@@ -285,25 +285,25 @@ bool MIOPENConvOp::DoRunWithType() {
           W_out));
     }
 
-    MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(
+    int group_offset_X = C / group_ * H * W * D;
+    int batch_offset_X = group_offset_X * group_;
+    int group_offset_Y = M / group_ * H_out * W_out * D_out;
+    int batch_offset_Y = group_offset_Y * group_;
+
+    while (!bestAlgoFound_) {
+      miopenConvAlgoPerf_t perf;
+
+      MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(
         miopen_wrapper_.inline_miopen_handle(),
         weight_desc_,
         bottom_desc_,
         conv_desc_,
         top_desc_,
         &fwdConvWsSize_));
+      if ((fwdConvWsSize_ > 0) && (fwdConvWs_ == nullptr)) {
+        HIP_CHECK(hipMalloc(&fwdConvWs_, fwdConvWsSize_));
+      }
 
-    int group_offset_X = C / group_ * H * W * D;
-    int batch_offset_X = group_offset_X * group_;
-    int group_offset_Y = M / group_ * H_out * W_out * D_out;
-    int batch_offset_Y = group_offset_Y * group_;
-
-    if ((fwdConvWsSize_ > 0) && (fwdConvWs_ == nullptr)) {
-      HIP_CHECK(hipMalloc(&fwdConvWs_, fwdConvWsSize_));
-    }
-
-    while (!bestAlgoFound_) {
-      miopenConvAlgoPerf_t perf;
       miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
         MIOPEN_ENFORCE(miopenFindConvolutionForwardAlgorithm(
           state->miopen_handle(),
@@ -397,7 +397,10 @@ bool MIOPENConvOp::DoRunWithType() {
           bias_desc_, miopenTypeWrapper<T_B>::type, 1, C_out, 1, 1));
     }
 
-    MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(
+    while (!bestAlgoFound_) {
+      miopenConvAlgoPerf_t perf;
+
+      MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(
         miopen_wrapper_.inline_miopen_handle(),
         weight_desc_,
         bottom_desc_,
@@ -405,12 +408,10 @@ bool MIOPENConvOp::DoRunWithType() {
         top_desc_,
         &fwdConvWsSize_));
 
-    if ((fwdConvWsSize_ > 0) && (fwdConvWs_ == nullptr)) {
-      HIP_CHECK(hipMalloc(&fwdConvWs_, fwdConvWsSize_));
-    }
+      if ((fwdConvWsSize_ > 0) && (fwdConvWs_ == nullptr)) {
+        HIP_CHECK(hipMalloc(&fwdConvWs_, fwdConvWsSize_));
+      }
 
-    while (!bestAlgoFound_) {
-      miopenConvAlgoPerf_t perf;
       miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
         MIOPEN_ENFORCE(miopenFindConvolutionForwardAlgorithm(
           state->miopen_handle(),
@@ -575,37 +576,25 @@ bool MIOPENConvGradientOp::DoRunWithType() {
           W_out));
     }
 
-    MIOPEN_ENFORCE(miopenConvolutionBackwardDataGetWorkSpaceSize(
+    int group_offset_X = C / group_ * H * W * D;
+    int batch_offset_X = group_offset_X * group_;
+    int group_offset_Y = M / group_ * H_out * W_out * D_out;
+    int batch_offset_Y = group_offset_Y * group_;
+
+    while (!bestDataAlgoFound_) {
+      miopenConvAlgoPerf_t perf;
+
+      MIOPEN_ENFORCE(miopenConvolutionBackwardDataGetWorkSpaceSize(
         miopen_wrapper_.inline_miopen_handle(),
         top_desc_,
         weight_desc_,
         conv_desc_,
         bottom_desc_,
         &bwdDataWsSize_));
+      if ((bwdDataWsSize_ > 0) && (bwdDataWs_ == nullptr)) {
+        HIP_CHECK(hipMalloc(&bwdDataWs_, bwdDataWsSize_));
+      }
 
-    int group_offset_X = C / group_ * H * W * D;
-    int batch_offset_X = group_offset_X * group_;
-    int group_offset_Y = M / group_ * H_out * W_out * D_out;
-    int batch_offset_Y = group_offset_Y * group_;
-
-    if ((bwdDataWsSize_ > 0) && (bwdDataWs_ == nullptr)) {
-      HIP_CHECK(hipMalloc(&bwdDataWs_, bwdDataWsSize_));
-    }
-
-    MIOPEN_ENFORCE(miopenConvolutionBackwardWeightsGetWorkSpaceSize(
-        miopen_wrapper_.inline_miopen_handle(),
-        top_desc_,
-        bottom_desc_,
-        conv_desc_,
-        weight_desc_,
-        &bwdWeightWsSize_));
-
-    if ((bwdWeightWsSize_ > 0) && (bwdWeightWs_ == nullptr)) {
-      HIP_CHECK(hipMalloc(&bwdWeightWs_, bwdWeightWsSize_));
-    }
-
-    while (!bestDataAlgoFound_) {
-      miopenConvAlgoPerf_t perf;
       miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
         MIOPEN_ENFORCE(miopenFindConvolutionBackwardDataAlgorithm(
           state->miopen_handle(),
@@ -630,6 +619,18 @@ bool MIOPENConvGradientOp::DoRunWithType() {
 
     while (!bestWeightAlgoFound_) {
       miopenConvAlgoPerf_t perf;
+
+      MIOPEN_ENFORCE(miopenConvolutionBackwardWeightsGetWorkSpaceSize(
+        miopen_wrapper_.inline_miopen_handle(),
+        top_desc_,
+        bottom_desc_,
+        conv_desc_,
+        weight_desc_,
+        &bwdWeightWsSize_));
+      if ((bwdWeightWsSize_ > 0) && (bwdWeightWs_ == nullptr)) {
+        HIP_CHECK(hipMalloc(&bwdWeightWs_, bwdWeightWsSize_));
+      }
+
       miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
         MIOPEN_ENFORCE(miopenFindConvolutionBackwardWeightsAlgorithm(
           state->miopen_handle(),
@@ -741,32 +742,20 @@ bool MIOPENConvGradientOp::DoRunWithType() {
           bias_desc_, miopenTypeWrapper<T_B>::type, 1, M, 1, 1));
     }
 
-    MIOPEN_ENFORCE(miopenConvolutionBackwardDataGetWorkSpaceSize(
+    while (!bestDataAlgoFound_) {
+      miopenConvAlgoPerf_t perf;
+
+      MIOPEN_ENFORCE(miopenConvolutionBackwardDataGetWorkSpaceSize(
         miopen_wrapper_.inline_miopen_handle(),
         top_desc_,
         weight_desc_,
         conv_desc_,
         bottom_desc_,
         &bwdDataWsSize_));
+      if ((bwdDataWsSize_ > 0) && (bwdDataWs_ == nullptr)) {
+        HIP_CHECK(hipMalloc(&bwdDataWs_, bwdDataWsSize_));
+      }
 
-    if ((bwdDataWsSize_ > 0) && (bwdDataWs_ == nullptr)) {
-      HIP_CHECK(hipMalloc(&bwdDataWs_, bwdDataWsSize_));
-    }
-
-    MIOPEN_ENFORCE(miopenConvolutionBackwardWeightsGetWorkSpaceSize(
-        miopen_wrapper_.inline_miopen_handle(),
-        top_desc_,
-        bottom_desc_,
-        conv_desc_,
-        weight_desc_,
-        &bwdWeightWsSize_));
-
-    if ((bwdWeightWsSize_ > 0) && (bwdWeightWs_ == nullptr)) {
-      HIP_CHECK(hipMalloc(&bwdWeightWs_, bwdWeightWsSize_));
-    }
-
-    while (!bestDataAlgoFound_) {
-      miopenConvAlgoPerf_t perf;
       miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
         MIOPEN_ENFORCE(miopenFindConvolutionBackwardDataAlgorithm(
           state->miopen_handle(),
@@ -791,6 +780,18 @@ bool MIOPENConvGradientOp::DoRunWithType() {
 
     while (!bestWeightAlgoFound_) {
       miopenConvAlgoPerf_t perf;
+
+      MIOPEN_ENFORCE(miopenConvolutionBackwardWeightsGetWorkSpaceSize(
+        miopen_wrapper_.inline_miopen_handle(),
+        top_desc_,
+        bottom_desc_,
+        conv_desc_,
+        weight_desc_,
+        &bwdWeightWsSize_));
+      if ((bwdWeightWsSize_ > 0) && (bwdWeightWs_ == nullptr)) {
+        HIP_CHECK(hipMalloc(&bwdWeightWs_, bwdWeightWsSize_));
+      }
+      
       miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
         MIOPEN_ENFORCE(miopenFindConvolutionBackwardWeightsAlgorithm(
           state->miopen_handle(),

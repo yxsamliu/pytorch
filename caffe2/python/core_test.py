@@ -640,7 +640,7 @@ class TestInferDeviceCpuOnly(test_util.TestCase):
         self.assertEqual(op.input[2], "fc_b")
 
 
-@unittest.skipIf(not workspace.has_gpu_support, 'No GPU support')
+@unittest.skipIf(not workspace.has_gpu_support and not workspace.has_hip_support, 'No GPU support')
 class TestInferDevice(test_util.TestCase):
 
     def setUp(self):
@@ -770,7 +770,7 @@ class TestInferDevice(test_util.TestCase):
             self.assertEqual(op.input[0], "data_hip_1")
             self.assertEqual(op.input[1], "fc_w_hip_1")
             self.assertEqual(op.input[2], "fc_b_hip_1")
-            self.assertEqual(op.device_option.device_type, 1)
+            self.assertEqual(op.device_option.device_type, 6)
             self.assertEqual(op.device_option.hip_gpu_id, 1)
         else:
             self.assertEqual(op.input[0], "data_cuda_1")
@@ -806,12 +806,13 @@ class TestInferDevice(test_util.TestCase):
         )
         op = nets[1]._net.op[0]
         self.assertEqual(op.type, "CopyCPUToGPU")
-        self.assertEqual(op.device_option.device_type, 1)
         if workspace.has_hip_support:
+            self.assertEqual(op.device_option.device_type, 6)
             self.assertEqual(op.device_option.device_type, 6)
             self.assertEqual(op.device_option.hip_gpu_id, 1)
             self.assertEqual(op.output[0], "fc_w_hip_1")
         else:
+            self.assertEqual(op.device_option.device_type, 1)
             self.assertEqual(op.device_option.device_type, 1)
             self.assertEqual(op.device_option.cuda_gpu_id, 1)
             self.assertEqual(op.output[0], "fc_w_cuda_1")
@@ -951,8 +952,12 @@ external_input: "fc_b"
     def test_inject_copy_multi_use(self):
         net = core.Net("test")
         device_option = caffe2_pb2.DeviceOption()
-        device_option.device_type = caffe2_pb2.CUDA
-        device_option.cuda_gpu_id = 1
+        if workspace.has_hip_support:
+            device_option.device_type = caffe2_pb2.HIP
+            device_option.hip_gpu_id = 1
+        else:
+            device_option.device_type = caffe2_pb2.CUDA
+            device_option.cuda_gpu_id = 1
 
         with core.DeviceScope(device_option):
             net.Relu("data", "relu1")
@@ -960,23 +965,38 @@ external_input: "fc_b"
         with core.DeviceScope(device_option):
             net.Relu("data", "relu3")
         net.Relu("data", "relu4")
-        device_option.cuda_gpu_id = 0
+        if workspace.has_hip_support:
+            device_option.hip_gpu_id = 0
+        else:
+            device_option.cuda_gpu_id = 0
         with core.DeviceScope(device_option):
             net.Relu("data", "relu5")
-        device_option.cuda_gpu_id = 1
+        if workspace.has_hip_support:
+            device_option.hip_gpu_id = 1
+        else:
+            device_option.cuda_gpu_id = 1
         with core.DeviceScope(device_option):
             net.Relu("data", "relu6")
 
         new_net, _ = core.InjectCrossDeviceCopies(net)
         op = new_net._net.op[0]
         self.assertEqual(op.type, "CopyCPUToGPU")
-        self.assertEqual(op.device_option.device_type, 1)
-        self.assertEqual(op.device_option.cuda_gpu_id, 1)
-        self.assertEqual(op.output[0], "data_cuda_1")
+        if workspace.has_hip_support:
+            self.assertEqual(op.device_option.device_type, 6)
+            self.assertEqual(op.device_option.hip_gpu_id, 1)
+            self.assertEqual(op.output[0], "data_hip_1")
+        else:
+            self.assertEqual(op.device_option.device_type, 1)
+            self.assertEqual(op.device_option.cuda_gpu_id, 1)
+            self.assertEqual(op.output[0], "data_cuda_1")
         op = new_net._net.op[1]
         self.assertEqual(op.type, "Relu")
-        self.assertEqual(op.device_option.device_type, 1)
-        self.assertEqual(op.device_option.cuda_gpu_id, 1)
+        if workspace.has_hip_support:
+            self.assertEqual(op.device_option.device_type, 6)
+            self.assertEqual(op.device_option.hip_gpu_id, 1)
+        else:
+            self.assertEqual(op.device_option.device_type, 1)
+            self.assertEqual(op.device_option.cuda_gpu_id, 1)
         self.assertEqual(op.output[0], "relu1")
         op = new_net._net.op[2]
         self.assertEqual(op.type, "Relu")
@@ -984,9 +1004,14 @@ external_input: "fc_b"
         self.assertEqual(op.output[0], "relu2")
         op = new_net._net.op[3]
         self.assertEqual(op.type, "Relu")
-        self.assertEqual(op.device_option.device_type, 1)
-        self.assertEqual(op.device_option.cuda_gpu_id, 1)
-        self.assertEqual(op.input[0], "data_cuda_1")
+        if workspace.has_hip_support:
+            self.assertEqual(op.device_option.device_type, 6)
+            self.assertEqual(op.device_option.hip_gpu_id, 1)
+            self.assertEqual(op.input[0], "data_hip_1")
+        else:
+            self.assertEqual(op.device_option.device_type, 1)
+            self.assertEqual(op.device_option.cuda_gpu_id, 1)
+            self.assertEqual(op.input[0], "data_cuda_1")
         self.assertEqual(op.output[0], "relu3")
         op = new_net._net.op[4]
         self.assertEqual(op.type, "Relu")
@@ -994,20 +1019,35 @@ external_input: "fc_b"
         self.assertEqual(op.output[0], "relu4")
         op = new_net._net.op[5]
         self.assertEqual(op.type, "CopyCPUToGPU")
-        self.assertEqual(op.device_option.device_type, 1)
-        self.assertEqual(op.device_option.cuda_gpu_id, 0)
-        self.assertEqual(op.output[0], "data_cuda_0")
+        if workspace.has_hip_support:
+            self.assertEqual(op.device_option.device_type, 6)
+            self.assertEqual(op.device_option.hip_gpu_id, 0)
+            self.assertEqual(op.output[0], "data_hip_0")
+        else:
+            self.assertEqual(op.device_option.device_type, 1)
+            self.assertEqual(op.device_option.cuda_gpu_id, 0)
+            self.assertEqual(op.output[0], "data_cuda_0")
         op = new_net._net.op[6]
         self.assertEqual(op.type, "Relu")
-        self.assertEqual(op.device_option.device_type, 1)
-        self.assertEqual(op.device_option.cuda_gpu_id, 0)
-        self.assertEqual(op.input[0], "data_cuda_0")
+        if workspace.has_hip_support:
+            self.assertEqual(op.device_option.device_type, 6)
+            self.assertEqual(op.device_option.hip_gpu_id, 0)
+            self.assertEqual(op.input[0], "data_hip_0")
+        else:
+            self.assertEqual(op.device_option.device_type, 1)
+            self.assertEqual(op.device_option.cuda_gpu_id, 0)
+            self.assertEqual(op.input[0], "data_cuda_0")
         self.assertEqual(op.output[0], "relu5")
         op = new_net._net.op[7]
         self.assertEqual(op.type, "Relu")
-        self.assertEqual(op.device_option.device_type, 1)
-        self.assertEqual(op.device_option.cuda_gpu_id, 1)
-        self.assertEqual(op.input[0], "data_cuda_1")
+        if workspace.has_hip_support:
+            self.assertEqual(op.device_option.device_type, 6)
+            self.assertEqual(op.device_option.hip_gpu_id, 1)
+            self.assertEqual(op.input[0], "data_hip_1")
+        else:
+            self.assertEqual(op.device_option.device_type, 1)
+            self.assertEqual(op.device_option.cuda_gpu_id, 1)
+            self.assertEqual(op.input[0], "data_cuda_1")
         self.assertEqual(op.output[0], "relu6")
         """
 For reference, net.Proto() should be like:
@@ -1100,11 +1140,11 @@ external_input: "data"
             cpu_device[i].node_name = 'node:' + str(i)
             gpu_device.append(caffe2_pb2.DeviceOption())
             if workspace.has_hip_support:
-                device_option.device_type = caffe2_pb2.HIP
-                device_option.hip_gpu_id = 0
+                gpu_device[i].device_type = caffe2_pb2.HIP
+                gpu_device[i].hip_gpu_id = 0
             else:
-                device_option.device_type = caffe2_pb2.CUDA
-                device_option.cuda_gpu_id = 0
+                gpu_device[i].device_type = caffe2_pb2.CUDA
+                gpu_device[i].cuda_gpu_id = 0
             gpu_device[i].node_name = 'node:' + str(i)
         send_node = 'node:0'
         recv_node = 'node:1'

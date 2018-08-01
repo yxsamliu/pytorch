@@ -339,7 +339,7 @@ class TestWorkspaceGPU(test_util.TestCase):
         self.assertEqual(fetched_again.shape, (1, 2, 3, 4))
         np.testing.assert_array_equal(fetched_again, 2.0)
 
-    @unittest.skipIf(workspace.has_hip_support, "No cuda support.")
+    @unittest.skipIf(not workspace.has_gpu_support, "No gpu support.")
     def testGetCudaPeerAccessPattern(self):
         pattern = workspace.GetCudaPeerAccessPattern()
         self.assertEqual(type(pattern), np.ndarray)
@@ -347,7 +347,7 @@ class TestWorkspaceGPU(test_util.TestCase):
         self.assertEqual(pattern.shape[0], pattern.shape[1])
         self.assertEqual(pattern.shape[0], workspace.NumCudaDevices())
 
-    @unittest.skipIf(workspace.has_gpu_support, "No hip support.")
+    @unittest.skipIf(not workspace.has_hip_support, "No hip support.")
     def testGetHipPeerAccessPattern(self):
         pattern = workspace.GetHipPeerAccessPattern()
         self.assertEqual(type(pattern), np.ndarray)

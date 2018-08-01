@@ -59,7 +59,7 @@ def _ConvBase(
                  '""')
 
     if use_gpu_engine:
-        kwargs['engine'] = 'CUDNN' if workspace.has_gpu_support else 'MIOPEN'
+        kwargs['engine'] = 'MIOPEN' if workspace.has_hip_support else 'CUDNN'
         kwargs['exhaustive_search'] = gpu_engine_exhaustive_search
         if ws_nbytes_limit:
             kwargs['ws_nbytes_limit'] = ws_nbytes_limit
@@ -235,7 +235,7 @@ def conv_transpose(
     model.AddParameter(weight, ParameterTags.WEIGHT)
     model.AddParameter(bias, ParameterTags.BIAS)
     if use_gpu_engine:
-        kwargs['engine'] = 'CUDNN' if workspace.has_gpu_support else 'MIOPEN'
+        kwargs['engine'] = 'MIOPEN' if workspace.has_hip_support else 'CUDNN'
         kwargs['exhaustive_search'] = gpu_engine_exhaustive_search
         if ws_nbytes_limit:
             kwargs['ws_nbytes_limit'] = ws_nbytes_limit
@@ -295,7 +295,7 @@ def group_conv_deprecated(
     bias_init = bias_init if bias_init else ('ConstantFill', {})
     use_bias = False if ("no_bias" in kwargs and kwargs["no_bias"]) else True
     if use_gpu_engine:
-        kwargs['engine'] = 'CUDNN' if workspace.has_gpu_support else 'MIOPEN'
+        kwargs['engine'] = 'MIOPEN' if workspace.has_hip_support else 'CUDNN'
         kwargs['exhaustive_search'] = gpu_engine_exhaustive_search
         if ws_nbytes_limit:
             kwargs['ws_nbytes_limit'] = ws_nbytes_limit

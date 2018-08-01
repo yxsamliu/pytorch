@@ -2024,13 +2024,13 @@ class Net(object):
     def RunAllOnGPU(self, gpu_id=0, use_gpu_engine=False):
         """A convenient function to run everything on the GPU."""
         device_option = caffe2_pb2.DeviceOption()
-        device_option.device_type = caffe2_pb2.CUDA if workspace.has_gpu_support else caffe2_pb2.HIP
+        device_option.device_type = caffe2_pb2.HIP if workspace.has_hip_support else caffe2_pb2.CUDA
         device_option.cuda_gpu_id = gpu_id
         device_option.hip_gpu_id = gpu_id
         self._net.device_option.CopyFrom(device_option)
         if use_gpu_engine:
             for op in self._net.op:
-                op.engine = "CUDNN" if workspace.has_gpu_support else 'MIOPEN'
+                op.engine = "MIOPEN" if workspace.has_hip_support else 'CUDNN'
 
     def RunAllOnMKL(self):
         """A convenient function to run everything using MKLDNN."""
@@ -2189,10 +2189,10 @@ class Net(object):
 
 def copy_func_between_devices(src, dst):
     CPU = caffe2_pb2.CPU
-    if workspace.has_gpu_support:
-        GPU = caffe2_pb2.CUDA
+    if workspace.has_hip_support:
+        GPU = caffe2_pb2.HIP`
     else:
-        GPU = caffe2_pb2.HIP
+        GPU = caffe2_pb2.CUDA
 
     if src.device_type == CPU and dst.device_type == CPU:
         return None
@@ -2202,16 +2202,17 @@ def copy_func_between_devices(src, dst):
             with DeviceScope(dst):
                 return net.Copy(*args, **kw)
 
-        if workspace.has_gpu_support:
+        if workspace.has_hip_support:
+            if src.hip_gpu_id == dst.hip_gpu_id:
+                return None
+            else:
+                return fun    
+        else:
             if src.cuda_gpu_id == dst.cuda_gpu_id:
                 return None
             else:
                 return fun
-        else:
-            if src.hip_gpu_id == dst.hip_gpu_id:
-                return None
-            else:
-                return fun       
+               
 
     if src.device_type == GPU and dst.device_type == CPU:
         def fun(net, *args, **kw):
@@ -2234,10 +2235,10 @@ def device_equal(src, dst):
     comparison between empty device_options and {device_type:0, cuda_gpu_id:0}
     returns not equal in some cases.
     '''
-    if workspace.has_gpu_support:
-        gpu_id_eq = src.cuda_gpu_id == dst.cuda_gpu_id
-    else:
+    if workspace.has_hip_support:
         gpu_id_eq = src.hip_gpu_id == dst.hip_gpu_id
+    else:
+        gpu_id_eq = src.cuda_gpu_id == dst.cuda_gpu_id
 
     return src.device_type == dst.device_type and gpu_id_eq
 

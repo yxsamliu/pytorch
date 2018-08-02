@@ -64,7 +64,7 @@ import os
 from caffe2.python import workspace, brew, model_helper, core
 from caffe2.proto import caffe2_pb2
 
-def MLP(order, cudnn_ws, model_path=""):
+def MLP(order, gpu_engine_ws, model_path=""):
     model = model_helper.ModelHelper(name="MLP")
     d = 256
     depth = 20
@@ -99,14 +99,14 @@ def MLP(order, cudnn_ws, model_path=""):
     return model, d
 
 
-def AlexNet(order, cudnn_ws, model_path=""):
+def AlexNet(order, gpu_engine_ws, model_path=""):
     my_arg_scope = {
         'order': order,
-        'use_cudnn': True,
-        'cudnn_exhaustive_search': True,
+        'use_gpu_engine': True,
+        'gpu_engine_exhaustive_search': True,
     }
-    if cudnn_ws:
-        my_arg_scope['ws_nbytes_limit'] = cudnn_ws
+    if gpu_engine_ws:
+        my_arg_scope['ws_nbytes_limit'] = gpu_engine_ws
     model = model_helper.ModelHelper(
         name="alexnet",
         arg_scope=my_arg_scope,
@@ -192,14 +192,14 @@ def AlexNet(order, cudnn_ws, model_path=""):
     return model, 224
 
 
-def OverFeat(order, cudnn_ws, model_path=""):
+def OverFeat(order, gpu_engine_ws, model_path=""):
     my_arg_scope = {
         'order': order,
-        'use_cudnn': True,
-        'cudnn_exhaustive_search': True,
+        'use_gpu_engine': True,
+        'gpu_engine_exhaustive_search': True,
     }
-    if cudnn_ws:
-        my_arg_scope['ws_nbytes_limit'] = cudnn_ws
+    if gpu_engine_ws:
+        my_arg_scope['ws_nbytes_limit'] = gpu_engine_ws
     model = model_helper.ModelHelper(
         name="overfeat",
         arg_scope=my_arg_scope,
@@ -278,14 +278,14 @@ def OverFeat(order, cudnn_ws, model_path=""):
     return model, 231
 
 
-def VGGA(order, cudnn_ws, model_path=""):
+def VGGA(order, gpu_engine_ws, model_path=""):
     my_arg_scope = {
         'order': order,
-        'use_cudnn': True,
-        'cudnn_exhaustive_search': True,
+        'use_gpu_engine': True,
+        'gpu_engine_exhaustive_search': True,
     }
-    if cudnn_ws:
-        my_arg_scope['ws_nbytes_limit'] = cudnn_ws
+    if gpu_engine_ws:
+        my_arg_scope['ws_nbytes_limit'] = gpu_engine_ws
     model = model_helper.ModelHelper(
         name="vgga",
         arg_scope=my_arg_scope,
@@ -476,14 +476,14 @@ def _InceptionModule(
     return output
 
 
-def Inception(order, cudnn_ws, model_path=""):
+def Inception(order, gpu_engine_ws, model_path=""):
     my_arg_scope = {
         'order': order,
-        'use_cudnn': True,
-        'cudnn_exhaustive_search': True,
+        'use_gpu_engine': True,
+        'gpu_engine_exhaustive_search': True,
     }
-    if cudnn_ws:
-        my_arg_scope['ws_nbytes_limit'] = cudnn_ws
+    if gpu_engine_ws:
+        my_arg_scope['ws_nbytes_limit'] = gpu_engine_ws
     model = model_helper.ModelHelper(
         name="inception",
         arg_scope=my_arg_scope,
@@ -563,7 +563,7 @@ def Inception(order, cudnn_ws, model_path=""):
     model.net.AveragedLoss(xent, "loss")
     return model, 224
 
-def Resnet50(order, cudnn_ws, model_path=""):
+def Resnet50(order, gpu_engine_ws, model_path=""):
     if model_path == "":
         print("ERROR: please specify paths to init_net and predict_net protobufs for Resnet50")
         exit(1)
@@ -603,7 +603,7 @@ def Resnet50(order, cudnn_ws, model_path=""):
     model.net.AveragedLoss(xent, "loss")
     return model, 224
 
-def Inception_v2(order, cudnn_ws, model_path=""):
+def Inception_v2(order, gpu_engine_ws, model_path=""):
     if model_path == "":
         print("ERROR: please specify paths to init_net and predict_net protobufs for Inception_v2")
         exit(1)
@@ -654,7 +654,7 @@ def AddParameterUpdate(model):
 
 
 def Benchmark(model_gen, arg):
-    model, input_size = model_gen(arg.order, arg.cudnn_ws, arg.model_path)
+    model, input_size = model_gen(arg.order, arg.gpu_engine_ws, arg.model_path)
     model.Proto().type = arg.net_type
     model.Proto().num_workers = arg.num_workers
 
@@ -735,7 +735,7 @@ def GetArgumentParser():
         help="The order to evaluate."
     )
     parser.add_argument(
-        "--cudnn_ws",
+        "--gpu_engine_ws",
         type=int,
         help="The cudnn workspace size."
     )

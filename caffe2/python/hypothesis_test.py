@@ -366,7 +366,7 @@ class TestOperators(hu.HypothesisTestCase):
             input_mode=input_mode,
             num_layers=num_layers,
             seed=seed,
-            engine="CUDNN")
+            engine="MIOPEN" if workspace.has_hip_support else "CUDNN")
         X = np.random.randn(T, N, D).astype(np.float32)
         self.ws.create_blob("INPUT").feed(X, device_option=hu.gpu_do)
         W = self.ws.blobs["WEIGHT"].fetch()

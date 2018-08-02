@@ -550,7 +550,7 @@ class TestConvolution(hu.HypothesisTestCase):
                     kernel=3,
                     weight_init=('ConstantFill', dict(value=w1)),
                     bias_init=('ConstantFill', dict(value=b1)),
-                    gpu_engine_state=np.random.randint(0, 3),
+                    cudnn_state=np.random.randint(0, 3),
                     stride=1,
                     pad=1,
                     deterministic=1,
@@ -565,7 +565,7 @@ class TestConvolution(hu.HypothesisTestCase):
                     weight_init=('ConstantFill', dict(value=w2)),
                     bias_init=('ConstantFill', dict(value=b2)),
                     deterministic=1,
-                    gpu_engine_state=np.random.randint(0, 3),
+                    cudnn_state=np.random.randint(0, 3),
                     use_gpu_engine=use_gpu_engine,
                     engine=engine)
                 m.net.Sum([mid_1, mid_2], top)

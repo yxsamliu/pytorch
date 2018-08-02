@@ -121,7 +121,7 @@ class Optimizer(object):
         if self._local_lr_multiplier is not None:
             current_scope = scope.CurrentDeviceScope()
             if (current_scope is not None
-                    and current_scope.device_type == caffe2_pb2.CUDA
+                    and current_scope.device_type == (caffe2_pb2.HIP if workspace.has_hip_support else caffe2_pb2.CUDA)
                     and not self._local_lr_multiplier_on_gpu):
                 local_lr_multiplier = net.CopyFromCPUInput(
                     self._local_lr_multiplier,
@@ -241,7 +241,7 @@ class SgdOptimizer(Optimizer):
             self._add_local_lr_multiplier(
                 lr_lars_multiplier,
                 is_gpu_blob=(current_scope is not None
-                    and current_scope.device_type == caffe2_pb2.CUDA),
+                    and current_scope.device_type == (caffe2_pb2.HIP if workspace.has_hip_support else caffe2_pb2.CUDA)),
             )
 
         # We need negative sign for LR when used directly with WeightedSum
@@ -262,7 +262,7 @@ class SgdOptimizer(Optimizer):
         # to include device information.
         ONE = param_init_net.ConstantFill(
             [],
-            "ONE_{}_{}{}".format(dev.device_type, dev.cuda_gpu_id, dev.node_name),
+            "ONE_{}_{}{}".format(dev.device_type, dev.hip_gpu_id if workspace.has_hip_support else dev.cuda_gpu_id, dev.node_name),
             shape=[1],
             value=1.0
         )
@@ -471,12 +471,12 @@ class WeightDecayBuilder(Optimizer):
 
         ONE = param_init_net.ConstantFill(
             [],
-            "ONE_{}_{}".format(dev.device_type, dev.cuda_gpu_id),
+            "ONE_{}_{}".format(dev.device_type, dev.hip_gpu_id if workspace.has_hip_support else dev.cuda_gpu_id),
             shape=[1],
             value=1.0
         )
         WD = param_init_net.ConstantFill(
-            [], "wd_{}_{}".format(dev.device_type, dev.cuda_gpu_id),
+            [], "wd_{}_{}".format(dev.device_type, dev.hip_gpu_id if workspace.has_hip_support else dev.cuda_gpu_id),
             shape=[1], value=self.weight_decay
         )
 
@@ -528,7 +528,7 @@ class AdagradOptimizer(Optimizer):
             self._add_local_lr_multiplier(
                 lr_lars_multiplier,
                 is_gpu_blob=(current_scope is not None
-                    and current_scope.device_type == caffe2_pb2.CUDA),
+                    and current_scope.device_type == (caffe2_pb2.HIP if workspace.has_hip_support else caffe2_pb2.CUDA)),
             )
 
         lr, _ = self.build_lr(
@@ -649,7 +649,7 @@ class WngradOptimizer(Optimizer):
             self._add_local_lr_multiplier(
                 lr_lars_multiplier,
                 is_gpu_blob=(current_scope is not None
-                    and current_scope.device_type == caffe2_pb2.CUDA),
+                    and current_scope.device_type == (caffe2_pb2.HIP if workspace.has_hip_support else caffe2_pb2.CUDA)),
             )
 
         lr, _ = self.build_lr(
@@ -1126,7 +1126,7 @@ class RmsPropOptimizer(Optimizer):
 
         ONE = param_init_net.ConstantFill(
             [],
-            "ONE_{}_{}".format(dev.device_type, dev.cuda_gpu_id),
+            "ONE_{}_{}".format(dev.device_type, dev.hip_gpu_id if workspace.has_hip_support else dev.cuda_gpu_id),
             shape=[1],
             value=1.0
         )

@@ -203,15 +203,6 @@ Probability distributions - torch.distributions
     :undoc-members:
     :show-inheritance:
 
-:hidden:`NegativeBinomial`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. currentmodule:: torch.distributions.negative_binomial
-.. autoclass:: NegativeBinomial
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 :hidden:`Normal`
 ~~~~~~~~~~~~~~~~~~~~~~~
 

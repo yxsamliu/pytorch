@@ -35,7 +35,6 @@ import onnx.numpy_helper
 import onnx.defs
 import onnx.optimizer
 import onnx.shape_inference
-import onnx.utils
 from onnx.backend.base import Backend, Device, DeviceType, namedtupledict
 
 from caffe2.python.onnx.workspace import Workspace
@@ -877,7 +876,6 @@ class Caffe2Backend(Backend):
     def _onnx_model_to_caffe2_net(cls, onnx_model, device, opset_version, include_initializers):
         device_option = get_device_option(Device(device))
 
-        onnx_model = onnx.utils.polish_model(onnx_model)
         init_model = cls.optimize_onnx(onnx_model, init=True)
         pred_model = cls.optimize_onnx(onnx_model, predict=True)
 

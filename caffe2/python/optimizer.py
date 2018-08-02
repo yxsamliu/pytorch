@@ -1421,8 +1421,7 @@ def build_ftrl(model, engine="SIMD", **kwargs):
 
 
 def build_gftrl(model, engine="", **kwargs):
-    if engine == "SIMD":
-        assert core.IsOperator('GFtrl_ENGINE_SIMD')
+    # SIMD version of GFTRL is not supported
     gftrl_optimizer = GFtrlOptimizer(engine=engine, **kwargs)
     return _build(model, gftrl_optimizer)
 

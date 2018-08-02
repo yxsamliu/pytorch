@@ -111,7 +111,7 @@ inline std::vector<Tensor> expand_outplace(TensorList to_expand) {
     if (!to_expand[i].defined()) {
       continue;
     } else if (first) {
-      sizes = to_expand[i].sizes().vec();
+      sizes = to_expand[i].sizes();
       first = false;
     } else {
       sizes = infer_size(sizes, to_expand[i].sizes());

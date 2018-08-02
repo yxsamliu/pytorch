@@ -59,7 +59,7 @@ ERMatXf ComputeAllAnchors(
 //     regression result 'deltas' as well as predefined bounding box shapes
 //     'anchors'. Greedy non-maximum suppression is applied to generate the
 //     final bounding boxes.
-// Reference: facebookresearch/Detectron/detectron/ops/generate_proposals.py
+// Reference: detectron/lib/ops/generate_proposals.py
 template <class Context>
 class GenerateProposalsOp final : public Operator<Context> {
  public:

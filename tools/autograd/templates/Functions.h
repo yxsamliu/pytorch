@@ -29,7 +29,7 @@ struct TypeAndSize {
   TypeAndSize() : type(nullptr) {}
   /* implicit */
   TypeAndSize(const Tensor & t)
-    : sizes(t.sizes().vec())
+    : sizes(t.sizes())
     , type(&t.type()) {}
 
   Tensor zeros() { return at::zeros(sizes, *type); }

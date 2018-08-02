@@ -11,15 +11,23 @@ using namespace nom;
 
 void addNNPACK(repr::NNModule* nn, bool low_memory) {
   for (auto node : nn->dataFlow.getMutableNodes()) {
+    auto* nodeData = node->data().get(); // Let graph retain ownership.
+
     // Skip blobs.
-    NOM_REQUIRE_OR_CONT(repr::nn::is<repr::NeuralNetOperator>(node));
+    if (!isa<nom::repr::NeuralNetOperator>(nodeData)) {
+      continue;
+    }
 
     // Check if it is a convolution.
-    auto nnOp = repr::nn::get<repr::NeuralNetOperator>(node);
-    NOM_REQUIRE_OR_CONT(isa<nom::repr::Conv>(nnOp));
+    auto nnOp = dyn_cast<nom::repr::NeuralNetOperator>(nodeData);
+    if (!isa<nom::repr::Conv>(nnOp)) {
+      continue;
+    }
 
     // Requires X, W, b for NNPACK
-    NOM_REQUIRE_OR_CONT(node->getInEdges().size() >= 3);
+    if (node->getInEdges().size() < 3) {
+      continue;
+    }
 
     std::string engine = "NNPACK";
 
@@ -27,7 +35,9 @@ void addNNPACK(repr::NNModule* nn, bool low_memory) {
     bool validTransformCandidate = true;
     auto conv = dyn_cast<nom::repr::Conv>(nnOp);
 
-    NOM_REQUIRE_OR_CONT(conv->getLayout() == nom::repr::Conv::NNLayout::NCHW);
+    if (conv->getLayout() != nom::repr::Conv::NNLayout::NCHW) {
+      continue;
+    }
 
     // NNPACK only supports stride == 1
     for (auto stride : conv->getStrides()) {
@@ -36,21 +46,28 @@ void addNNPACK(repr::NNModule* nn, bool low_memory) {
         break;
       }
     }
-    NOM_REQUIRE_OR_CONT(validTransformCandidate);
+    if (!validTransformCandidate) {
+      continue;
+    }
 
     // NNPACK only supports 2DConv.
     const auto& kernelShape = conv->getKernelShape();
-    NOM_REQUIRE_OR_CONT(kernelShape.size() == 2);
+    if (kernelShape.size() != 2) {
+      continue;
+    }
 
     // Kx1 and 1xK convs are inefficient in NNPACK.
     if (kernelShape[0] != kernelShape[1]) {
-      NOM_REQUIRE_OR_CONT(kernelShape[0] != 1 && kernelShape[1] != 1);
+      if (kernelShape[0] == 1 || kernelShape[1] == 1) {
+        continue;
+      }
     }
 
     // We're good to use our engine.
     auto annotation = conv->getMutableAnnotation();
-    NOM_REQUIRE_OR_CONT(annotation && isa<Caffe2Annotation>(annotation));
-
+    if (!annotation || !isa<Caffe2Annotation>(annotation)) {
+      continue;
+    }
     auto* op = dyn_cast<Caffe2Annotation>(annotation)->getMutableOperatorDef();
     op->set_engine(engine);
     if (!low_memory) {

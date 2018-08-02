@@ -10,6 +10,7 @@
 #include "ATen/Half.h"
 #include "ATen/ScalarType.h"
 #include "ATen/TensorBase.h"
+#include "ATen/Utils.h"
 
 
 namespace at {

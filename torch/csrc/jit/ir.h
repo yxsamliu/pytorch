@@ -54,7 +54,7 @@ struct Value;
 
 TORCH_API std::ostream& operator<<(std::ostream & out, const Graph & g);
 TORCH_API std::ostream& operator<<(std::ostream & out, const Type & t);
-TORCH_API std::ostream& operator<<(std::ostream & out, const Node & n);
+TORCH_API std::ostream& operator<<(std::ostream & out, const Node & t);
 
 // A list of nodes, with inputs and outputs
 struct Block;
@@ -683,9 +683,7 @@ public:
     return *schema_;
   }
 
-  void dump() const;
-
-  virtual ~Node() = default;
+  virtual ~Node() {}
 private:
   std::pair<Value*, const Argument&> findInput(Symbol name);
   void findSchema() const;
@@ -891,7 +889,8 @@ public:
   , block_(new Block(this, nullptr))
   , insert_before_(return_node()) {}
 
-  Graph() : Graph(std::make_shared<Scope>()) {}
+  Graph()
+  : Graph( std::make_shared<Scope>()) {}
 
   at::ArrayRef<Value*> inputs() {
     return block_->inputs();

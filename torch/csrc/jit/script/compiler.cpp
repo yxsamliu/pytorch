@@ -351,19 +351,37 @@ Value* createNumber(Graph& g, const SourceRange& loc, const at::Tensor& val) {
   return output;
 }
 
+Value* createStack(Graph& g, const SourceRange& loc, at::ArrayRef<Value*> inputs) {
+  // bake in constant propagation for the all-constant case because it is
+  // common to see constant lists like [1, 2] passed to attributes
+  bool all_constant = std::all_of(inputs.begin(), inputs.end(), [&](Value* v) {
+    return v->node()->kind() == prim::Constant;
+  });
+  if(all_constant) {
+    auto values = fmap(inputs, [&](Value* v) {
+      return v->node()->t(attr::value);
+    });
+    return insertConstant(g, at::stack(values), loc);
+  }
+  return g.insertNode(g.create(aten::stack, inputs)
+                      ->i_(attr::dim, 0)
+                      ->setSourceLocation(std::make_shared<SourceRange>(loc)))->output();
+}
+
+static bool isTensorSubtype(Value* v) {
+  return v->type()->isSubtypeOf(DynamicType::get());
+}
+
 at::optional<std::vector<int64_t>> getIntListAttribute(at::optional<int32_t> N, Value* input) {
   auto list = constant_as<Shared<jit::IntList>>(input);
   if(list)
-    return list.value()->elements().vec();
-
+    return std::vector<int64_t>(list.value()->elements());
   // broadcast IntList[3] with value 4 -> {4, 4, 4}
   if(!N)
     return at::nullopt;
-
   auto r = constant_as<int64_t>(input);
   if(!r)
     return at::nullopt;
-
   // broadcast to attribute size
   return std::vector<int64_t>(*N, *r);
 }
@@ -437,46 +455,51 @@ at::optional<std::vector<Value*>> tryMatchSchema(
     }
 
     // check input types
-    std::vector<Value*> matched_inputs;
+    std::vector<Value*> flat_inputs;
     for(size_t i = 0; i < schema.arguments.size(); ++i) {
-      Value* value = positional_inputs[i]->value;
+      NamedValue v = *positional_inputs[i];
       const auto& arg = schema.arguments[i];
 
       // some functions that take lists of integers for fixed size arrays
       // also allow single ints to be passed in their place.
       // the single int is then repeated to the length of the list
-      if (isIntUsedAsIntList(value, arg)) {
-        std::vector<Value*> repeated(*arg.N, value);
-        value = graph.insertNode(graph.createList(IntType::get(), repeated))->output();
+      if (isIntUsedAsIntList(v.value, arg)) {
+        std::vector<Value*> repeated(*arg.N, v.value);
+        v.value = graph.insertNode(graph.createList(IntType::get(), repeated))->output();
       }
 
-      // Allow homogeneous tuples to be casted implicitly to lists of appropriate types
-      if (arg.type->kind() == TypeKind::ListType &&
-          value->type()->kind() == TypeKind::TupleType &&
-          value->type()->isSubtypeOf(arg.type)) {
-        auto unpacked = createTupleUnpack(value);
-        auto elem_type = arg.type->expect<ListType>()->getElementType();
-        value = graph.insertNode(graph.createList(elem_type, unpacked))->output();
+      // Allow tuples that only contain integers to turn into lists of integers
+      if(*ListType::ofInts() == *arg.type &&
+         v.value->type()->kind() == TypeKind::TupleType &&
+         v.value->type()->isSubtypeOf(ListType::ofInts())) {
+        auto unpacked = createTupleUnpack(v.value);
+        v.value = graph.insertNode(graph.createList(IntType::get(), unpacked))->output();
       }
 
-      if (value->node()->kind() == prim::None){
+      if (v.value->node()->kind() == prim::None){
         if (arg.type->isSubtypeOf(NumberType::get()))
-          value = insertConstant(graph, at::Scalar(NAN), loc);
+          v.value = insertConstant(graph, at::Scalar(NAN), loc);
         else
-          value = graph.insertNode(graph.createUndefined())->output();
+          v.value = graph.insertNode(graph.createUndefined())->output();
       }
 
-      if(!value->type()->isSubtypeOf(arg.type)) {
+      if(!v.value->type()->isSubtypeOf(arg.type)) {
         err() << "expected a value of type " << arg.type->str() << " for argument '" << arg.name << "' but found "
-              << value->type()->str() << "\n"
-              << positional_inputs[i]->loc;
+              << v.value->type()->str() << "\n"
+              << v.loc;
         return at::nullopt;
       }
 
-      matched_inputs.push_back(value);
+      // we only support tensor lists for builtins, where they must be flattened
+      if(arg.type->isSubtypeOf(ListType::ofTensors())) {
+        auto outputs = createTupleUnpack(v.value);
+        flat_inputs.insert(flat_inputs.end(), outputs.begin(), outputs.end());
+      } else {
+        flat_inputs.push_back(v.value);
+      }
     }
 
-    return matched_inputs;
+    return flat_inputs;
 }
 
 
@@ -490,27 +513,27 @@ static std::shared_ptr<SugaredValue> tryEmitBuiltin(
   at::ArrayRef<NamedValue> attributes) {
 
   auto graph = method.graph();
-  auto matched_inputs = tryMatchSchema(op->schema(), loc, *graph, inputs, attributes, failure_messages);
-  if(!matched_inputs)
+  auto flat_inputs = tryMatchSchema(op->schema, loc, *graph, inputs, attributes, failure_messages);
+  if(!flat_inputs)
     return nullptr;
   // we successfully matched this schema, construct the node
 
   NodeKind kind(Symbol::aten(name));
-  auto n = graph->insertNode(graph->create(kind, *matched_inputs, 0))
+  auto n = graph->insertNode(graph->create(kind, *flat_inputs, 0))
                 ->setSourceLocation(std::make_shared<SourceRange>(loc));
 
   // special case for chunk when the chunks=<const> is known
   // DO NOT ADD MORE SPECIAL CASES HERE, REFACTOR INTO A FUNCTION IF
   // NEEDED
   if(n->kind() == aten::chunk) {
-    auto value = constant_as<int64_t>((*matched_inputs)[1]);
+    auto value = constant_as<int64_t>((*flat_inputs)[1]);
     if(!value) {
       throw ErrorReport(loc) << "argument 'chunks' must be a constant";
     }
     for(int64_t i = 0; i < *value; ++i)
       n->addOutput();
   } else {
-    for(auto & ret : op->schema().returns) {
+    for(auto & ret : op->schema.returns) {
       n->addOutput()->setType(ret.type);
     }
   }
@@ -565,7 +588,7 @@ std::shared_ptr<SugaredValue> emitBuiltinCall(
 }
 
 static Value* ensureTensor(const SourceRange& range, Value* v) {
-  if(!v->type()->isSubtypeOf(DynamicType::get())) {
+  if(!isTensorSubtype(v)) {
     throw ErrorReport(range) << "expected a tensor value but found a "
                              << v->type()->str();
   }
@@ -677,7 +700,7 @@ struct to_ir {
       if (return_stmt.values().size() == 1 && results.size() == 1) {
         auto result = results.at(0);
         if(result->type()->cast<TupleType>()) {
-          results = createTupleUnpack(result).vec();
+          results = createTupleUnpack(result);
         }
       }
       if (typed_def.schema && typed_def.schema->returns.size() != results.size()) {
@@ -688,16 +711,12 @@ struct to_ir {
       auto range = return_stmt.range();
       size_t return_type_idx = 0;
       for (auto& r : results) {
-        // TODO: support tuples and lists as returns
-        auto return_kind = r->type()->kind();
-        if (return_kind != TypeKind::TensorType &&
-            return_kind != TypeKind::DynamicType &&
-            return_kind != TypeKind::IntType &&
-            return_kind != TypeKind::FloatType) {
-          throw ErrorReport(return_stmt.range()) << "The only supported return types "
-            << "are tensors, ints and floats";
+        if(r->type()->isSubtypeOf(NumberType::get())) {
+          graph->registerOutput(numToTensor(range, r));
+        } else {
+          ensureTensor(range, r);
+          graph->registerOutput(r);
         }
-        graph->registerOutput(r);
         TypePtr type = DynamicType::get();
         if (typed_def.schema) {
           type = typed_def.schema->returns.at(return_type_idx).type;
@@ -1365,11 +1384,6 @@ private:
       } break;
       case TK_LIST_LITERAL: {
         auto ll = ListLiteral(tree);
-        auto values = getValues(ll.inputs(), /*maybe_unpack=*/true, identity);
-        return graph->insertNode(graph->createTuple(values))->output();
-      } break;
-      case TK_TUPLE_LITERAL: {
-        auto ll = TupleLiteral(tree);
         auto values = getValues(ll.inputs(), /*maybe_unpack=*/true, identity);
         return graph->insertNode(graph->createTuple(values))->output();
       } break;

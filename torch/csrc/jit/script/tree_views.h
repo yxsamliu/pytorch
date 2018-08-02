@@ -58,7 +58,6 @@ namespace script {
 //       | Gather(Expr value, Expr indices)                             TK_GATHER
 //       | Var(Ident name)                                              TK_VAR
 //       | ListLiteral(List<Expr> inputs)                               TK_LIST_LITERAL
-//       | TupleLiteral(List<Expr> inputs)                              TK_TUPLE_LITERAL
 //       | Starred(Expr expr)                                           TK_STARRED
 //
 // -- NB: only allowed expressions are Const or List(Const)
@@ -256,7 +255,6 @@ struct Expr : public TreeView {
       case TK_GATHER:
       case TK_VAR:
       case TK_LIST_LITERAL:
-      case TK_TUPLE_LITERAL:
       case '@':
       case TK_POW:
         return;
@@ -696,17 +694,6 @@ struct ListLiteral : public Expr {
   }
 };
 
-struct TupleLiteral : public Expr {
-  explicit TupleLiteral(const TreeRef& tree) : Expr(tree) {
-    tree_->match(TK_TUPLE_LITERAL);
-  }
-  List<Expr> inputs() const {
-    return subtree(0);
-  }
-  static TupleLiteral create(const SourceRange& range, const List<Expr>& inputs) {
-    return TupleLiteral(Compound::create(TK_TUPLE_LITERAL, range, {inputs}));
-  }
-};
 
 struct Starred : public Expr {
   explicit Starred(const TreeRef& tree) : Expr(tree) {

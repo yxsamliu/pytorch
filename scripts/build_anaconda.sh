@@ -296,10 +296,6 @@ fi
 # Add packages required for all Caffe2 builds
 add_package 'glog'
 add_package 'gflags'
-add_package 'mkl' '>=2018'
-add_package 'mkl-include'
-add_package 'typing'
-append_to_section 'build' '- pyyaml'
 caffe2_cmake_args+=("-DUSE_LEVELDB=OFF")
 caffe2_cmake_args+=("-DUSE_LMDB=OFF")
 
@@ -307,6 +303,10 @@ caffe2_cmake_args+=("-DUSE_LMDB=OFF")
 # Add packages required for pytorch
 if [[ -n $integrated ]]; then
   add_package 'cffi'
+  add_package 'mkl' '>=2018'
+  add_package 'mkl-include'
+  add_package 'typing'
+  append_to_section 'build' '- pyyaml'
   append_to_section 'build' '- setuptools'
   #caffe2_cmake_args+=("-DBLAS=MKL")
   if [[ -n $cuda_ver ]]; then

@@ -10,7 +10,6 @@ __all__ = [
     'argmin',
     'btrifact',
     'btriunpack',
-    'broadcast_tensors',
     'isfinite',
     'isinf',
     'isnan',
@@ -18,28 +17,6 @@ __all__ = [
     'stft',
     'unique',
 ]
-
-
-def broadcast_tensors(*tensors):
-    r"""broadcast_tensors(*tensors) -> List of Tensors
-
-    Broadcasts the given tensors according to :ref:`_broadcasting-semantics`.
-
-    Args:
-        *tensors: any number of tensors of the same type
-
-    Example::
-
-        >>> x = torch.arange(3).view(1, 3)
-        >>> y = torch.arange(2).view(2, 1)
-        >>> a, b = torch.broadcast_tensors(x, y)
-        >>> a.size()
-        torch.Size([2, 3])
-        >>> a
-        tensor([[0, 1, 2],
-                [0, 1, 2]])
-    """
-    return torch._C._VariableFunctions.broadcast_tensors(tensors)
 
 
 def split(tensor, split_size_or_sections, dim=0):

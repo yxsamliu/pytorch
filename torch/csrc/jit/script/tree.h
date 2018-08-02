@@ -89,7 +89,7 @@ struct Tree : std::enable_shared_from_this<Tree> {
       throw std::runtime_error(ss.str());
     }
   }
-  virtual ~Tree() = default;
+  virtual ~Tree() {}
 
  private:
   int kind_;

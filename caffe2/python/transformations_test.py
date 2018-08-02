@@ -179,7 +179,6 @@ class TestTransformations(test_util.TestCase):
         epsilon=st.floats(min_value=1e-5, max_value=1e-2),
     )
     def test_transformer_FuseConvBN(self, size, input_channels, seed, order, epsilon):
-        workspace.ResetWorkspace()
         net = core.Net("net")
         c = input_channels
         h = size
@@ -205,22 +204,16 @@ class TestTransformations(test_util.TestCase):
         workspace.FeedBlob("scale", np.random.rand(c).astype(np.float32))
         workspace.FeedBlob("bias", np.random.rand(c).astype(np.float32))
         workspace.FeedBlob("mean", np.random.rand(c).astype(np.float32))
-        # This is necessary because 1/sqrt(var) is used and if var is too small
-        # we get floating point artifacts that cause test failures
-        workspace.FeedBlob("var", np.random.rand(c).astype(np.float32) + 0.5)
+        workspace.FeedBlob("var", np.random.rand(c).astype(np.float32))
         workspace.RunNetOnce(net)
-        preTransformOutput = workspace.FetchBlob("Y2").flatten()
-        workspace.FeedBlob("Y2", np.zeros((1, 1)))
+        preTransformOutput = workspace.FetchBlob("Y2")
         transformer.FuseConvBN(net)
 
         # Ensure fusion
         assert len(net.Proto().op) == 1
         workspace.RunNetOnce(net)
-        postTransformOutput = workspace.FetchBlob("Y2").flatten()
+        postTransformOutput = workspace.FetchBlob("Y2")
         # Check that there is no numerical difference
         assert np.allclose(
-            preTransformOutput,
-            postTransformOutput,
-            rtol=1e-02,
-            atol=1e-04
+            preTransformOutput, postTransformOutput, rtol=1e-05, atol=1e-08
         )

@@ -5,7 +5,6 @@
 #include <ATen/Allocator.h>
 #include <ATen/ScalarType.h>
 #include <ATen/ScalarTypeUtils.h>
-#include <ATen/Retainable.h>
 #include <TH/THTypeConversion.hpp>
 #include <atomic>
 
@@ -40,7 +39,7 @@ namespace at {
 
 struct Type;
 
-struct AT_API StorageImpl : public Retainable {
+struct TH_CPP_API StorageImpl {
 
   StorageImpl() = delete;
   virtual ~StorageImpl() {};
@@ -49,6 +48,8 @@ struct AT_API StorageImpl : public Retainable {
   at::ScalarType scalar_type;
   at::DataPtr data_ptr;
   ptrdiff_t size;
+  std::atomic<int> refcount;
+  std::atomic<int> weakcount;
   bool resizable;
   at::Allocator* allocator;
   std::unique_ptr<THFinalizer> finalizer;
@@ -57,8 +58,6 @@ struct AT_API StorageImpl : public Retainable {
   StorageImpl(StorageImpl&&) = delete;
   StorageImpl(const StorageImpl&&) = delete;
 
-  // TODO: Rename this into th_data, and move it out of the class;
-  // the real data shouldn't call th::from_type
   template <typename T>
   inline T* data() const {
     auto scalar_type_T = at::CTypeToScalarType<th::from_type<T>>::to();
@@ -75,14 +74,6 @@ struct AT_API StorageImpl : public Retainable {
   template <typename T>
   inline T* unsafe_data() const {
     return static_cast<T*>(this->data_ptr.get());
-  }
-
-  void release_resources() {
-    if (finalizer) {
-      (*finalizer)();
-    }
-    finalizer = nullptr;
-    data_ptr.clear();
   }
 
   void operator=(const StorageImpl&) = delete;
@@ -103,6 +94,9 @@ struct AT_API StorageImpl : public Retainable {
   const void* data() const {
     return data_ptr.get();
   };
+  void retain() {
+    ++refcount;
+  }
 
   int getDevice() const {
     return data_ptr.device().index();

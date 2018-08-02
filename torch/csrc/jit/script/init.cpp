@@ -370,15 +370,10 @@ static void gatherParametersAndBuffers(std::vector<at::Tensor*> & values, const 
   }
 }
 
-Stack createStack(const py::tuple& tuple, const Method& method) {
-  auto relevant_inputs = method.graph()->inputs().slice(0, method.num_inputs());
-  return createStack(tuple, relevant_inputs);
-}
-
 py::object runMethodFromPython(Method& m, py::args args) {
-  auto stack = createStack(args, m);
+  auto stack = createStack(args);
   m.run(stack);
-  return wrapStack(std::move(stack), m.graph()->outputs());
+  return wrapStack(std::move(stack));
 }
 
 void initJitScriptBindings(PyObject* module) {
@@ -507,8 +502,7 @@ void initJitScriptBindings(PyObject* module) {
       })
       .def("graph_for", [](Module& self, py::args args) {
         if (self.find_method("forward")) {
-          Method & m = self.get_method("forward");
-          return m.graph_for(createStack(args, m.graph()->inputs()));
+          return self.get_method("forward").graph_for(createStack(args));
         }
         throw std::runtime_error("Attempted to call graph_for on a Module without a compiled forward()");
       })
@@ -536,7 +530,7 @@ void initJitScriptBindings(PyObject* module) {
     .def("propagate_and_assign_input_and_output_shapes", &Method::propagate_and_assign_input_and_output_shapes)
     .def("params", &Method::params)
     .def("graph_for", [](Method& self, py::args args) {
-      return self.graph_for(createStack(args, self.graph()->inputs()));
+      return self.graph_for(createStack(args));
     })
     .def("set_arg_and_return_types", [](Method &self, TypedDef &typed_def, bool method) {
       std::vector<Argument> arg_type_args, return_type_args;

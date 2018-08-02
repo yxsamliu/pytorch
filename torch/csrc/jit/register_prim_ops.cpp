@@ -231,18 +231,6 @@ RegisterOperators reg({
               push(stack, std::move(vals));
               return 0;
             };
-          } else if (lt->getElementType()->isSubtypeOf(DynamicType::get())) {
-            return [=](Stack& stack) {
-              const size_t stack_size = stack.size();
-              std::vector<at::Tensor> vals;
-              vals.reserve(num_inputs);
-              for (size_t i = stack_size - num_inputs; i < stack_size; ++i) {
-                vals.push_back(std::move(stack[i]).toTensor());
-              }
-              drop(stack, num_inputs);
-              push(stack, std::move(vals));
-              return 0;
-            };
           } else {
             std::stringstream ss;
             ss << "unsupported list type: " << *lt->getElementType();
@@ -347,35 +335,7 @@ RegisterOperators reg2({
             return 0;
           };
         }),
-    Operator(
-        "aten::_tensor_to_list(Tensor a) -> int[]",
-        [](Node* node) {
-          return [=](Stack& stack) {
-            at::Tensor t;
-            pop(stack, t);
-            std::vector<int64_t> elems;
-            for(int i = 0; i < t.size(0); i++){
-              elems.push_back(*t[i].toIntData());
-            }
-            push(stack, jit::IntList::create(elems));
-            return 0;
-          };
-        }),
-    Operator(
-        "aten::_list_to_tensor(int[] a) -> Tensor",
-        [](Node* node) {
-          return [=](Stack& stack) {
-            std::vector<int64_t> l;
-            pop(stack, l);
-            auto t = torch::empty(
-                {static_cast<int64_t>(l.size())}, at::dtype(at::kInt));
-            for(size_t i = 0; i < l.size(); i++){
-              t[i] = l[i];
-            }
-            push(stack, t);
-            return 0;
-          };
-        }),
+
     // commutative
     DEFINE_ST_OP(mul, at::mul(b, a))
     DEFINE_ST_OP(add, at::add(b, a))

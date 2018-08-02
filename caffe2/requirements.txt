@@ -1,4 +1,2 @@
 numpy
 enum34
-pyyaml
-typing

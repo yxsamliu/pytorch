@@ -21,7 +21,7 @@ class IDEEPContext final : public BaseContext {
     CAFFE_ENFORCE_EQ(option.device_type(), IDEEP);
   }
 
-  ~IDEEPContext() noexcept override {}
+  ~IDEEPContext() noexcept {}
 
   BaseStaticContext* GetStaticContext() const override {
     return GetIDEEPStaticContext();

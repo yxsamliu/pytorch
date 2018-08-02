@@ -22,7 +22,7 @@
 namespace torch {
 namespace autograd {
 Variable::Impl::Impl(at::Tensor data, bool requires_grad, Edge gradient_edge)
-    : TensorImpl(data.type().backend(), data.type().scalarType(), nullptr, /* is variable */ true),
+    : TensorImpl(VariableType::getType(data), nullptr),
       data_(std::move(data)),
       grad_fn_(std::move(gradient_edge.function)),
       requires_grad_(false),
@@ -118,9 +118,7 @@ void Variable::Impl::backward(
 
 void Variable::Impl::set_data(Tensor new_data) {
   if (new_data.type() != data_.type()) {
-    scalar_type_ = new_data.type().scalarType();
-    backend_ = new_data.type().backend();
-    is_variable_ = true;
+    type_ = VariableType::getType(new_data.type());
     // Clear grad_accumulator if it exists, since it stores the old type info.
     grad_accumulator_.reset();
   }
@@ -156,8 +154,8 @@ std::shared_ptr<Function>& Variable::ViewImpl::get_grad_fn() {
     AT_ASSERT(output_nr_ == 0);
     auto fn = std::make_shared<generated::AsStridedBackward>();
     fn->self_geometry = at::TensorGeometry(base_);
-    fn->size = sizes().vec();
-    fn->stride = strides().vec();
+    fn->size = sizes();
+    fn->stride = strides();
     fn->storage_offset = data_.storage_offset();
     fn->set_next_edges(collect_next_edges(base_));
     fn->add_input_metadata(base_.type(), sizes());

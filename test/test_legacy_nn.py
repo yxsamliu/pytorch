@@ -693,18 +693,14 @@ class TestNN(NNTestCase):
 
         return module.backward(input, grad_output)
 
-    def _forward_criterion(self, criterion, input, target, extra_args=None):
-        if extra_args is None:
-            extra_args = tuple()
+    def _forward_criterion(self, criterion, input, target):
         with torch.no_grad():
-            return criterion.forward(input, target, *extra_args)
+            return criterion.forward(input, target)
 
-    def _backward_criterion(self, criterion, input, target, gradOutput=None, extra_args=None):
-        if extra_args is None:
-            extra_args = tuple()
+    def _backward_criterion(self, criterion, input, target, gradOutput=None):
         # Ignore gradOutput. It's used for non-legacy tests.
         with torch.no_grad():
-            return criterion.backward(input, target, *extra_args)
+            return criterion.backward(input, target)
 
     def _zero_grad_parameters(self, module):
         return module.zeroGradParameters()

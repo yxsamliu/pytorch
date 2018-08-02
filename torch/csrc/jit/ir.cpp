@@ -44,9 +44,9 @@ std::ostream& operator<<(std::ostream & out, const at::ArrayRef<T> & nodes) {
 }
 
 struct const_value_list_with_types {
-  const ArrayRef<const Value*> values;
+  const std::vector<const Value*>& values;
   bool use_newlines;
-  const_value_list_with_types(ArrayRef<const Value*> values, bool use_newlines = false)
+  const_value_list_with_types(const std::vector<const Value*>& values, bool use_newlines = false)
     : values(values), use_newlines(use_newlines) {}
 };
 std::ostream& operator<<(std::ostream & out, const_value_list_with_types l) {
@@ -355,7 +355,7 @@ void Graph::lint() const {
   // - every use will occur later in the topsort
 
   struct LintScope {
-    LintScope() = default;
+    LintScope() {}
     LintScope(std::unique_ptr<LintScope> parent)
     : parent(std::move(parent)) {}
     bool contains(const Value * v) {
@@ -487,13 +487,13 @@ void LintGraph(std::shared_ptr<Graph>& graph) {
   graph->lint();
 }
 
-void Block::cloneFrom(Block * src, std::function<Value*(Value*)> value_map) {
+void Block::cloneFrom(Block * src, std::function<Value*(Value*)> outer_map) {
   std::unordered_map<Value*, Value*> local_map;
   auto env = [&](Value * v) {
     auto it = local_map.find(v);
     if(it != local_map.end())
       return it->second;
-    return value_map(v);
+    return outer_map(v);
   };
 
   auto graph = owningGraph();
@@ -619,8 +619,23 @@ Value* Node::namedInput(Symbol name) const {
     // so this is completely unsafe and needs to be gone as soon as possible.
     return v;
   }
+  const auto & the_schema = schema();
+  int64_t tensor_list_pos = 0;
+  for (auto & arg : the_schema.arguments) {
+    if (*arg.type == *ListType::ofTensors())
+      break;
+    tensor_list_pos++;
+  }
   int64_t arg_pos = findArgument(schema(), name).first;
-  return input(arg_pos);
+  // XXX: we don't have a single value we could give for a Tensor[],
+  // because we flatten lists into arguments
+  JIT_ASSERT(arg_pos != tensor_list_pos);
+  // NB: if there's no tensor list, then tensor_list_pos == arguments.size(), so this is always true
+  if (arg_pos < tensor_list_pos) {
+    return input(arg_pos);
+  } else {
+    return input(inputs().size() - (the_schema.arguments.size() - arg_pos));
+  }
 }
 
 bool Node::matches(const char *signature_literal, at::ArrayRef<Symbol> const_inputs) {
@@ -631,12 +646,8 @@ bool Node::matches(const char *signature_literal, at::ArrayRef<Symbol> const_inp
   return true;
 }
 
-void Node::dump() const {
-  std::cout << *this << "\n";
-}
-
 void Node::findSchema() const {
-  schema_ = &getOperatorFor(this).schema();
+  schema_ = &getOperatorFor(this).schema;
 }
 
 PythonOp* defaultAllocPythonOp(Graph*g) {

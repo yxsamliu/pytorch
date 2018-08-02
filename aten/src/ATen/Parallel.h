@@ -37,9 +37,7 @@ inline void parallel_for(
       f(begin_tid, std::min(end, chunk_size + begin_tid));
   }
 #else
-  if (begin < end) {
-    f(begin, end);
-  }
+  f(begin, end);
 #endif
 }
 

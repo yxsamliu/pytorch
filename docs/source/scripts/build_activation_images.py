@@ -36,7 +36,6 @@ functions = [
     'ReLU6',
     'RReLU',
     'SELU',
-    'CELU',
     'Sigmoid',
     'Softplus',
     'Softshrink',

@@ -139,10 +139,8 @@ ScalarType infer_scalar_type(PyObject *obj) {
   }
 #ifdef USE_NUMPY
   if (PyArray_Check(obj)) {
-    return numpy_dtype_to_aten(PyArray_TYPE((PyArrayObject*)obj));
-  }
-  if (PyArray_CheckScalar(obj)) {
-    return numpy_dtype_to_aten(PyArray_TYPE((PyArrayObject*)(PyArray_FromScalar(obj, NULL))));
+    auto array = (PyArrayObject*)obj;
+    return numpy_dtype_to_aten(PyArray_TYPE(array));
   }
 #endif
   if (PySequence_Check(obj)) {

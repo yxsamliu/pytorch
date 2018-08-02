@@ -2,7 +2,6 @@
 #ifdef CAFFE2_OPTIMIZER
 #include "caffe2/opt/optimizer.h"
 #endif
-#include "caffe2/utils/proto_utils.h"
 
 #include <unordered_set>
 #include "caffe2/core/init.h"
@@ -97,9 +96,7 @@ Predictor::Predictor(
   GlobalInit();
 #endif
   auto predict_net = config_.predict_net;
-
-  if (optimization &&
-      !ArgumentHelper::HasArgument(*predict_net, "disable_nomnigraph")) {
+  if (optimization) {
 #ifdef CAFFE2_OPTIMIZER
     try {
       *predict_net = opt::optimize(*predict_net, &ws_, optimization);

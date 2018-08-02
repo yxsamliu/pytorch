@@ -10,6 +10,7 @@ at::Backend ATenOp<CPUContext>::backend() const {
 }
 
 OPERATOR_SCHEMA(ATen);
+CAFFE_KNOWN_TYPE(at::Half);
 
 namespace math {
 template <>

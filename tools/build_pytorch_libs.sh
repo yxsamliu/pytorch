@@ -97,11 +97,7 @@ if [[ $(uname) == 'Darwin' ]]; then
     LDFLAGS="$LDFLAGS -Wl,-rpath,@loader_path"
     LD_POSTFIX=".dylib"
 else
-    if [[ $USE_ROCM -eq 1 ]]; then
-        LDFLAGS="$LDFLAGS -Wl,-rpath,\\\\\\\$ORIGIN"
-    else
-        LDFLAGS="$LDFLAGS -Wl,-rpath,\$ORIGIN"
-    fi
+    LDFLAGS="$LDFLAGS -Wl,-rpath,\$ORIGIN"
 fi
 CPP_FLAGS=" -std=c++11 "
 GLOO_FLAGS=""

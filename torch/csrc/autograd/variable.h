@@ -263,7 +263,7 @@ struct Variable::Impl : public at::TensorImpl {
   TORCH_API explicit Impl(
       at::Tensor data,
       bool requires_grad = false,
-      Edge gradient_edge = Edge());
+      Edge edge = Edge());
 
   ~Impl() override;
 
@@ -326,6 +326,9 @@ struct Variable::Impl : public at::TensorImpl {
 
   /// Reset all expensive fields to free up resources
   void release_resources() override;
+
+  // Make this field public so we can access it from `Variable`.
+  using at::TensorImpl::type_;
 
   std::string name;
   at::Tensor data_;

@@ -38,9 +38,9 @@ void addInputs(Node *n, const char * name, const std::string& value)         { b
 void addInputs(Node *n, const char * name, const at::SparseTensorRef& value) { badArgType(); }
 
 void addInputs(Node *n, const char * name, at::TensorList value) {
-  Graph *g = n->owningGraph();
-  Node *list_node = g->appendNode(g->createList(DynamicType::get(), fmap(value, getValueTrace)));
-  n->addInput(list_node->output());
+  for (auto & t : value) {
+    n->addInput(getValueTrace(t));
+  }
 }
 
 void addInputs(Node *n, const char * name, at::IntList value) {

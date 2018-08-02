@@ -13,10 +13,9 @@
 #include <gloo/transport/tcp/device.h>
 #include <pybind11/chrono.h>
 
-#include <torch/csrc/Exceptions.h>
-#include <torch/csrc/distributed/c10d/ddp.h>
-#include <torch/csrc/utils/object_ptr.h>
-#include <torch/csrc/utils/pybind.h>
+#include "torch/csrc/Exceptions.h"
+#include "torch/csrc/utils/object_ptr.h"
+#include "torch/csrc/utils/pybind.h"
 
 namespace torch {
 namespace distributed {
@@ -199,8 +198,6 @@ PyObject* c10d_init(PyObject* _unused) {
           "wait",
           &::c10d::ProcessGroup::Work::wait,
           py::call_guard<py::gil_scoped_release>());
-
-  module.def("_dist_broadcast_coalesced", &::c10d::distBroadcastCoalesced);
 
   Py_RETURN_TRUE;
 }

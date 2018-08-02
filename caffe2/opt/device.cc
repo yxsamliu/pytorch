@@ -9,14 +9,15 @@ std::vector<NNGraph::EdgeRef> getInputEdges(
     const NNGraph::SubgraphType& sg,
     const NNGraph& g) {
   std::vector<NNGraph::EdgeRef> inputTensorEdges;
-  for (const auto& node : sg.getNodes()) {
+  for (const auto& node : sg.Nodes) {
     NOM_REQUIRE_OR_CONT(nn::is<NeuralNetOperator>(node));
     NOM_REQUIRE_OR_CONT(nn::hasInputs(node));
 
     // Check if tensor's parents are in the sg
     for (const auto& input : nn::getInputs(node)) {
       NOM_REQUIRE_OR_CONT(
-          !nn::hasProducer(input) || !sg.hasNode(nn::getProducer(input)));
+          !nn::hasProducer(input) ||
+          sg.Nodes.count(nn::getProducer(input)) == 0);
       inputTensorEdges.emplace_back(g.getEdge(input, node));
     }
   }
@@ -27,13 +28,13 @@ std::vector<NNGraph::EdgeRef> getOutputEdges(
     const NNGraph::SubgraphType& sg,
     const NNGraph& g) {
   std::vector<NNGraph::EdgeRef> outputTensorEdges;
-  for (const auto& node : sg.getNodes()) {
+  for (const auto& node : sg.Nodes) {
     NOM_REQUIRE_OR_CONT(nn::is<NeuralNetOperator>(node));
 
     for (const auto& output : nn::getOutputs(node)) {
       auto consumers = nn::getConsumers(output);
       for (const auto& consumer : consumers) {
-        NOM_REQUIRE_OR_CONT(!sg.hasNode(consumer));
+        NOM_REQUIRE_OR_CONT(sg.Nodes.count(consumer) == 0);
         outputTensorEdges.emplace_back(g.getEdge(node, output));
       }
       NOM_REQUIRE_OR_CONT(consumers.size() == 0);

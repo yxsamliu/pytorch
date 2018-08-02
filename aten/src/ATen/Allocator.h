@@ -6,7 +6,7 @@
 #include <ATen/Error.h>
 #include <ATen/Retainable.h>
 #include <ATen/Device.h>
-#include <ATen/core/UniqueVoidPtr.h>
+#include <ATen/detail/UniqueVoidPtr.h>
 
 namespace at {
 

@@ -90,8 +90,8 @@ struct PythonArgParser {
 
 private:
   [[noreturn]]
-  void print_error(PyObject* args, PyObject* kwargs, PyObject* parsed_args[]);
-  PythonArgs raw_parse(PyObject* args, PyObject* kwargs, PyObject* parsed_args[]);
+  void print_error(PyObject* args, PyObject* kwargs, PyObject* dst[]);
+  PythonArgs raw_parse(PyObject* args, PyObject* kwargs, PyObject* dst[]);
 
   std::vector<FunctionSignature> signatures_;
   std::string function_name;

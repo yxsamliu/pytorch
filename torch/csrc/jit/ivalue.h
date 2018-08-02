@@ -83,7 +83,6 @@ struct ConstantList;
 struct IValue;
 using Tuple = ConstantList<IValue>;
 using IntList = ConstantList<int64_t>;
-using TensorList = ConstantList<at::Tensor>;
 using DoubleList = ConstantList<double>;
 
 // IValue is the generic tagged union used by the interpreter to hold
@@ -94,7 +93,7 @@ using DoubleList = ConstantList<double>;
 // retain/release calls.
 
 #define TORCH_FORALL_TAGS(_) \
-  _(None) _(Tensor) _(Double) _(Int) _(Tuple) _(IntList) _(DoubleList) _(TensorList)
+  _(None) _(Tensor) _(Double) _(Int) _(Tuple) _(IntList) _(DoubleList)
 
 struct IValue {
   IValue()
@@ -224,20 +223,6 @@ struct IValue {
     return toRetainable<DoubleList>();
   }
 
-  //TensorList
-  IValue(Shared<TensorList> v);
-  IValue(std::vector<at::Tensor> v);
-  bool isTensorList() const { return Tag::TensorList == tag; }
-  Shared<TensorList> toTensorList() && {
-    JIT_ASSERT(isTensorList());
-    return moveToRetainable<TensorList>();
-  }
-  Shared<TensorList> toTensorList() const & {
-    JIT_ASSERT(isTensorList());
-    return toRetainable<TensorList>();
-  }
-
-  // None
   bool isNone() {
     return Tag::None == tag;
   }
@@ -384,15 +369,8 @@ inline IValue::IValue(Shared<DoubleList> v)
 inline IValue::IValue(std::vector<double> v)
 : IValue(DoubleList::create(std::move(v))) {}
 
-inline IValue::IValue(Shared<TensorList> v)
-: tag(Tag::TensorList), retainable(true) {
-  as_retainable = v.detach();
-}
-inline IValue::IValue(std::vector<at::Tensor> v)
-: IValue(TensorList::create(std::move(v))) {}
-
 inline std::vector<int64_t> IValue::copyToIntList() const {
-  return toIntList()->elements().vec();
+  return std::vector<int64_t>(toIntList()->elements());
 }
 
 }}

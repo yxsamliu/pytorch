@@ -5,7 +5,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from caffe2.python import core
+from caffe2.python import core, workspace
 
 
 def prelu(model, blob_in, blob_out, num_channels=1, slope_init=None,

@@ -2190,7 +2190,7 @@ class Net(object):
 def copy_func_between_devices(src, dst):
     CPU = caffe2_pb2.CPU
     if workspace.has_hip_support:
-        GPU = caffe2_pb2.HIP`
+        GPU = caffe2_pb2.HIP
     else:
         GPU = caffe2_pb2.CUDA
 

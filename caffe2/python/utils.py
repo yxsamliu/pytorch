@@ -6,7 +6,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from caffe2.proto import caffe2_pb2
-from caffe2.python import workspace
 from future.utils import viewitems
 from google.protobuf.message import DecodeError, Message
 from google.protobuf import text_format
@@ -246,7 +245,7 @@ def GetGPUMemoryUsageStats():
             "GetGPUMemoryUsage",
             [],
             ["____mem____"],
-            device_option=core.DeviceOption(caffe2_pb2.HIP if workspace.has_hip_support else caffe2_pb2.CUDA, 0),
+            device_option=core.DeviceOption(caffe2_pb2.CUDA, 0),
         ),
     )
     b = workspace.FetchBlob("____mem____")

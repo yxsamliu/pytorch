@@ -75,9 +75,11 @@ class Optimizer(object):
         if current_scope is None:
             return self.get_cpu_blob_name(base_str)
 
-        if current_scope.device_type == caffe2_pb2.CUDA:
+        if current_scope.device_type == caffe2_pb2.CUDA or current_scope.device_type == caffe2_pb2.HIP:
             return self.get_gpu_blob_name(
-                base_str, current_scope.cuda_gpu_id, current_scope.node_name
+                base_str, 
+                current_scope.hip_gpu_id if workspace.has_hip_support else current_scope.cuda_gpu_id, 
+                current_scope.node_name
             )
         else:
             return self.get_cpu_blob_name(base_str, current_scope.node_name)

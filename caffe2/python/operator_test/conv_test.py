@@ -521,7 +521,7 @@ class TestConvolution(hu.HypothesisTestCase):
                ["simple", "dag"] +
                (["async_dag"] if workspace.has_gpu_support or workspace.has_hip_support else [])),
            do=st.sampled_from(hu.device_options),
-           engine=st.sampled_from(["MIOPEN" if workspace.has_hip_support else "CUDNN", ""]))
+           engine=st.sampled_from(["CUDNN", ""]))
     def test_convolution_sync(self, net_type, num_workers, do, engine):
         m = ModelHelper(name="test_model")
         n = 1
@@ -532,7 +532,7 @@ class TestConvolution(hu.HypothesisTestCase):
         w = 5
         workspace.ResetWorkspace()
 
-        use_gpu_engine = (engine == 'CUDNN' or engine == 'MIOPEN')
+        use_cudnn = (engine == 'CUDNN')
 
         np.random.seed(1701)
         # Build a binary tree of conv layers, summing at each node.
@@ -554,7 +554,7 @@ class TestConvolution(hu.HypothesisTestCase):
                     stride=1,
                     pad=1,
                     deterministic=1,
-                    use_gpu_engine=use_gpu_engine,
+                    use_cudnn=use_cudnn,
                     engine=engine)
                 brew.conv(
                     m, bottom_2, mid_2,
@@ -566,7 +566,7 @@ class TestConvolution(hu.HypothesisTestCase):
                     bias_init=('ConstantFill', dict(value=b2)),
                     deterministic=1,
                     cudnn_state=np.random.randint(0, 3),
-                    use_gpu_engine=use_gpu_engine,
+                    use_cudnn=use_cudnn,
                     engine=engine)
                 m.net.Sum([mid_1, mid_2], top)
 
@@ -605,47 +605,42 @@ class TestConvolution(hu.HypothesisTestCase):
                 1763719461732352.0,
                 rtol=1e-5)
 
-    def test_use_gpu_engine_interactions(self):
-        """Make sure the use_gpu_engine and engine kwargs work as expected."""
+    def test_use_cudnn_engine_interactions(self):
+        """Make sure the use_cudnn and engine kwargs work as expected."""
         for model_default in [None, True, False]:
             arg_scope = {}
             if model_default is not None:
-                arg_scope['use_gpu_engine'] = model_default
+                arg_scope['use_cudnn'] = model_default
             else:
                 model_default = True  # the default
 
             model = ModelHelper(arg_scope=arg_scope)
-            self.assertEqual(model.arg_scope['use_gpu_engine'], model_default)
+            self.assertEqual(model.arg_scope['use_cudnn'], model_default)
             f = functools.partial(brew.conv, model,
                                   'conv_in', 'conv_out', 10, 10, 5)
 
-            for op_gpu_engine in [None, True, False]:
-                for op_engine in [None, '', 'MIOPEN' if workspace.has_hip_support else 'CUDNN']:
+            for op_cudnn in [None, True, False]:
+                for op_engine in [None, '', 'CUDNN']:
                     kwargs = {}
-                    if op_gpu_engine is not None:
-                        kwargs['use_gpu_engine'] = op_gpu_engine
+                    if op_cudnn is not None:
+                        kwargs['use_cudnn'] = op_cudnn
                     else:
-                        op_gpu_engine = False  # the default
+                        op_cudnn = False  # the default
                     if op_engine is not None:
                         kwargs['engine'] = op_engine
 
-                    calculated_gpu_engine = kwargs.get('use_gpu_engine', model_default)
-                    if calculated_gpu_engine:
-                        expected_engine_default = 'MIOPEN' if workspace.has_hip_support else 'CUDNN'
-                    else:
-                        expected_engine_default = ''
+                    calculated_cudnn = kwargs.get('use_cudnn', model_default)
                     expected_engine = kwargs.get(
                         'engine',
-                        expected_engine_default)
+                        'CUDNN' if calculated_cudnn else '')
 
-                    if ((calculated_gpu_engine is True and op_engine == '') or
-                            (calculated_cudnn is False and op_engine == ('MIOPEN' if workspace.has_hip_support else 'CUDNN'))):
+                    if ((calculated_cudnn is True and op_engine == '') or
+                            (calculated_cudnn is False and op_engine == 'CUDNN')):
                         with self.assertRaises(ValueError):
                             f(**kwargs)
                     else:
                         f(**kwargs)
-                        self.assertEqual(model.Proto().op[-1].engine,
-                                         expected_engine)
+                        self.assertEqual(model.Proto().op[-1].engine, expected_engine)
 
     @given(op_type=st.sampled_from(["Conv", "Conv2D"]), N=st.integers(1, 4),
            G=st.integers(1, 4), DX=st.integers(1, 4), DY=st.integers(1, 4),

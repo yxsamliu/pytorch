@@ -5,19 +5,19 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from caffe2.python import scope, workspace
+from caffe2.python import scope
 from caffe2.python.modeling.parameter_info import ParameterTags
 from caffe2.proto import caffe2_pb2
 from caffe2.python.modeling import initializers
 
 
-def lrn(model, blob_in, blob_out, order="NCHW", use_gpu_engine=False, **kwargs):
+def lrn(model, blob_in, blob_out, order="NCHW", use_cudnn=False, **kwargs):
     """LRN"""
     dev = kwargs['device_option'] if 'device_option' in kwargs \
         else scope.CurrentDeviceScope()
     is_cpu = dev is None or dev.device_type == caffe2_pb2.CPU
-    if use_gpu_engine and (not is_cpu):
-        kwargs['engine'] = 'MIOPEN' if workspace.has_hip_support else 'CUDNN'
+    if use_cudnn and (not is_cpu):
+        kwargs['engine'] = 'CUDNN'
         blobs_out = blob_out
     else:
         blobs_out = [blob_out, "_" + blob_out + "_scale"]
@@ -28,16 +28,16 @@ def lrn(model, blob_in, blob_out, order="NCHW", use_gpu_engine=False, **kwargs):
         **kwargs
     )
 
-    if use_gpu_engine and (not is_cpu):
+    if use_cudnn and (not is_cpu):
         return lrn
     else:
         return lrn[0]
 
 
-def softmax(model, blob_in, blob_out=None, use_gpu_engine=False, **kwargs):
+def softmax(model, blob_in, blob_out=None, use_cudnn=False, **kwargs):
     """Softmax."""
-    if use_gpu_engine:
-        kwargs['engine'] = 'MIOPEN' if workspace.has_hip_support else 'CUDNN'
+    if use_cudnn:
+        kwargs['engine'] = 'CUDNN'
     if blob_out is not None:
         return model.net.Softmax(blob_in, blob_out, **kwargs)
     else:

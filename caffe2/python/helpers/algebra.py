@@ -5,12 +5,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from caffe2.python import workspace
 
-def transpose(model, blob_in, blob_out, use_gpu_engine=False, **kwargs):
+def transpose(model, blob_in, blob_out, use_cudnn=False, **kwargs):
     """Transpose."""
-    if use_gpu_engine:
-        kwargs['engine'] = 'MIOPEN' if workspace.has_hip_support else 'CUDNN'
+    if use_cudnn:
+        kwargs['engine'] = 'CUDNN'
     return model.net.Transpose(blob_in, blob_out, **kwargs)
 
 

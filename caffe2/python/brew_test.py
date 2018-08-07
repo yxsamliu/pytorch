@@ -294,7 +294,7 @@ class BrewTest(unittest.TestCase):
         self.assertEqual(output_value, 18)
 
 
-@unittest.skipIf(not workspace.has_gpu_support and not workspace.has_hip_support, "No gpu support.")
+@unittest.skipIf(not workspace.has_gpu_support, "No gpu support.")
 class BrewGPUTest(unittest.TestCase):
     def test_relu(self):
         Xpos = np.ones((5, 5)).astype(np.float32) - 0.5
@@ -303,8 +303,8 @@ class BrewGPUTest(unittest.TestCase):
         workspace.FeedBlob("xpos", Xpos)
         workspace.FeedBlob("xneg", Xneg)
         model = ModelHelper(name="test_model")
-        brew.relu(model, "xpos", "out_xpos", use_gpu_engine=True)
-        brew.relu(model, "xneg", "out_xneg", use_gpu_engine=True)
+        brew.relu(model, "xpos", "out_xpos", use_cudnn=True)
+        brew.relu(model, "xneg", "out_xneg", use_cudnn=True)
         model.Validate()
         workspace.RunNetOnce(model.param_init_net)
         workspace.RunNetOnce(model.net)
@@ -319,13 +319,10 @@ class BrewGPUTest(unittest.TestCase):
 
         workspace.FeedBlob("x", X)
         model = ModelHelper(name="test_model")
-        brew.tanh(model, "x", "out_tanh", use_gpu_engine=True)
+        brew.tanh(model, "x", "out_tanh", use_cudnn=True)
         model.Validate()
         workspace.RunNetOnce(model.param_init_net)
         workspace.RunNetOnce(model.net)
 
         out = workspace.FetchBlob("out_tanh")
         self.assertAlmostEqual(out.mean(), np.tanh(0.5), places=5)
-
-if __name__ == '__main__':
-    unittest.main()

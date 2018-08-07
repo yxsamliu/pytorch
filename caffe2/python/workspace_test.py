@@ -589,8 +589,8 @@ class TestTransform(htu.HypothesisTestCase):
         conv = brew.conv(m, fc2, "conv",
                             dim_in=output_dim,
                             dim_out=output_dim,
-                            use_gpu_engine=True,
-                            engine="MIOPEN" if workspace.has_hip_support else "CUDNN",
+                            use_cudnn=True,
+                            engine="CUDNN",
                             kernel=3)
 
         conv.Relu([], conv)\
@@ -631,8 +631,8 @@ class TestTransform(htu.HypothesisTestCase):
                             dim_in=5,
                             dim_out=5,
                             kernel=3,
-                            use_gpu_engine=True,
-                            engine="MIOPEN" if workspace.has_hip_support else "CUDNN")
+                            use_cudnn=True,
+                            engine="CUDNN")
 
         conv.Relu([], conv)\
            .Softmax([], "pred") \

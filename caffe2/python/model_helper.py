@@ -119,8 +119,8 @@ class ModelHelper(object):
         self.biases = []
         self._arg_scope = {
             'order': "NCHW",
-            'use_gpu_engine': True,
-            'gpu_engine_exhaustive_search': False,
+            'use_cudnn': True,
+            'cudnn_exhaustive_search': False,
         }
         if arg_scope is not None:
             # Please notice value as None is not acceptable. We are not checking it
@@ -591,7 +591,6 @@ def ExtractPredictorNet(
                     op.device_option.hip_gpu_id = device.hip_gpu_id
                 else:
                     op.device_option.cuda_gpu_id = device.cuda_gpu_id
-
             validate_op(op)
             predict_proto.op.extend([op])
             known_blobs.update(op.output)

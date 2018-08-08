@@ -2021,16 +2021,16 @@ class Net(object):
             raise ValueError('{} is not supported'.format(aggregator))
         return GradientSlice(indices=unique, values=new_g)
 
-    def RunAllOnGPU(self, gpu_id=0, use_gpu_engine=False):
+    def RunAllOnGPU(self, gpu_id=0, use_cudnn=False):
         """A convenient function to run everything on the GPU."""
         device_option = caffe2_pb2.DeviceOption()
         device_option.device_type = caffe2_pb2.HIP if workspace.has_hip_support else caffe2_pb2.CUDA
         device_option.cuda_gpu_id = gpu_id
         device_option.hip_gpu_id = gpu_id
         self._net.device_option.CopyFrom(device_option)
-        if use_gpu_engine:
+        if use_cudnn:
             for op in self._net.op:
-                op.engine = "MIOPEN" if workspace.has_hip_support else 'CUDNN'
+                op.engine = 'CUDNN'
 
     def RunAllOnMKL(self):
         """A convenient function to run everything using MKLDNN."""

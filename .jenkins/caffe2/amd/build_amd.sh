@@ -2,12 +2,10 @@
 
 set -ex
 
-pip install --user --no-cache-dir hypothesis==3.59.0
-
 # The INSTALL_PREFIX here must match up with test.sh
 INSTALL_PREFIX="/usr/local/caffe2"
 LOCAL_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-ROOT_DIR=$(cd "$LOCAL_DIR"/../.. && pwd)
+ROOT_DIR=$(cd "$LOCAL_DIR"/../../.. && pwd)
 CMAKE_ARGS=()
 
 ##############################################################################
@@ -41,23 +39,7 @@ export HCC_AMDGPU_TARGET=gfx900
 ########## HIPIFY Caffe2 operators
 ${PYTHON} "${ROOT_DIR}/tools/amd_build/build_caffe2_amd.py"
 
-# Try to include Redis support for Linux builds
-if [ "$(uname)" == "Linux" ]; then
-  CMAKE_ARGS+=("-DUSE_REDIS=ON")
-fi
-
-# We test the presence of cmake3 (for platforms like Centos and Ubuntu 14.04)
-# and use that if so.
-if [[ -x "$(command -v cmake3)" ]]; then
-    CMAKE_BINARY=cmake3
-else
-    CMAKE_BINARY=cmake
-fi
-
 MAX_JOBS=$(nproc)
-
-
-
 
 ###############################################################################
 # Configure and make
@@ -70,7 +52,7 @@ mkdir build_caffe2
 cd ./build_caffe2
 
 # Configure
-${CMAKE_BINARY} "${ROOT_DIR}" ${CMAKE_ARGS[*]} "$@"
+ "${ROOT_DIR}" ${CMAKE_ARGS[*]} "$@"
 
 # Build
 if [ "$(uname)" == "Linux" ]; then
@@ -87,3 +69,6 @@ fi
 # Install ONNX into a local directory
 pip install --user -b /tmp/pip_install_onnx "file://${ROOT_DIR}/third_party/onnx#egg=onnx"
 
+# Set environment variables
+export LD_LIBRARY_PATH=/usr/local/caffe2/lib:$LD_LIBRARY_PATH
+export PYTHONPATH=/usr/local/caffe2/lib/python2.7/dist-packages:$PYTHONPATH

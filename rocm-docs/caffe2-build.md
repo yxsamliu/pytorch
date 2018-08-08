@@ -1,11 +1,7 @@
 # Caffe2: Building From Source on ROCm Platform
 
 ## Intro
-This instruction provides a starting point to build caffe2 on AMD GPUs (Caffe2 ROCm port) from source. This requires you to install ROCm stack on your bare metal.
-
-## Install ROCm
-
-Install ROCm stack following steps at [link](https://github.com/RadeonOpenCompute/ROCm/blob/master/README.md) if your machine doesn't have ROCm already.
+This instruction provides a starting point to build caffe2 on AMD GPUs (Caffe2 ROCm port) from source. This requires you to install ROCm stack on your bare metal. Install ROCm stack following steps at [link](https://github.com/RadeonOpenCompute/ROCm/blob/master/README.md) if your machine doesn't have ROCm already.
 
 Once the machine is ready with ROCm stack, there are three ways to use caffe2 
 * Run the docker container with caffe2 installed in it.

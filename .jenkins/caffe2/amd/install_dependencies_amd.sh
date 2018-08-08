@@ -56,6 +56,9 @@ update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-"$CLANG_VERSION"
 
 
 apt-get install -y --no-install-recommends \
+        rocm-dev \
+        rocm-utils \
+        rocm-libs \
         rocfft \
         miopen-hip \
         miopengemm \

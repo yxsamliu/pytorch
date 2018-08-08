@@ -1,30 +1,29 @@
 # Caffe2: Building From Source on ROCm Platform
 
 ## Intro
-This instruction provides a starting point to build caffe2 on AMD GPUs (Caffe2 ROCm port) from source.
-*Note*: it is recommended to start with a clean Ubuntu 16.04 system
-
-## Install docker
-
- If your machine doesn't have docker installed, follow the steps [here](https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-docker-ce) to install docker.
+This instruction provides a starting point to build caffe2 on AMD GPUs (Caffe2 ROCm port) from source. This requires you to install ROCm stack on your bare metal.
 
 ## Install ROCm
 
 Install ROCm stack following steps at [link](https://github.com/RadeonOpenCompute/ROCm/blob/master/README.md) if your machine doesn't have ROCm already.
 
-Once the machine is ready with ROCm stack, there are two ways to use caffe2 
+Once the machine is ready with ROCm stack, there are three ways to use caffe2 
 * Run the docker container with caffe2 installed in it.
 
-* Build caffe2 from source inside a docker with all the dependencies.
+* Build caffe2 from source inside a docker environment.
 
-## Launch docker container with caffe2 pre-installed
+* Build caffe2 from source on bare metal environment
+
+If you are looking for docker based installations, follow the steps [here](https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-docker-ce) to install docker if you do not have one already.
+
+## 1. Launch docker container with caffe2 pre-installed
 ```
 docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video rocm/caffe2:rocm1.8.2
 ```
 
 To run benchmarks, skip directly to benchmarks section of the document.
 
-## Build Caffe2 from source
+## 2. Build caffe2 from source inside docker
 ### Pull the docker image
 ```
 docker pull rocm/caffe2:unbuilt-rocm1.8.2
@@ -51,23 +50,30 @@ docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add vi
 ``` 
 Navigate to pytorch directory `cd /pytorch` inside the container.
 
-### Build caffe2 Project from source
+Run the below command to build caffe2  
 
-* Run the command  
-
-	`.jenkins/caffe2/build.sh`
+`.jenkins/caffe2/amd/build_amd.sh`
 
 	
-* Test the rocm-caffe2 Installation 
+## 3. Build caffe2 from source on bare metal
 
-	Before running the tests, make sure that the required environment variables are set:
-	``` 
-	export LD_LIBRARY_PATH=/usr/local/caffe2/lib:$LD_LIBRARY_PATH
-	export PYTHONPATH=/usr/local/caffe2/lib/python2.7/dist-packages:$PYTHONPATH
-	```
+Clone this repository and isntall the dependencies required by running
+```
+<pytorch_home>/.jenkins/caffe2/amd/install_dependecies_amd.sh
+```
+Run the build script to build caffe2 from source.
+```
+<pytorch_home>/.jenkins/caffe2/amd/build_amd.sh
+```
 
-	Run the binaries under `/pytorch/build_caffe2/bin`
 
+## Test installation
+
+Run this to see if your Caffe2 installation was successful
+
+```
+cd ~ && python -c 'from caffe2.python import core' 2>/dev/null && echo "Success" || echo "Failure"
+```
 ## Run benchmarks
 
 Navigate to build directory, `cd /pytorch/build_caffe2` to run benchmarks.

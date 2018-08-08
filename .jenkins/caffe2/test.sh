@@ -109,6 +109,10 @@ if [[ $BUILD_ENVIRONMENT == *-rocm* ]]; then
   # Our cuda top_k op has some asm code, the hipified version doesn't
   # compile yet, so we don't have top_k operator for now
   rocm_ignore_test+=("--ignore $CAFFE2_PYPATH/python/operator_test/top_k_test.py")
+
+  # this is a multi-gpu test
+  rocm_ignore_test+=("--ignore $CAFFE2_PYPATH/python/data_parallel_model_test.py")
+
 fi
 
 # Python tests

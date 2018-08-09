@@ -57,7 +57,7 @@ Navigate to pytorch directory `cd /pytorch` inside the container.
 
 * Run the command  
 
-	`.jenkins/caffe2/build.sh`
+	`.jenkins/caffe2/amd/amd_build.sh`
 
 	
 * Test the rocm-caffe2 Installation 

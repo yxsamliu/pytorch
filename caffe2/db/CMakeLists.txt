@@ -1,4 +1,4 @@
-iset(Caffe2_DB_COMMON_CPU_SRC
+set(Caffe2_DB_COMMON_CPU_SRC
     "${CMAKE_CURRENT_SOURCE_DIR}/create_db_op.cc"
     "${CMAKE_CURRENT_SOURCE_DIR}/protodb.cc"
 )

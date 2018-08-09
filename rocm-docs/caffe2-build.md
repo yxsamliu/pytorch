@@ -66,6 +66,12 @@ Navigate to pytorch directory `cd /pytorch` inside the container.
 	```
 	cd build_caffe2 && python -c 'from caffe2.python import core' 2>/dev/null && echo "Success" || echo "Failure"
 	```
+Make sure the the following environment variables are set.
+
+```
+LD_lIBRARY_PATH=/usr/local/caffe2/lib
+PYTHONPATH=/usr/local/caffe2/lib/python2.7/dist-packages
+```
 
 ## Run benchmarks
 

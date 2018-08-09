@@ -69,6 +69,3 @@ fi
 # Install ONNX into a local directory
 pip install --user -b /tmp/pip_install_onnx "file://${ROOT_DIR}/third_party/onnx#egg=onnx"
 
-# Set environment variables
-export LD_LIBRARY_PATH=/usr/local/caffe2/lib:$LD_LIBRARY_PATH
-export PYTHONPATH=/usr/local/caffe2/lib/python2.7/dist-packages:$PYTHONPATH

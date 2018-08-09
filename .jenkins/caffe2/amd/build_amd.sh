@@ -52,7 +52,7 @@ mkdir build_caffe2
 cd ./build_caffe2
 
 # Configure
- "${ROOT_DIR}" ${CMAKE_ARGS[*]} "$@"
+cmake "${ROOT_DIR}" ${CMAKE_ARGS[*]} "$@"
 
 # Build
 if [ "$(uname)" == "Linux" ]; then

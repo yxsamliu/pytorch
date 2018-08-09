@@ -19,7 +19,7 @@ Once the machine is ready with ROCm stack, there are two ways to use caffe2
 
 ## Launch docker container with caffe2 pre-installed
 ```
-docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video rocm/caffe2:rocm1.8.2
+docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video rocm/caffe2:rocm1.8.2-v2
 ```
 
 To run benchmarks, skip directly to benchmarks section of the document.
@@ -27,18 +27,20 @@ To run benchmarks, skip directly to benchmarks section of the document.
 ## Build Caffe2 from source
 ### Pull the docker image
 ```
-docker pull rocm/caffe2:unbuilt-rocm1.8.2
+docker pull rocm/caffe2:unbuilt-rocm1.8.2-v2
 ```
 This docker image has all the dependencies for caffe2 pre-installed.
 
 ### Pull the latest caffe2 source:
+
+Checkout the `caffe2_specific` branch of this repository.
 * Using https 
 ```
-git clone --recurse-submodules https://github.com/ROCmSoftwarePlatform/pytorch.git
+git clone --recurse-submodules -b caffe2_specific https://github.com/ROCmSoftwarePlatform/pytorch.git
 ```
 * Using ssh
 ```
-git clone --recurse-submodules git@github.com:ROCmSoftwarePlatform/pytorch.git
+git clone --recurse-submodules -b caffe2_specific git@github.com:ROCmSoftwarePlatform/pytorch.git
 ```
 Navigate to repo directory
 ```
@@ -47,7 +49,7 @@ cd pytorch
 
 ### Launch the docker container
 ```	
-docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/pytorch rocm/caffe2:unbuilt-rocm1.8.2
+docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/pytorch rocm/caffe2:unbuilt-rocm1.8.2-v2
 ``` 
 Navigate to pytorch directory `cd /pytorch` inside the container.
 
@@ -61,12 +63,9 @@ Navigate to pytorch directory `cd /pytorch` inside the container.
 * Test the rocm-caffe2 Installation 
 
 	Before running the tests, make sure that the required environment variables are set:
-	``` 
-	export LD_LIBRARY_PATH=/usr/local/caffe2/lib:$LD_LIBRARY_PATH
-	export PYTHONPATH=/usr/local/caffe2/lib/python2.7/dist-packages:$PYTHONPATH
 	```
-
-	Run the binaries under `/pytorch/build_caffe2/bin`
+	cd build_caffe2 && python -c 'from caffe2.python import core' 2>/dev/null && echo "Success" || echo "Failure"
+	```
 
 ## Run benchmarks
 

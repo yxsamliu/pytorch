@@ -4,7 +4,7 @@
 
 void THCStorage_(rawCopy)(THCState *state, THCStorage *self, real *src)
 {
-  THCudaCheck(cudaMemcpyAsync(THCStorage_(data)(state, self), src, self->size() * sizeof(real), cudaMemcpyDeviceToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(THCStorage_(data)(state, self), src, self->size() * sizeof(real), hipMemcpyDeviceToDevice, THCState_getCurrentStream(state)));
 }
 
 // conversions are delegated to THCTensor implementation

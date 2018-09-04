@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorSort.cu"
 #else
@@ -53,8 +54,8 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
     dim3 block(blockSize);                                              \
                                                                         \
     if (dir) {                                                          \
-      bitonicSortKVInPlace<real, int64_t, A, -1, GTComp<real>, TYPE, SIZE> \
-        <<<grid, block, 0, THCState_getCurrentStream(state)>>>(         \
+     hipLaunchKernelGGL( bitonicSortKVInPlace<real, int64_t, A, -1, GTComp<real>, TYPE, SIZE> \
+        , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state),          \
           keyInfo,                                                      \
           keySlices,                                                    \
           (TYPE) keySliceSize,                                          \
@@ -63,8 +64,8 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
           (TYPE) valueInfo.strides[collapseValueDim],                   \
           GTComp<real>());                                              \
     } else {                                                            \
-      bitonicSortKVInPlace<real, int64_t, A, -1, LTComp<real>, TYPE, SIZE> \
-        <<<grid, block, 0, THCState_getCurrentStream(state)>>>(         \
+     hipLaunchKernelGGL( bitonicSortKVInPlace<real, int64_t, A, -1, LTComp<real>, TYPE, SIZE> \
+        , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state),          \
           keyInfo,                                                      \
           keySlices,                                                    \
           (TYPE) keySliceSize,                                          \
@@ -101,7 +102,7 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
       /* Nothing to do, data already sorted */          \
       break;                                            \
       default:                                          \
-      assert(false);                                    \
+      ;                                    \
     }                                                   \
   }
 
@@ -148,7 +149,7 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
 #undef HANDLE_SORT_CASE
 #undef HANDLE_A_CASE
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 void THCTensor_(sortViaThrust)(THCState* state,
@@ -326,7 +327,7 @@ THC_API void THCTensor_(sort)(THCState* state,
     THCTensor_(sortViaThrust)(state, sorted, indices, input, dim, (bool) order);
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #endif

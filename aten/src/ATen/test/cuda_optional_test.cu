@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 

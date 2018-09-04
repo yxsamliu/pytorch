@@ -23,7 +23,7 @@ struct kl_functor
 template <typename Dtype>
 struct kl_updateOutput_no_reduce_functor
 {
-  __forceinline__ __host__ __device__ void operator()(
+  inline __host__ __device__ void operator()(
       const Dtype *x,
       const Dtype *y,
       Dtype *output)

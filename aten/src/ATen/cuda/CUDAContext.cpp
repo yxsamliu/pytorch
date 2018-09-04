@@ -6,21 +6,21 @@ namespace at { namespace cuda {
 /* Device info */
 int64_t getNumGPUs() {
   int count;
-  AT_CUDA_CHECK(cudaGetDeviceCount(&count));
+  AT_CUDA_CHECK(hipGetDeviceCount(&count));
   return count;
 }
 
 int64_t current_device() {
   int cur_device;
-  AT_CUDA_CHECK(cudaGetDevice(&cur_device));
+  AT_CUDA_CHECK(hipGetDevice(&cur_device));
   return cur_device;
 }
 
-cudaDeviceProp* getCurrentDeviceProperties() {
+hipDeviceProp_t* getCurrentDeviceProperties() {
   return THCState_getCurrentDeviceProperties(at::globalContext().getTHCState());
 }
 
-cudaDeviceProp* getDeviceProperties(int64_t device) {
+hipDeviceProp_t* getDeviceProperties(int64_t device) {
   return THCState_getDeviceProperties(at::globalContext().getTHCState(), (int)device);
 }
 
@@ -66,7 +66,7 @@ void uncheckedSetCurrentCUDAStreamOnDevice(int64_t device, CUDAStream stream) {
 
 /* Handles */
 #ifndef __HIP_PLATFORM_HCC__
-  cusparseHandle_t getCurrentCUDASparseHandle() {
+  hipsparseHandle_t getCurrentCUDASparseHandle() {
     return THCState_getCurrentSparseHandle(at::globalContext().getTHCState());
   }
 #endif

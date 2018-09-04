@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "THCUNN.h"
 #include "common.h"
 #include "THCDeviceTensor.cuh"
@@ -74,8 +75,8 @@ __global__ void SpatialFractionalMaxPooling_updateOutput(
       }
     }
 
-    assert(THCNumerics<Dtype>::ne(maxVal, THCNumerics<Dtype>::min()));
-    assert(maxIndex != -1);
+    ;
+    ;
 
     // +1 for Lua index
     indices[batch][plane][outputH][outputW] = maxIndex + TH_INDEX_BASE;
@@ -99,10 +100,10 @@ __global__ void SpatialFractionalMaxPooling_updateGradInput(
     int outputH = ourOutputPoint / gradOutput.getSize(3);
 
     int index = indices[batch][plane][outputH][outputW] - TH_INDEX_BASE;
-    assert(index >= 0);
+    ;
     int inputW = index % gradInput.getSize(3);
     int inputH = index / gradInput.getSize(3);
-    assert(inputH < gradInput.getSize(2));
+    ;
 
     atomicAdd(gradInput[batch][plane][inputH][inputW].data(),
               gradOutput[batch][plane][outputH][outputW]);

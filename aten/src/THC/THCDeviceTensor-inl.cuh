@@ -184,8 +184,8 @@ THCDeviceTensor<T, Dim, IndexT, PtrTraits>::transpose(int dim1,
                                                       int dim2) const {
 #if defined(__CUDA_ARCH__) || defined(__HIP_PLATFORM_HCC__)
   // Device code
-  assert(dim1 >= 0 && dim1 < Dim);
-  assert(dim1 >= 0 && dim2 < Dim);
+  ;
+  ;
 #else
   // Host code
   if (dim1 < 0 || dim1 >= Dim) {
@@ -287,7 +287,7 @@ THCDeviceTensor<T, Dim, IndexT, PtrTraits>::downcastOuter() {
   bool cont = isContiguousRange(0, Dim - NewDim);
 #if defined(__CUDA_ARCH__) || defined(__HIP_PLATFORM_HCC__)
   // Device code
-  assert(cont);
+  ;
 #else
   // Host code
   if (!cont) {
@@ -338,7 +338,7 @@ THCDeviceTensor<T, Dim, IndexT, PtrTraits>::downcastInner() {
   bool cont = isContiguousRange(NewDim, Dim);
 #if defined(__CUDA_ARCH__) || defined(__HIP_PLATFORM_HCC__)
   // Device code
-  assert(cont);
+  ;
 #else
   // Host code
   if (!cont) {
@@ -403,14 +403,14 @@ THCDeviceTensor<T, Dim, IndexT, PtrTraits>::view() {
 template <typename T, int Dim,
           typename IndexT, template <typename U> class PtrTraits>
 void
-THCDeviceTensor<T, Dim, IndexT, PtrTraits>::zero(cudaStream_t stream) {
+THCDeviceTensor<T, Dim, IndexT, PtrTraits>::zero(hipStream_t stream) {
 #if defined(__CUDA_ARCH__) || defined(__HIP_PLATFORM_HCC__)
-  assert(isContiguous());
+  ;
 #else
   if (!isContiguous()) {
     THError("fillAsync only works on contiguous data");
   }
 #endif
 
-  cudaMemsetAsync(data(), 0, numElements() * sizeof(T), stream);
+  hipMemsetAsync(data(), 0, numElements() * sizeof(T), stream);
 }

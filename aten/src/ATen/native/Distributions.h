@@ -58,7 +58,7 @@ deviceforcuda scalar_t sample_gamma(scalar_t alpha, BaseSampler<accscalar_t>& st
   // Boost alpha for higher acceptance probability.
   if (alpha < 1.0f) {
     if (alpha == 0.f) return 0.f;
-    scale *= std::pow(1 - standard_uniform.sample(), 1.0f / alpha);
+    scale *= ::pow(1 - standard_uniform.sample(), 1.0f / alpha);
     alpha += 1.0f;
   }
 
@@ -77,7 +77,7 @@ deviceforcuda scalar_t sample_gamma(scalar_t alpha, BaseSampler<accscalar_t>& st
     const accscalar_t xx = x * x;
     if (u < 1.0f - 0.0331f * xx * xx)
       return static_cast<scalar_t>(scale * d * v);
-    if (std::log(u) < 0.5f * xx + d * (1.0f - v + std::log(v)))
+    if (::log(u) < 0.5f * xx + d * (1.0f - v + ::log(v)))
       return static_cast<scalar_t>(scale * d * v);
   }
 }
@@ -143,7 +143,7 @@ deviceforcuda static inline scalar_t digamma_one(scalar_t x) {
     accscalar_t z = 1.0 / (x * x);
     y = z * polevl<accscalar_t>(z, A, 6);
   }
-  return static_cast<scalar_t>(result + std::log(x) - (0.5f / x) - y + additional_summand);
+  return static_cast<scalar_t>(result + ::log(x) - (0.5f / x) - y + additional_summand);
 }
 
 // Computes the reparameterized gradient -(d/dalpha cdf(x;alpha)) / pdf(x;alpha)
@@ -164,10 +164,10 @@ deviceforcuda scalar_t standard_gamma_grad_one(scalar_t alpha_, scalar_t x_) {
       series1 += numer / denom;
       series2 += numer / (denom * denom);
     }
-    const auto pow_x_alpha = std::pow(x, alpha);
-    const auto gamma_pdf = std::pow(x, alpha - 1) * std::exp(-x);
+    const auto pow_x_alpha = ::pow(x, alpha);
+    const auto gamma_pdf = ::pow(x, alpha - 1) * ::exp(-x);
     const auto gamma_cdf = pow_x_alpha * series1;
-    const auto gamma_cdf_alpha = (std::log(x) - digamma_one<accscalar_t,accscalar_t>(alpha)) * gamma_cdf
+    const auto gamma_cdf_alpha = (::log(x) - digamma_one<accscalar_t,accscalar_t>(alpha)) * gamma_cdf
         - pow_x_alpha * series2;
     const auto result = -gamma_cdf_alpha / gamma_pdf;
     return isnan(result) ? static_cast<scalar_t>( 0.f ) : static_cast<scalar_t>(result);
@@ -184,9 +184,9 @@ deviceforcuda scalar_t standard_gamma_grad_one(scalar_t alpha_, scalar_t x_) {
     }
     const auto denom = std::sqrt(8 * alpha);
     const auto term2 = denom / (alpha - x);
-    const auto term3 = std::pow(x - alpha - alpha * std::log(x / alpha), static_cast<accscalar_t>(-1.5));
+    const auto term3 = ::pow(x - alpha - alpha * ::log(x / alpha), static_cast<accscalar_t>(-1.5));
     const auto term23 = (x < alpha) ? term2 - term3 : term2 + term3;
-    const auto term1 = std::log(x / alpha) * term23
+    const auto term1 = ::log(x / alpha) * term23
                      - std::sqrt(2 / alpha) * (alpha + x) / ((alpha - x) * (alpha - x));
     const auto stirling = 1 + 1 / (12 * alpha) * (1 + 1 / (24 * alpha));
     const auto numer = x * term1;
@@ -194,8 +194,8 @@ deviceforcuda scalar_t standard_gamma_grad_one(scalar_t alpha_, scalar_t x_) {
   }
 
   // Use a bivariate rational approximation to the reparameterized gradient.
-  const auto u = std::log(x / alpha);
-  const auto v = std::log(alpha);
+  const auto u = ::log(x / alpha);
+  const auto v = ::log(alpha);
   static const accscalar_t coef_uv[3][8] = {
     {0.16009398, -0.094634809, 0.025146376, -0.0030648343,
      1, 0.32668115, 0.10406089, 0.0014179084},
@@ -210,7 +210,7 @@ deviceforcuda scalar_t standard_gamma_grad_one(scalar_t alpha_, scalar_t x_) {
   }
   const auto p = coef_v[0] + v * (coef_v[1] + v * (coef_v[2] + v * coef_v[3]));
   const auto q = coef_v[4] + v * (coef_v[5] + v * (coef_v[6] + v * coef_v[7]));
-  return static_cast<scalar_t>(std::exp(p / q));
+  return static_cast<scalar_t>(::exp(p / q));
 }
 
 } // namespace

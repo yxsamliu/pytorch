@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #pragma once
 
 #include "ATen/cuda/detail/IndexUtils.cuh"
@@ -233,7 +234,7 @@ kernelPointwiseApply4(detail::TensorInfo<scalar1, IndexType> a,
    Computes ceil(a / b)
 */
 template <typename T>
-__host__ __device__ __forceinline__ T ATenCeilDiv(T a, T b) {
+__host__ __device__ inline T ATenCeilDiv(T a, T b) {
   return (a + b - 1) / b;
 }
 
@@ -319,11 +320,11 @@ bool CUDA_tensor_apply2(at::Tensor a,
   // index can be similarly collapsed. That is what this unrolling is for.
 
 #define HANDLE_CASE(TYPE, A, B)                                         \
-  kernelPointwiseApply2<Op,                                             \
+ hipLaunchKernelGGL( kernelPointwiseApply2<Op,                                             \
                         scalar1,                                        \
                         scalar2,                                        \
                         TYPE, A, B>                                     \
-   <<<grid, block, 0, at::cuda::getCurrentCUDAStreamOnDevice(curDevice)>>>(    \
+   , dim3(grid), dim3(block), 0, at::cuda::getCurrentCUDAStreamOnDevice(curDevice),     \
        aInfo, bInfo, (TYPE) totalElements, op);
 
 #define HANDLE_B_CASE(TYPE, A, B) {         \
@@ -385,21 +386,21 @@ bool CUDA_tensor_apply2(at::Tensor a,
     large (64-bit indexed) tensors to reduce compilation time. 
     */
     if (aInfo.dims == 1 && bInfo.dims == 1) {
-      kernelPointwiseApply2<Op,
+     hipLaunchKernelGGL( kernelPointwiseApply2<Op,
                             scalar1,
                             scalar2,
                           uint64_t, 1, 1>
-        <<<grid, block, 0, at::cuda::getCurrentCUDAStream()>>>(
+        , dim3(grid), dim3(block), 0, at::cuda::getCurrentCUDAStream(), 
            aInfo, bInfo, (uint64_t) totalElements, op);
     } else {
 #if CUDA_VERSION < 9000
       grid.x = std::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
 #endif
-      kernelPointwiseApply2<Op,
+     hipLaunchKernelGGL( kernelPointwiseApply2<Op,
                             scalar1,
                             scalar2,
                             uint64_t, -1, -1>
-        <<<grid, block, 0, at::cuda::getCurrentCUDAStream()>>>(
+        , dim3(grid), dim3(block), 0, at::cuda::getCurrentCUDAStream(), 
            aInfo, bInfo, (uint64_t) totalElements, op);
     }
   }
@@ -498,12 +499,12 @@ bool CUDA_tensor_apply3(at::Tensor a,
   }
 
 #define HANDLE_CASE(TYPE, A, B, C)                                      \
-  kernelPointwiseApply3<Op,                                             \
+ hipLaunchKernelGGL( kernelPointwiseApply3<Op,                                             \
                         scalar1,                                        \
                         scalar2,                                        \
                         scalar3,                                        \
                         TYPE, A, B, C>                                  \
-    <<<grid, block, 0, at::cuda::getCurrentCUDAStreamOnDevice(curDevice)>>>(   \
+    , dim3(grid), dim3(block), 0, at::cuda::getCurrentCUDAStreamOnDevice(curDevice),    \
       aInfo, bInfo, cInfo, (TYPE) totalElements, op);
 
 #define HANDLE_C_CASE(TYPE, A, B, C) {      \
@@ -590,24 +591,24 @@ bool CUDA_tensor_apply3(at::Tensor a,
     large (64-bit indexed) tensors to reduce compilation time. 
     */
     if (aInfo.dims == 1 && bInfo.dims == 1 && cInfo.dims == 1) {
-      kernelPointwiseApply3<Op,
+     hipLaunchKernelGGL( kernelPointwiseApply3<Op,
                             scalar1,
                             scalar2,
                             scalar3,
                             uint64_t, 1, 1, 1>
-        <<<grid, block, 0, at::cuda::getCurrentCUDAStream()>>>(
+        , dim3(grid), dim3(block), 0, at::cuda::getCurrentCUDAStream(), 
           aInfo, bInfo, cInfo, (uint64_t) totalElements, op);
     } else {
 #if CUDA_VERSION < 9000
   grid.x = std::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
 #endif
 
-	kernelPointwiseApply3<Op,
+hipLaunchKernelGGL(	kernelPointwiseApply3<Op,
                         scalar1,
                         scalar2,
                         scalar3,
                         uint64_t, -1, -1, -1>
-        <<<grid, block, 0, at::cuda::getCurrentCUDAStream()>>>(
+        , dim3(grid), dim3(block), 0, at::cuda::getCurrentCUDAStream(), 
           aInfo, bInfo, cInfo, (uint64_t) totalElements, op);
     }
   }
@@ -725,13 +726,13 @@ bool CUDA_tensor_apply4(at::Tensor a,
   }
 
 #define HANDLE_CASE(TYPE, A, B, C, D)                                   \
-  kernelPointwiseApply4<Op,                                             \
+ hipLaunchKernelGGL( kernelPointwiseApply4<Op,                                             \
                         scalar1,                                        \
                         scalar2,                                        \
                         scalar3,                                        \
                         scalar4,                                        \
                         TYPE, A, B, C, D>                               \
-    <<<grid, block, 0, at::cuda::getCurrentCUDAStreamOnDevice(curDevice)>>>(   \
+    , dim3(grid), dim3(block), 0, at::cuda::getCurrentCUDAStreamOnDevice(curDevice),    \
     aInfo, bInfo, cInfo, dInfo, (TYPE) totalElements, op);
 
 #define HANDLE_D_CASE(TYPE, A, B, C, D) {       \
@@ -841,26 +842,26 @@ bool CUDA_tensor_apply4(at::Tensor a,
     large (64-bit indexed) tensors to reduce compilation time. 
     */
     if (aInfo.dims == 1 && bInfo.dims == 1 && cInfo.dims == 1 && dInfo.dims == 1) {
-      kernelPointwiseApply4<Op,
+     hipLaunchKernelGGL( kernelPointwiseApply4<Op,
                             scalar1,
                             scalar2,
                             scalar3,
                             scalar4,
                             uint64_t, 1, 1, 1, 1>
-        <<<grid, block, 0, at::cuda::getCurrentCUDAStream()>>>(
+        , dim3(grid), dim3(block), 0, at::cuda::getCurrentCUDAStream(), 
           aInfo, bInfo, cInfo, dInfo, (uint64_t) totalElements, op);
     } else {
 #if CUDA_VERSION < 9000
   grid.x = std::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
 #endif
 
-	kernelPointwiseApply4<Op,
+hipLaunchKernelGGL(	kernelPointwiseApply4<Op,
                         scalar1,
                         scalar2,
                         scalar3,
                         scalar4,
                         uint64_t, -1, -1, -1, -1>
-        <<<grid, block, 0, at::cuda::getCurrentCUDAStream()>>>(
+        , dim3(grid), dim3(block), 0, at::cuda::getCurrentCUDAStream(), 
           aInfo, bInfo, cInfo, dInfo, (uint64_t) totalElements, op);
     }
   }

@@ -43,9 +43,9 @@ void Adam::step() {
     }
 
     const auto bias_correction1 =
-        1 - std::pow(options.beta1_, buffer_at(step_buffers_, i));
+        1 - ::pow(options.beta1_, buffer_at(step_buffers_, i));
     const auto bias_correction2 =
-        1 - std::pow(options.beta2_, buffer_at(step_buffers_, i));
+        1 - ::pow(options.beta2_, buffer_at(step_buffers_, i));
     const auto step_size =
         options.learning_rate_ * std::sqrt(bias_correction2) / bias_correction1;
 

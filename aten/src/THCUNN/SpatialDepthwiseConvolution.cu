@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 // updateOutput, updateGradInput Kernels ported from Sergey Zagoruyko's pyinn, which itself was a
 // port from Caffe
 

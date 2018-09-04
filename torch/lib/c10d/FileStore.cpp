@@ -134,14 +134,14 @@ class File {
 
   void write(const std::string& str) {
     uint32_t len = str.size();
-    assert(str.size() <= std::numeric_limits<decltype(len)>::max());
+    ;
     write(&len, sizeof(len));
     write(str.c_str(), len);
   }
 
   void write(const std::vector<uint8_t>& data) {
     uint32_t len = data.size();
-    assert(data.size() <= std::numeric_limits<decltype(len)>::max());
+    ;
     write(&len, sizeof(len));
     write(data.data(), len);
   }

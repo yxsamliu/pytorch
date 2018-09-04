@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "THCUNN.h"
 #include "THCHalf.h"
 #include "THCHalfAutoNumerics.cuh"
@@ -15,7 +16,7 @@ struct PReLUUpdateOutput
     : weight_(weight)
   {}
 
-  __device__ __forceinline__ void operator()(T *out, T *in)
+  __device__ inline void operator()(T *out, T *in)
   {
     T x = *in;
     *out = (x > 0) ? x : weight_[0] * x;
@@ -42,7 +43,7 @@ struct PReLUUpdateGradInput
     : weight_(weight)
   {}
 
-  __device__ __forceinline__ void operator()(T *gradInput, T *gradOutput, T *input)
+  __device__ inline void operator()(T *gradInput, T *gradOutput, T *input)
   {
     *gradInput = *input > 0 ? *gradOutput : *gradOutput * *weight_;
   }
@@ -67,7 +68,7 @@ __global__ void preluBackward(
 template <typename T>
 struct PReLUAccGradParametersShared
 {
-  __device__ __forceinline__ void operator()(T *gradInput, T  *input, T *gradOutput)
+  __device__ inline void operator()(T *gradInput, T  *input, T *gradOutput)
   {
     *gradInput = (*input) * (*gradOutput) * (*input <= 0);
   }
@@ -82,7 +83,7 @@ struct PReLUAccGradParameters
     : scale(scale)
   {}
 
-  __device__ __forceinline__ void operator()(T *gradInput, T *input, T *gradOutput)
+  __device__ inline void operator()(T *gradInput, T *input, T *gradOutput)
   {
     *gradInput = (*input) * (*gradOutput) * scale * (*input <= 0);
   }
@@ -97,7 +98,7 @@ struct PReLUAccGradParameters1to1
     : scale(scale)
   {}
 
-  __device__ __forceinline__ void operator()(T *gradWeight, T *input, T *gradOutput)
+  __device__ inline void operator()(T *gradWeight, T *input, T *gradOutput)
   {
     *gradWeight += (*input) * (*gradOutput) * scale * (*input <= 0);
   }

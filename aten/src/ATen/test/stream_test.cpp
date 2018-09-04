@@ -4,7 +4,7 @@
 #include "ATen/cuda/CUDAContext.h"
 #include "ATen/cuda/CUDAGuard.h"
 
-#include "cuda_runtime.h"
+#include "hip/hip_runtime.h"
 
 #include <functional>
 #include <thread>
@@ -16,7 +16,7 @@ TEST_CASE(
     "Copying and Moving Streams",
     "Verifies streams are live through copying and moving") {
   int32_t device = -1;
-  cudaStream_t cuda_stream;
+  hipStream_t cuda_stream;
 
   // Tests that copying works as expected and preserves the stream
   at::cuda::CUDAStream copyStream;

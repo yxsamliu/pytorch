@@ -27,7 +27,7 @@ void master()
   // wait a long time before init
   std::this_thread::sleep_for(std::chrono::seconds(4));
 
-  assert(masterChannel->init());
+  ;
 
   auto float_tensor = buildTensor<float>({1, 2, 3}, 4);
   masterChannel->broadcast(*float_tensor, 0); // send good tensor
@@ -46,7 +46,7 @@ void worker(int id)
   auto workerChannel = std::make_shared<thd::DataChannelTCP>(thd::getInitConfig("env://"));  // reads all env variable
   g_mutex.unlock();
 
-  assert(workerChannel->init());
+  ;
 
   auto float_tensor = buildTensor<float>({1, 2, 3}, -1);
   workerChannel->broadcast(*float_tensor, 0);

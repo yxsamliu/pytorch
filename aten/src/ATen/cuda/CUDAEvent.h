@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <utility>
 
-#include "cuda_runtime_api.h"
+#include "hip/hip_runtime_api.h"
 
 #include <ATen/core/ATenGeneral.h>
 #include <ATen/Error.h>
@@ -28,14 +28,14 @@ namespace detail {
 AT_API CUDAEventInternals* CUDAEvent_create(unsigned int flags);
 AT_API void CUDAEvent_retain(CUDAEventInternals* internals);
 AT_API void CUDAEvent_uncheckedFree(CUDAEventInternals* internals);
-AT_API cudaEvent_t CUDAEvent_event(CUDAEventInternals* internals);
+AT_API hipEvent_t CUDAEvent_event(CUDAEventInternals* internals);
 AT_API int64_t CUDAEvent_device(CUDAEventInternals* internals);
 
 } // namespace detail
 
 struct CUDAEvent {
   // Constants
-  static constexpr unsigned int DEFAULT_FLAGS = cudaEventDisableTiming;
+  static constexpr unsigned int DEFAULT_FLAGS = hipEventDisableTiming;
 
   // Constructors
   CUDAEvent(unsigned int flags = DEFAULT_FLAGS)
@@ -57,7 +57,7 @@ struct CUDAEvent {
     return *this;
   }
 
-  operator cudaEvent_t() const { return detail::CUDAEvent_event(internals_); }
+  operator hipEvent_t() const { return detail::CUDAEvent_event(internals_); }
 
   // Less than operator (to allow use in sets)
   friend bool operator<(const CUDAEvent& left, const CUDAEvent& right) {
@@ -65,7 +65,7 @@ struct CUDAEvent {
   }
 
   int64_t device() const { return detail::CUDAEvent_device(internals_); }
-  cudaEvent_t event() const { return detail::CUDAEvent_event(internals_); }
+  hipEvent_t event() const { return detail::CUDAEvent_event(internals_); }
   CUDAEventInternals* internals() const { return internals_; }
 
   void record() const; // Record on the current stream

@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_TENSOR_MODE_CUH
 #define THC_TENSOR_MODE_CUH
 
@@ -108,7 +109,7 @@ __global__ void computeMode(
   // Initially, the buffer will be organized as follows:
   //
   // [smem (slice elements) | bmem (valid indices) | <scratch space>]
-  extern __shared__ char shmem[];
+  HIP_DYNAMIC_SHARED( char, shmem)
 
   // smem represents a proportion of the shared memory buffer that is used to store
   // the elements from the slice:

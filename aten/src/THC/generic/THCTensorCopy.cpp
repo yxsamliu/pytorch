@@ -12,13 +12,13 @@ void THCTensor_(copyCPU)(THCState *state, THCTensor *self, struct THTensor *src)
     THCTensor *selfc = THCTensor_(newContiguous)(state, self);
     src = THTensor_(newContiguous)(src);
 
-    cudaStream_t stream = THCState_getCurrentStream(state);
-    THCudaCheck(cudaMemcpyAsync(THCTensor_(data)(state,selfc),
+    hipStream_t stream = THCState_getCurrentStream(state);
+    THCudaCheck(hipMemcpyAsync(THCTensor_(data)(state,selfc),
                                 THTensor_(data)(src),
                                 THTensor_(nElement)(src) * sizeof(real),
-                                cudaMemcpyHostToDevice,
+                                hipMemcpyHostToDevice,
                                 stream));
-    THCudaCheck(cudaStreamSynchronize(stream));
+    THCudaCheck(hipStreamSynchronize(stream));
 
     THTensor_(free)(src);
     THCTensor_(freeCopyTo)(state, selfc, self);
@@ -60,13 +60,13 @@ void THTensor_(copyCuda)(THCState *state, THTensor *self, struct THCTensor *src)
     THTensor *selfc = THTensor_(newContiguous)(self);
     src = THCTensor_(newContiguous)(state, src);
 
-    cudaStream_t stream = THCState_getCurrentStream(state);
-    THCudaCheck(cudaMemcpyAsync(THTensor_(data)(selfc),
+    hipStream_t stream = THCState_getCurrentStream(state);
+    THCudaCheck(hipMemcpyAsync(THTensor_(data)(selfc),
                                 THCTensor_(data)(state, src),
                                 THCTensor_(nElement)(state, src) * sizeof(real),
-                                cudaMemcpyDeviceToHost,
+                                hipMemcpyDeviceToHost,
                                 stream));
-    THCudaCheck(cudaStreamSynchronize(stream));
+    THCudaCheck(hipStreamSynchronize(stream));
 
     THCTensor_(free)(state, src);
     THTensor_(freeCopyTo)(selfc, self);
@@ -114,23 +114,23 @@ void THCTensor_(copyAsyncCPU)(THCState *state, THCTensor *self, struct THTensor 
   // Perform the copy wrt the current stream on the CudaTensor's device.
   int tensorDevice = THCTensor_(getDevice)(state, self);
   int currentDevice;
-  THCudaCheck(cudaGetDevice(&currentDevice));
+  THCudaCheck(hipGetDevice(&currentDevice));
 
   if (currentDevice != tensorDevice) {
-    THCudaCheck(cudaSetDevice(tensorDevice));
+    THCudaCheck(hipSetDevice(tensorDevice));
   }
 
   THCStream *stream  = THCState_getStream(state);
-  THCudaCheck(cudaMemcpyAsync(THCTensor_(data)(state, self),
+  THCudaCheck(hipMemcpyAsync(THCTensor_(data)(state, self),
                               THTensor_(data)(src),
                               THTensor_(nElement)(src) * sizeof(real),
-                              cudaMemcpyHostToDevice,
+                              hipMemcpyHostToDevice,
                               THCStream_stream(stream)));
 
   THCudaCheck(THCCachingHostAllocator_recordEvent(THStorage_(data)(THTensor_getStoragePtr(src)), stream));
 
   if (currentDevice != tensorDevice) {
-    THCudaCheck(cudaSetDevice(currentDevice));
+    THCudaCheck(hipSetDevice(currentDevice));
   }
 }
 
@@ -145,23 +145,23 @@ void THTensor_(copyAsyncCuda)(THCState *state, THTensor *self, struct THCTensor 
   // Perform the copy wrt the current stream on the CudaTensor's device.
   int tensorDevice = THCTensor_(getDevice)(state, src);
   int currentDevice;
-  THCudaCheck(cudaGetDevice(&currentDevice));
+  THCudaCheck(hipGetDevice(&currentDevice));
 
   if (currentDevice != tensorDevice) {
-    THCudaCheck(cudaSetDevice(tensorDevice));
+    THCudaCheck(hipSetDevice(tensorDevice));
   }
 
   THCStream *stream = THCState_getStream(state);
-  THCudaCheck(cudaMemcpyAsync(THTensor_(data)(self),
+  THCudaCheck(hipMemcpyAsync(THTensor_(data)(self),
                               THCTensor_(data)(state, src),
                               THCTensor_(nElement)(state, src) * sizeof(real),
-                              cudaMemcpyDeviceToHost,
+                              hipMemcpyDeviceToHost,
                               THCStream_stream(stream)));
 
   THCudaCheck(THCCachingHostAllocator_recordEvent(THCStorage_(data)(state, THTensor_getStoragePtr(src)), stream));
 
   if (currentDevice != tensorDevice) {
-    THCudaCheck(cudaSetDevice(currentDevice));
+    THCudaCheck(hipSetDevice(currentDevice));
   }
 }
 

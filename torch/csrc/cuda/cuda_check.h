@@ -1,8 +1,8 @@
 #pragma once
 
 #ifdef USE_CUDA
-#include <cuda.h>
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
+#include <hip/hip_runtime.h>
 #include <nvrtc.h>
 
 namespace torch {
@@ -16,10 +16,10 @@ static inline void nvrtcCheck(nvrtcResult result,const char * file, int line) {
 }
 #define TORCH_NVRTC_CHECK(result) ::torch::nvrtcCheck(result,__FILE__,__LINE__);
 
-static inline void cuCheck(CUresult result, const char * file, int line) {
-  if(result != CUDA_SUCCESS) {
+static inline void cuCheck(hipError_t result, const char * file, int line) {
+  if(result != hipSuccess) {
     const char * str;
-    cuGetErrorString(result, &str);
+    hipGetErrorString___(result, &str);
     std::stringstream ss;
     ss << file << ":" << line << ": " << str;
     throw std::runtime_error(ss.str());
@@ -27,10 +27,10 @@ static inline void cuCheck(CUresult result, const char * file, int line) {
 }
 #define TORCH_CU_CHECK(result) ::torch::cuCheck(result,__FILE__,__LINE__);
 
-static inline void cudaCheck(cudaError_t result, const char * file, int line) {
-  if(result != cudaSuccess) {
+static inline void cudaCheck(hipError_t result, const char * file, int line) {
+  if(result != hipSuccess) {
     std::stringstream ss;
-    ss << file << ":" << line << ": " << cudaGetErrorString(result);
+    ss << file << ":" << line << ": " << hipGetErrorString(result);
     throw std::runtime_error(ss.str());
   }
 }

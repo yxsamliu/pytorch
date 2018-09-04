@@ -1,6 +1,7 @@
+#include "hip/hip_runtime.h"
 #pragma once
 
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 #include <limits.h>
 
 // NumericLimits.cuh is a holder for numeric limits definitions of commonly used

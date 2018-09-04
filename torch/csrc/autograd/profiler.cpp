@@ -109,7 +109,7 @@ void RecordFunction::pushFunctionRange(Function* fn) {
 static void onEachDevice(std::function<void(int)> op) {
   at::DeviceGuard device_guard;
   int count;
-  TORCH_CUDA_CHECK(cudaGetDeviceCount(&count));
+  TORCH_CUDA_CHECK(hipGetDeviceCount(&count));
   for(int i = 0; i < count; i++) {
     device_guard.set_index(i);
     op(i);
@@ -135,7 +135,7 @@ void enableProfiler(ProfilerState new_state) {
     for(int i = 0; i < 5; i++) {
       onEachDevice([](int d) {
           mark("__cuda_startup");
-          cudaDeviceSynchronize();
+          hipDeviceSynchronize();
       });
     }
 

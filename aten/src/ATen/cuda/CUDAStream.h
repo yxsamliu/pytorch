@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <utility>
 
-#include "cuda_runtime_api.h"
+#include "hip/hip_runtime_api.h"
 
 #include <ATen/core/ATenGeneral.h>
 
@@ -45,7 +45,7 @@ AT_API void CUDAStream_uncheckedSetStreamOnDevice(
     CUDAStreamInternals* internals);
 AT_API void CUDAStream_setStream(CUDAStreamInternals* internals);
 
-AT_API cudaStream_t CUDAStream_stream(CUDAStreamInternals*);
+AT_API hipStream_t CUDAStream_stream(CUDAStreamInternals*);
 AT_API int64_t CUDAStream_device(CUDAStreamInternals*);
 
 AT_API bool CUDAStream_retain(CUDAStreamInternals*);
@@ -55,10 +55,10 @@ AT_API void CUDAStream_uncheckedFree(CUDAStreamInternals*&);
 } // namespace detail
 
 // RAII for a CUDA stream
-// Allows use as a cudaStream_t, copying, moving, and metadata access.
+// Allows use as a hipStream_t, copying, moving, and metadata access.
 struct CUDAStream {
   // Constants
-  static constexpr int32_t DEFAULT_FLAGS = cudaStreamNonBlocking;
+  static constexpr int32_t DEFAULT_FLAGS = hipStreamNonBlocking;
   static constexpr int32_t DEFAULT_PRIORITY = 0;
 
   // Constructors
@@ -90,8 +90,8 @@ struct CUDAStream {
     return internals_ != nullptr;
   }
 
-  // Implicit conversion to cudaStream_t
-  operator cudaStream_t() const { return detail::CUDAStream_stream(internals_); }
+  // Implicit conversion to hipStream_t
+  operator hipStream_t() const { return detail::CUDAStream_stream(internals_); }
 
   // Less than operator (to allow use in sets)
   friend bool operator<(const CUDAStream& left, const CUDAStream& right) {
@@ -100,7 +100,7 @@ struct CUDAStream {
 
   // Getters
   int64_t device() const { return detail::CUDAStream_device(internals_); }
-  cudaStream_t stream() const { return detail::CUDAStream_stream(internals_); }
+  hipStream_t stream() const { return detail::CUDAStream_stream(internals_); }
   CUDAStreamInternals* internals() const { return internals_; }
 
   void synchronize_with(const CUDAEvent& event) const;

@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/cuda/CUDAContext.h"
 #include "ATen/Config.h"
@@ -12,9 +13,10 @@
 
 #include <thrust/execution_policy.h>
 #include <thrust/unique.h>
-#include <cufft.h>
-#include <cufftXt.h>
+
+
 #include <cmath>
+#if !defined(__HIP_PLATFORM_HCC__)
 
 namespace at { namespace native {
 
@@ -40,7 +42,7 @@ struct cnt_to_dst_idx_functor : public thrust::unary_function<int64_t, int64_t>
   __host__ __device__
   cnt_to_dst_idx_functor & operator=(const cnt_to_dst_idx_functor&) = default;
 
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   int64_t operator()(const int64_t& i) const
   {
     int64_t imag = i % 2;
@@ -69,7 +71,7 @@ struct dst_idx_to_src_functor : public thrust::unary_function<int64_t, scalar_t>
     }
   }
 
-  __device__ __forceinline__
+  __device__ inline
   scalar_t operator()(const int64_t& write_idx_with_imag) const
   {
     int64_t imag = write_idx_with_imag % 2;
@@ -98,7 +100,7 @@ struct dst_idx_to_src_functor : public thrust::unary_function<int64_t, scalar_t>
 // input should be a contiguous batched tensor of same size as full (twosided)
 // signals, but only contains half (onesided) of the values.
 // This function modifies inplace.
-__forceinline__
+inline
 static void _fft_fill_with_conjugate_symmetry_(Tensor& input,
                       int64_t size_last_dim, int64_t last_dim_start_slice) {
   if (last_dim_start_slice >= size_last_dim) {
@@ -108,7 +110,7 @@ static void _fft_fill_with_conjugate_symmetry_(Tensor& input,
   // copy
   int64_t n = input.numel() / size_last_dim * (size_last_dim - last_dim_start_slice);
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
   auto allocator = THCThrustAllocator(globalContext().lazyInitCUDA());
   auto policy = thrust::cuda::par(allocator).on(stream);
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "_fft_fill_with_conjugate_symmetry_", [&] {
@@ -312,3 +314,5 @@ Tensor _fft_cufft(const Tensor& self, int64_t signal_ndim,
 }
 
 }} // at::native
+
+#endif

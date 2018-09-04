@@ -19,7 +19,7 @@
 #include "torch/csrc/cuda/cuda_check.h"
 #ifdef USE_CUDA
 #include "ATen/cuda/CUDAContext.h"
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
 #endif
 
 namespace torch { namespace autograd {
@@ -51,11 +51,11 @@ struct Event {
   , thread_id_(thread_id) {
 #ifdef USE_CUDA
     if(record_cuda) {
-      TORCH_CUDA_CHECK(cudaGetDevice(&device_));
-      TORCH_CUDA_CHECK(cudaEventCreate(&event));
+      TORCH_CUDA_CHECK(hipGetDevice(&device_));
+      TORCH_CUDA_CHECK(hipEventCreate(&event));
       auto stream = at::cuda::getCurrentCUDAStream();
       cpu_ns_ = getTime();
-      TORCH_CUDA_CHECK(cudaEventRecord(event, stream));
+      TORCH_CUDA_CHECK(hipEventRecord(event, stream));
     } else {
       cpu_ns_ = getTime();
     }
@@ -88,10 +88,10 @@ struct Event {
     if(e.device() != device()) {
       throw std::logic_error("Events are not on the same device");
     }
-    TORCH_CUDA_CHECK(cudaEventSynchronize(event));
-    TORCH_CUDA_CHECK(cudaEventSynchronize(e.event));
+    TORCH_CUDA_CHECK(hipEventSynchronize(event));
+    TORCH_CUDA_CHECK(hipEventSynchronize(e.event));
     float ms;
-    TORCH_CUDA_CHECK(cudaEventElapsedTime(&ms, event, e.event));
+    TORCH_CUDA_CHECK(hipEventElapsedTime(&ms, event, e.event));
     return ms*1000.0;
 #else
     throw std::logic_error("CUDA not enabled");
@@ -113,7 +113,7 @@ private:
   uint32_t thread_id_;
   int64_t cpu_ns_; // signed to allow for negative intervals
 #ifdef USE_CUDA
-  cudaEvent_t event = nullptr;
+  hipEvent_t event = nullptr;
 #endif
   int device_ = -1;
 };

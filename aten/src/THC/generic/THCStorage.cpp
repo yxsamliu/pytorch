@@ -22,21 +22,21 @@ int THCStorage_(elementSize)(THCState *state)
 void THCStorage_(set)(THCState *state, THCStorage *self, ptrdiff_t index, real value)
 {
   THArgCheck((index >= 0) && (index < self->size()), 2, "index out of bounds");
-  cudaStream_t stream = THCState_getCurrentStream(state);
-  THCudaCheck(cudaMemcpyAsync(THCStorage_(data)(state, self) + index, &value, sizeof(real),
-                              cudaMemcpyHostToDevice,
+  hipStream_t stream = THCState_getCurrentStream(state);
+  THCudaCheck(hipMemcpyAsync(THCStorage_(data)(state, self) + index, &value, sizeof(real),
+                              hipMemcpyHostToDevice,
                               stream));
-  THCudaCheck(cudaStreamSynchronize(stream));
+  THCudaCheck(hipStreamSynchronize(stream));
 }
 
 real THCStorage_(get)(THCState *state, const THCStorage *self, ptrdiff_t index)
 {
   THArgCheck((index >= 0) && (index < self->size()), 2, "index out of bounds");
   real value;
-  cudaStream_t stream = THCState_getCurrentStream(state);
-  THCudaCheck(cudaMemcpyAsync(&value, THCStorage_(data)(state, self) + index, sizeof(real),
-                              cudaMemcpyDeviceToHost, stream));
-  THCudaCheck(cudaStreamSynchronize(stream));
+  hipStream_t stream = THCState_getCurrentStream(state);
+  THCudaCheck(hipMemcpyAsync(&value, THCStorage_(data)(state, self) + index, sizeof(real),
+                              hipMemcpyDeviceToHost, stream));
+  THCudaCheck(hipStreamSynchronize(stream));
   return value;
 }
 
@@ -45,7 +45,7 @@ THCStorage* THCStorage_(new)(THCState *state)
   THStorage* storage = c10::make_intrusive<at::StorageImpl>(
       at::CTypeToScalarType<real>::to(),
       0,
-      state->cudaDeviceAllocator,
+      state->hipDeviceAllocator,
       true).release();
   return storage;
 }
@@ -55,7 +55,7 @@ THCStorage* THCStorage_(newWithSize)(THCState *state, ptrdiff_t size)
   THStorage* storage = c10::make_intrusive<at::StorageImpl>(
       at::CTypeToScalarType<real>::to(),
       size,
-      state->cudaDeviceAllocator,
+      state->hipDeviceAllocator,
       true).release();
   return storage;
 }

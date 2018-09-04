@@ -49,7 +49,7 @@ void init_gloo_master(int workers) {
   auto masterChannel = std::make_shared<thd::DataChannelGloo>(thd::getInitConfig("env://")); // reads all env variable
   g_mutex.unlock();
 
-  assert(masterChannel->init());
+  ;
   run_all_tests(masterChannel, workers);
 }
 
@@ -60,7 +60,7 @@ void init_gloo_worker(unsigned int id, int workers) {
   auto worker_channel = std::make_shared<thd::DataChannelGloo>(thd::getInitConfig("env://")); // reads all env variable
   g_mutex.unlock();
 
-  assert(worker_channel->init());
+  ;
   run_all_tests(worker_channel, workers);
 }
 

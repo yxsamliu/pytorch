@@ -104,7 +104,7 @@ Tensor mvlgamma(const Tensor& self, int64_t p) {
   AT_CHECK(p >= 1, "p has to be greater than or equal to 1");
   Tensor args = native::arange(-p / 2. + 0.5, 0.5, 0.5, self.options());
   args = args.add(self.unsqueeze(-1));
-  return args.lgamma_().sum(-1).add_(p * (p - 1) * std::log(M_PI) / 4.);
+  return args.lgamma_().sum(-1).add_(p * (p - 1) * ::log(M_PI) / 4.);
 }
 
 Tensor& mvlgamma_(Tensor& self, int64_t p) {
@@ -115,7 +115,7 @@ Tensor& mvlgamma_(Tensor& self, int64_t p) {
   AT_CHECK(p >= 1, "p has to be greater than or equal to 1");
   Tensor args = native::arange(-p / 2. + 0.5, 0.5, 0.5, self.options());
   args = args.add(self.unsqueeze(-1));
-  return self.copy_(args.lgamma_().sum(-1).add_(p * (p - 1) * std::log(M_PI) / 4.));
+  return self.copy_(args.lgamma_().sum(-1).add_(p * (p - 1) * ::log(M_PI) / 4.));
 }
 
 // NB: If you use this macro, you may also need to add a CUDA forwarding

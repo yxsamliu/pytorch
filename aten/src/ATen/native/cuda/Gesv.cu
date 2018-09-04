@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/Context.h"
 #include "ATen/cuda/CUDAContext.h"
 #include "ATen/Dispatch.h"

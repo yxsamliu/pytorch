@@ -79,7 +79,7 @@ struct IntDivider<unsigned int> {
   IntDivider() { }  // Dummy constructor for arrays.
 
   IntDivider(unsigned int d) : divisor(d) {
-    assert(divisor >= 1 && divisor <= INT32_MAX);
+    ;
 
     // TODO: gcc/clang has __builtin_clz() but it's not portable.
     for (shift = 0; shift < 32; shift++) if ((1U << shift) >= divisor) break;
@@ -87,7 +87,7 @@ struct IntDivider<unsigned int> {
     uint64_t one = 1;
     uint64_t magic = ((one << 32) * ((one << shift) - divisor)) / divisor + 1;
     m1 = magic;
-    assert(m1 > 0 && m1 == magic);  // m1 must fit in 32 bits.
+    ;  // m1 must fit in 32 bits.
   }
 
   __host__ __device__ inline unsigned int div(unsigned int n) const {

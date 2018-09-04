@@ -1,8 +1,8 @@
 #ifndef THC_DEVICE_TENSOR_INC
 #define THC_DEVICE_TENSOR_INC
 
-#include <cuda.h>
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
+#include <hip/hip_runtime.h>
 
 // A CUDA 6.5 compatible version of static_assert. Remove once on CUDA 7.0.
 template <bool>
@@ -103,49 +103,49 @@ class THCDeviceTensor {
   const THCDeviceTensor<U, Dim, IndexT, PtrTraits> cast() const;
 
   /// Returns a raw pointer to the start of our data.
-  __host__ __device__ __forceinline__ DataPtrType data() {
+  __host__ __device__ inline DataPtrType data() {
     return data_;
   }
 
   /// Returns a raw pointer to the start of our data (const).
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   const DataPtrType data() const {
     return data_;
   }
 
   /// Cast to a different datatype
   template <typename U>
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   typename PtrTraits<U>::PtrType dataAs() {
     return reinterpret_cast<typename PtrTraits<U>::PtrType>(data_);
   }
 
   /// Cast to a different datatype
   template <typename U>
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   const typename PtrTraits<const U>::PtrType dataAs() const {
     return reinterpret_cast<typename PtrTraits<const U>::PtrType>(data_);
   }
 
   /// Returns a read/write view of a portion of our tensor.
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   detail::THCDeviceSubTensor<TensorType, Dim - 1, PtrTraits>
     operator[](IndexT);
 
   /// Returns a read/write view of a portion of our tensor (const).
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   const detail::THCDeviceSubTensor<TensorType, Dim - 1, PtrTraits>
     operator[](IndexT) const;
 
   /// Returns the size of a given dimension, `[0, Dim - 1]`. No bounds
   /// checking.
-  __host__ __device__ __forceinline__ int getSize(int i) const {
+  __host__ __device__ inline int getSize(int i) const {
     return size_[i];
   }
 
   /// Returns the stride of a given dimension, `[0, Dim - 1]`. No bounds
   /// checking.
-  __host__ __device__ __forceinline__ int getStride(int i) const {
+  __host__ __device__ inline int getStride(int i) const {
     return stride_[i];
   }
 
@@ -154,12 +154,12 @@ class THCDeviceTensor {
   __host__ __device__ ptrdiff_t numElements() const;
 
   /// Returns the size array.
-  __host__ __device__ __forceinline__ const IndexT* sizes() const {
+  __host__ __device__ inline const IndexT* sizes() const {
     return size_;
   }
 
   /// Returns the stride array.
-  __host__ __device__ __forceinline__ const IndexT* strides() const {
+  __host__ __device__ inline const IndexT* strides() const {
     return stride_;
   }
 
@@ -233,7 +233,7 @@ class THCDeviceTensor {
 
   /// Zeroes out the tensor asynchronously. Asserts if the contents
   /// in question are not contiguous.
-  void zero(cudaStream_t stream = 0);
+  void zero(hipStream_t stream = 0);
 
  private:
   /// Raw pointer to where the tensor data begins
@@ -279,12 +279,12 @@ class THCDeviceSubTensor<TensorType, 0, PtrTraits> {
   }
 
   /// Returns a raw accessor to our slice.
-  __host__ __device__ __forceinline__ typename TensorType::DataPtrType data() {
+  __host__ __device__ inline typename TensorType::DataPtrType data() {
     return data_;
   }
 
   /// Returns a raw accessor to our slice (const).
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   const typename TensorType::DataPtrType data() const {
     return data_;
   }
@@ -303,20 +303,20 @@ class THCDeviceSubTensor<TensorType, 0, PtrTraits> {
 
   /// Cast to a different datatype
   template <typename T>
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   typename PtrTraits<T>::PtrType dataAs() {
     return reinterpret_cast<typename PtrTraits<T>::PtrType>(data_);
   }
 
   /// Cast to a different datatype (const)
   template <typename T>
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   typename PtrTraits<const T>::PtrType dataAs() const {
     return reinterpret_cast<typename PtrTraits<const T>::PtrType>(data_);
   }
 
   /// Use the texture cache for reads
-  __device__ __forceinline__ typename TensorType::DataType ldg() const {
+  __device__ inline typename TensorType::DataType ldg() const {
 #if __CUDA_ARCH__ >= 350
     return __ldg(data_);
 #else
@@ -326,7 +326,7 @@ class THCDeviceSubTensor<TensorType, 0, PtrTraits> {
 
   /// Use the texture cache for reads; cast as a particular type
   template <typename T>
-  __device__ __forceinline__ T ldgAs() const {
+  __device__ inline T ldgAs() const {
 #if __CUDA_ARCH__ >= 350
     return __ldg(dataAs<T>());
 #else
@@ -344,7 +344,7 @@ class THCDeviceSubTensor<TensorType, 0, PtrTraits> {
                                typename TensorType::IndexType,
                                PtrTraits>;
 
-  __host__ __device__ __forceinline__ THCDeviceSubTensor(
+  __host__ __device__ inline THCDeviceSubTensor(
     TensorType& t,
     typename TensorType::DataPtrType data)
       : tensor_(t),
@@ -366,7 +366,7 @@ class THCDeviceSubTensor {
  public:
   /// Returns a view of the data located at our offset (the dimension
   /// `SubDim` - 1 tensor).
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   THCDeviceSubTensor<TensorType, SubDim - 1, PtrTraits>
     operator[](typename TensorType::IndexType index) {
     return THCDeviceSubTensor<TensorType, SubDim - 1, PtrTraits>(
@@ -376,7 +376,7 @@ class THCDeviceSubTensor {
 
   /// Returns a view of the data located at our offset (the dimension
   /// `SubDim` - 1 tensor) (const).
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   const THCDeviceSubTensor<TensorType, SubDim - 1, PtrTraits>
     operator[](typename TensorType::IndexType index) const {
     return THCDeviceSubTensor<TensorType, SubDim - 1, PtrTraits>(
@@ -395,12 +395,12 @@ class THCDeviceSubTensor {
   }
 
   /// Returns a raw accessor to our slice.
-  __host__ __device__ __forceinline__ typename TensorType::DataPtrType data() {
+  __host__ __device__ inline typename TensorType::DataPtrType data() {
     return data_;
   }
 
   /// Returns a raw accessor to our slice (const).
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   const typename TensorType::DataPtrType data() const {
     return data_;
   }
@@ -419,20 +419,20 @@ class THCDeviceSubTensor {
 
   /// Cast to a different datatype
   template <typename T>
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   typename PtrTraits<T>::PtrType dataAs() {
     return reinterpret_cast<typename PtrTraits<T>::PtrType>(data_);
   }
 
   /// Cast to a different datatype (const)
   template <typename T>
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   typename PtrTraits<const T>::PtrType dataAs() const {
     return reinterpret_cast<typename PtrTraits<const T>::PtrType>(data_);
   }
 
   /// Use the texture cache for reads
-  __device__ __forceinline__ typename TensorType::DataType ldg() const {
+  __device__ inline typename TensorType::DataType ldg() const {
 #if __CUDA_ARCH__ >= 350
     return __ldg(data_);
 #else
@@ -442,7 +442,7 @@ class THCDeviceSubTensor {
 
   /// Use the texture cache for reads; cast as a particular type
   template <typename T>
-  __device__ __forceinline__ T ldgAs() const {
+  __device__ inline T ldgAs() const {
 #if __CUDA_ARCH__ >= 350
     return __ldg(dataAs<T>());
 #else
@@ -470,7 +470,7 @@ class THCDeviceSubTensor {
                typename TensorType::IndexType,
                PtrTraits>;
 
-  __host__ __device__ __forceinline__ THCDeviceSubTensor(
+  __host__ __device__ inline THCDeviceSubTensor(
     TensorType& t,
     typename TensorType::DataPtrType data)
       : tensor_(t),
@@ -488,7 +488,7 @@ class THCDeviceSubTensor {
 
 template <typename T, int Dim,
           typename IndexT, template <typename U> class PtrTraits>
-__host__ __device__ __forceinline__
+__host__ __device__ inline
 detail::THCDeviceSubTensor<THCDeviceTensor<T, Dim, IndexT, PtrTraits>,
                         Dim - 1, PtrTraits>
 THCDeviceTensor<T, Dim, IndexT, PtrTraits>::operator[](IndexT index) {
@@ -499,7 +499,7 @@ THCDeviceTensor<T, Dim, IndexT, PtrTraits>::operator[](IndexT index) {
 
 template <typename T, int Dim,
           typename IndexT, template <typename U> class PtrTraits>
-__host__ __device__ __forceinline__
+__host__ __device__ inline
 const detail::THCDeviceSubTensor<THCDeviceTensor<T, Dim, IndexT, PtrTraits>,
                               Dim - 1, PtrTraits>
 THCDeviceTensor<T, Dim, IndexT, PtrTraits>::operator[](IndexT index) const {

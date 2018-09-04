@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_TENSOR_TOPK_CUH
 #define THC_TENSOR_TOPK_CUH
 
@@ -59,7 +60,7 @@ struct TopKTypeConfig<int16_t> {
   typedef uint32_t RadixType;
 
   static inline __device__ RadixType convert(int16_t v) {
-    assert(sizeof(short) == 2);
+    ;
     return 32768u + v;
   }
 
@@ -73,7 +74,7 @@ struct TopKTypeConfig<int32_t> {
   typedef uint32_t RadixType;
 
   static inline __device__ RadixType convert(int32_t v) {
-    assert(sizeof(int) == 4);
+    ;
     return 2147483648u + v;
   }
 
@@ -87,7 +88,7 @@ struct TopKTypeConfig<int64_t> {
   typedef uint64_t RadixType;
 
   static inline __device__ RadixType convert(int64_t v) {
-    assert(sizeof(int64_t) == 8);
+    ;
     return 9223372036854775808ull + v;
   }
 
@@ -122,7 +123,7 @@ struct TopKTypeConfig<half> {
     RadixType mask = -((x >> 15)) | 0x8000;
     return (x ^ mask);
 #else
-    assert(false);
+    ;
     return 0u;
 #endif
   }
@@ -132,7 +133,7 @@ struct TopKTypeConfig<half> {
     RadixType mask = ((v >> 15) - 1) | 0x8000;
     return __ushort_as_half(v ^ mask);
 #else
-    assert(false);
+    ;
     return ScalarConvert<int, half>::to(0);
 #endif
   }
@@ -246,7 +247,7 @@ __device__ DataType findPattern(DataType* smem,
   }
 
   // should not get here
-  assert(false);
+  ;
   return ScalarConvert<int, DataType>::to(0);
 }
 
@@ -426,7 +427,7 @@ __global__ void gatherTopK(TensorInfo<T, IndexType> input,
 
     if (hasTopK) {
       int writeIndex = writeIndexStart + index;
-      assert(writeIndex < outputSliceSize);
+      ;
 
       IndexType topKOffset = writeIndex * topKWithinSliceStride;
       IndexType indexOffset = writeIndex * indicesWithinSliceStride;
@@ -443,7 +444,7 @@ __global__ void gatherTopK(TensorInfo<T, IndexType> input,
   // writeIndexStart. There might be more than that number available,
   // in which case we have to choose the first seen set. We do this
   // via a prefix sum to calculate indices for writing results.
-  assert(outputSliceSize >= writeIndexStart);
+  ;
   IndexType topKRemaining = (outputSliceSize - writeIndexStart);
 
   for (IndexType i = threadIdx.x; i < numIterations; i += blockDim.x) {
@@ -458,7 +459,7 @@ __global__ void gatherTopK(TensorInfo<T, IndexType> input,
 
     if (hasTopK && index < topKRemaining) {
       int writeIndex = writeIndexStart + index;
-      assert(writeIndex < outputSliceSize);
+      ;
 
       IndexType topKOffset = writeIndex * topKWithinSliceStride;
       IndexType indexOffset = writeIndex * indicesWithinSliceStride;

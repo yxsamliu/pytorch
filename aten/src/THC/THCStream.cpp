@@ -13,7 +13,7 @@ THC_API THCStream* THCStream_newWithPriority(int flags, int priority) {
   return at::cuda::detail::CUDAStream_createAndRetainWithOptions(flags, priority);
 }
 
-THC_API cudaStream_t THCStream_stream(THCStream* stream) {
+THC_API hipStream_t THCStream_stream(THCStream* stream) {
   return at::cuda::detail::CUDAStream_stream(stream);
 }
 

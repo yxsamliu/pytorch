@@ -16,7 +16,7 @@ Tensor Scalar::toTensor() const {
   if (Tag::HAS_d == tag) {
     return CPU(kDouble).scalarTensor(*this);
   } else {
-    assert(Tag::HAS_i == tag);
+    ;
     return CPU(kLong).scalarTensor(*this);
   }
 }

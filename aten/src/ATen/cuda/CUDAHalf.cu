@@ -1,9 +1,10 @@
+#include "hip/hip_runtime.h"
 #include "ATen/core/Half.h"
 #include "ATen/cuda/CUDAHalf.cuh"
 
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include <cuda_fp16.h>
+#include <hip/hip_runtime.h>
+#include <hip/hip_runtime.h>
+#include <hip/hip_fp16.h>
 
 namespace at {
 #if CUDA_VERSION < 9000 && !defined(__HIP_PLATFORM_HCC__)

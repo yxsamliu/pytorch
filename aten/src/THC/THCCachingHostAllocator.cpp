@@ -1,7 +1,7 @@
 #include "THCCachingHostAllocator.h"
 #include "THCStream.h"
 
-#include <cuda_runtime_api.h>
+#include <hip/hip_runtime_api.h>
 #include <deque>
 #include <memory>
 #include <mutex>
@@ -55,17 +55,17 @@ struct HostAllocator
   std::set<BlockSize, Comparison> available;
 
   // outstanding cuda events
-  std::deque<std::pair<cudaEvent_t, void*>> cuda_events;
+  std::deque<std::pair<hipEvent_t, void*>> cuda_events;
 
   HostAllocator() : available(BlockComparator) {}
 
-  cudaError_t malloc(void** ptr, size_t size)
+  hipError_t malloc(void** ptr, size_t size)
   {
     std::lock_guard<std::mutex> lock(mutex);
 
     // process outstanding cuda events which may have occurred
-    cudaError_t err = processEvents();
-    if (err != cudaSuccess) {
+    hipError_t err = processEvents();
+    if (err != hipSuccess) {
       return err;
     }
 
@@ -78,33 +78,33 @@ struct HostAllocator
       block.allocated = true;
       *ptr = block.ptr;
       available.erase(it);
-      return cudaSuccess;
+      return hipSuccess;
     }
 
-    // note that cudaHostAlloc may not touch pointer if size is 0
+    // note that hipHostMalloc may not touch pointer if size is 0
     *ptr = 0;
 
     // allocate a new block if no cached allocation is found
-    err = cudaHostAlloc(ptr, size, cudaHostAllocDefault);
-    if (err != cudaSuccess) {
+    err = hipHostMalloc(ptr, size, hipHostMallocDefault);
+    if (err != hipSuccess) {
       return err;
     }
 
     blocks.insert({*ptr, Block(size, *ptr, true)});
-    return cudaSuccess;
+    return hipSuccess;
   }
 
-  cudaError_t free(void* ptr)
+  hipError_t free(void* ptr)
   {
     std::lock_guard<std::mutex> lock(mutex);
 
     if (!ptr) {
-      return cudaSuccess;
+      return hipSuccess;
     }
 
     // process outstanding cuda events which may have occurred
-    cudaError_t err = processEvents();
-    if (err != cudaSuccess) {
+    hipError_t err = processEvents();
+    if (err != hipSuccess) {
       return err;
     }
 
@@ -120,7 +120,7 @@ struct HostAllocator
 
     // insert CUDA events for each stream on which this block was used. This
     err = insertEvents(block);
-    if (err != cudaSuccess) {
+    if (err != hipSuccess) {
       return err;
     }
 
@@ -128,17 +128,17 @@ struct HostAllocator
       // the block can be re-used if there are no outstanding cuda events
       available.insert(block);
     }
-    return cudaSuccess;
+    return hipSuccess;
   }
 
-  cudaError_t recordEvent(void* ptr, THCStream *stream)
+  hipError_t recordEvent(void* ptr, THCStream *stream)
   {
     std::lock_guard<std::mutex> lock(mutex);
 
     auto it = blocks.find(ptr);
     if (it == blocks.end()) {
       // ignore events for untracked pointers
-      return cudaSuccess;
+      return hipSuccess;
     }
 
     Block& block = it->second;
@@ -148,10 +148,10 @@ struct HostAllocator
     THCStream_retain(stream);
 
     block.streams.insert(std::move(stream_ptr));
-    return cudaSuccess;
+    return hipSuccess;
   }
 
-  cudaError_t processEvents()
+  hipError_t processEvents()
   {
     // Process outstanding cudaEvents. Events that are completed are removed
     // from the queue, and the 'event_count' for the corresponding allocation
@@ -160,16 +160,16 @@ struct HostAllocator
     // the processing of some events may be delayed.
     while (!cuda_events.empty()) {
       auto& e = cuda_events.front();
-      cudaEvent_t event = e.first;
+      hipEvent_t event = e.first;
 
-      cudaError_t err = cudaEventQuery(event);
-      if (err == cudaErrorNotReady) {
+      hipError_t err = hipEventQuery(event);
+      if (err == hipErrorNotReady) {
         break;
-      } else if (err != cudaSuccess) {
+      } else if (err != hipSuccess) {
         return err;
       }
-      err = cudaEventDestroy(event);
-      if (err != cudaSuccess) {
+      err = hipEventDestroy(event);
+      if (err != hipSuccess) {
         return err;
       }
 
@@ -180,7 +180,7 @@ struct HostAllocator
       }
       cuda_events.pop_front();
     }
-    return cudaSuccess;
+    return hipSuccess;
   }
 
   void emptyCache()
@@ -189,10 +189,10 @@ struct HostAllocator
 
     // remove events for freed blocks
     for (auto it = cuda_events.begin(); it != cuda_events.end(); ++it) {
-      cudaEvent_t event = it->first;
+      hipEvent_t event = it->first;
       Block& block = blocks.at(it->second);
       if (!block.allocated) {
-        THCudaCheckWarn(cudaEventDestroy(event));
+        THCudaCheckWarn(hipEventDestroy(event));
         block.event_count--;
       }
     }
@@ -207,7 +207,7 @@ struct HostAllocator
     for (auto it = blocks.begin(); it != blocks.end();) {
       Block& block = it->second;
       if (!block.allocated) {
-        THCudaCheckWarn(cudaFreeHost(block.ptr));
+        THCudaCheckWarn(hipHostFree(block.ptr));
         it = blocks.erase(it);
       } else {
         ++it;
@@ -215,33 +215,33 @@ struct HostAllocator
     }
   }
 
-  cudaError_t insertEvents(Block& block)
+  hipError_t insertEvents(Block& block)
   {
-    cudaError_t err;
+    hipError_t err;
 
     int prev_device;
-    err = cudaGetDevice(&prev_device);
-    if (err != cudaSuccess) return err;
+    err = hipGetDevice(&prev_device);
+    if (err != hipSuccess) return err;
 
     std::set<THCStreamPtr> streams(std::move(block.streams));
     for (auto it = streams.begin(); it != streams.end(); ++it) {
       auto& stream = *it;
 
-      err = cudaSetDevice(THCStream_device(stream.get()));
-      if (err != cudaSuccess) break;
+      err = hipSetDevice(THCStream_device(stream.get()));
+      if (err != hipSuccess) break;
 
-      cudaEvent_t event;
-      err = cudaEventCreateWithFlags(&event, cudaEventDisableTiming);
-      if (err != cudaSuccess) break;
+      hipEvent_t event;
+      err = hipEventCreateWithFlags(&event, hipEventDisableTiming);
+      if (err != hipSuccess) break;
 
-      err = cudaEventRecord(event, THCStream_stream(stream.get()));
-      if (err != cudaSuccess) break;
+      err = hipEventRecord(event, THCStream_stream(stream.get()));
+      if (err != hipSuccess) break;
 
       block.event_count++;
       cuda_events.emplace_back(event, block.ptr);
     }
 
-    cudaSetDevice(prev_device);
+    hipSetDevice(prev_device);
     return err;
   }
 };
@@ -250,7 +250,7 @@ struct HostAllocator
 
 static HostAllocator allocator;
 
-cudaError_t THCCachingHostAllocator_recordEvent(void *ptr, THCStream *stream)
+hipError_t THCCachingHostAllocator_recordEvent(void *ptr, THCStream *stream)
 {
   return allocator.recordEvent(ptr, stream);
 }

@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorMode.cu"
 #else
@@ -238,9 +239,9 @@ THC_API void THCTensor_(mode)(THCState *state,
     dim3 blockSize(SIZE / 2); \
 \
     int memsize = (sizeof(real) * SIZE) + (2 * SIZE * sizeof(unsigned int)); \
-    computeMode<real, SIZE> \
-      <<<grid, blockSize, memsize, THCState_getCurrentStream(state)>>>( \
-        THCTensor_(data)(state, contiguous), tiValues, tiIndices, sliceSize); \
+   hipLaunchKernelGGL( computeMode<real, SIZE> \
+      , dim3(grid), dim3(blockSize), memsize, THCState_getCurrentStream(state),  \
+        THCTensor_(data)(state, contiguous), tiValues, tiIndices, static_cast<int64_t>(sliceSize)); \
   }
 
     // Tradeoff between compilation time and the number of specializations. Ideally we would have
@@ -267,9 +268,9 @@ THC_API void THCTensor_(mode)(THCState *state,
         break;
       case 1:
       default:
-        assert(false);
+        ;
     }
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
 
     THCTensor_(free)(state, transposed);
     THCTensor_(free)(state, contiguous);

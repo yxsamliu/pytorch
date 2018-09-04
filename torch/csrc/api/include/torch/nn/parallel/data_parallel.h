@@ -1,6 +1,6 @@
 #pragma once
 
-#include <torch/cuda.h>
+#include <torch/hip/hip_runtime.h>
 #include <torch/nn/module.h>
 #include <torch/nn/pimpl.h>
 #include <torch/tensor.h>
@@ -155,7 +155,7 @@ Tensor data_parallel(
     return module->forward(std::move(input)).to(*output_device);
   }
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   autograd::Scatter scatter(*devices, /*chunk_sizes=*/at::nullopt, dim);
   auto scattered_inputs = scatter.apply({std::move(input)});
 

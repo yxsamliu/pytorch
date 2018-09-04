@@ -10,8 +10,9 @@
 #include <stdexcept>
 #include <sstream>
 #include <limits>
-#include <cufft.h>
-#include <cufftXt.h>
+
+
+#if !defined(__HIP_PLATFORM_HCC__)
 
 namespace at { namespace native { namespace detail {
 
@@ -61,7 +62,7 @@ struct CuFFTHandleDeleter {
   }
 };
 
-__forceinline__
+inline
 static bool is_pow_of_two(int64_t x) {
   return (x & (x - 1)) == 0;
 }
@@ -192,19 +193,19 @@ public:
                 inembed.begin());                      // begin of output
     }
 
-    cudaDataType itype, otype, exec_type;
+    hipDataType_t itype, otype, exec_type;
     if (input.type().scalarType() == ScalarType::Float) {
-      itype = complex_input ? CUDA_C_32F : CUDA_R_32F;
-      otype = complex_output ? CUDA_C_32F : CUDA_R_32F;
-      exec_type = CUDA_C_32F;
+      itype = complex_input ? hipC32F : hipR32F;
+      otype = complex_output ? hipC32F : hipR32F;
+      exec_type = hipC32F;
     } else if (input.type().scalarType() == ScalarType::Double) {
-      itype = complex_input ? CUDA_C_64F : CUDA_R_64F;
-      otype = complex_output ? CUDA_C_64F : CUDA_R_64F;
-      exec_type = CUDA_C_64F;
+      itype = complex_input ? hipC64F : hipR64F;
+      otype = complex_output ? hipC64F : hipR64F;
+      exec_type = hipC64F;
     } else if (input.type().scalarType() == ScalarType::Half) {
-      itype = complex_input ? CUDA_C_16F : CUDA_R_16F;
-      otype = complex_output ? CUDA_C_16F : CUDA_R_16F;
-      exec_type = CUDA_C_16F;
+      itype = complex_input ? hipC16F : hipR16F;
+      otype = complex_output ? hipC16F : hipR16F;
+      exec_type = hipC16F;
     } else {
       std::ostringstream ss;
       ss << "cuFFT doesn't support tensor of type: "
@@ -398,3 +399,5 @@ int64_t cufft_get_plan_cache_size_impl();
 void cufft_clear_plan_cache_impl();
 
 }}} // namespace at::native::detail
+
+#endif

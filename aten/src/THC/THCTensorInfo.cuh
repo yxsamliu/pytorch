@@ -1,7 +1,7 @@
 #ifndef THC_TENSOR_INFO_INC
 #define THC_TENSOR_INFO_INC
 
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 #include <assert.h>
 #include "THCGeneral.h"
 #include "THCIntegerDivider.cuh"
@@ -62,7 +62,7 @@ TensorInfo<T, IndexType>::TensorInfo(T* p,
                                      IndexType st[MAX_CUTORCH_DIMS]) {
   data = p;
   dims = dim;
-  assert(dims > 0 && dims < MAX_CUTORCH_DIMS);
+  ;
 
   for (int i = 0; i < dim; ++i) {
     sizes[i] = sz[i];
@@ -73,7 +73,7 @@ TensorInfo<T, IndexType>::TensorInfo(T* p,
 template <typename T, typename IndexType>
 void
 TensorInfo<T, IndexType>::reduceDim(int dim) {
-  assert(dim < dims && dim >= 0);
+  ;
   sizes[dim] = 1;
 }
 
@@ -81,7 +81,7 @@ template <typename T, typename IndexType>
 int
 TensorInfo<T, IndexType>::collapseDims(const int excludeDim) {
 
-  assert(excludeDim >= -1 && excludeDim < dims);
+  ;
 
   int stopDim = (excludeDim == -1) ? dims : excludeDim;
   int newIndex = -1;
@@ -193,7 +193,7 @@ struct IndexToOffset<T, IndexType, -1> {
 template <typename T, typename IndexType, int Dims>
 struct OffsetInfo {
   explicit OffsetInfo(const TensorInfo<T, IndexType>& tinfo) {
-    assert(tinfo.dims == Dims);
+    ;
     data = tinfo.data;
 
     for (int i = 0; i < Dims; ++i) {

@@ -6,8 +6,9 @@
 #include <string>
 #include <stdexcept>
 #include <sstream>
-#include <cufft.h>
-#include <cufftXt.h>
+
+
+#if !defined(__HIP_PLATFORM_HCC__)
 
 namespace at { namespace native {
 
@@ -70,3 +71,5 @@ static inline void CUFFT_CHECK(cufftResult error)
 }
 
 }} // at::native
+
+#endif

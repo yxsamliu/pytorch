@@ -7,8 +7,8 @@
 
 #include <cstdint>
 
-#include "cuda_runtime_api.h"
-#include "cusparse.h"
+#include "hip/hip_runtime_api.h"
+#include "hipsparse.h"
 
 namespace at {
 namespace cuda {
@@ -39,9 +39,9 @@ AT_API int64_t getNumGPUs();
 
 AT_API int64_t current_device();
 
-AT_API cudaDeviceProp* getCurrentDeviceProperties();
+AT_API hipDeviceProp_t* getCurrentDeviceProperties();
 
-AT_API cudaDeviceProp* getDeviceProperties(int64_t device);
+AT_API hipDeviceProp_t* getDeviceProperties(int64_t device);
 
 /* Streams */
 AT_API CUDAStream createCUDAStream();
@@ -64,7 +64,7 @@ AT_API void uncheckedSetCurrentCUDAStreamOnDevice(int64_t device, CUDAStream str
 
 /* Handles */
 #ifndef __HIP_PLATFORM_HCC__
-  AT_API cusparseHandle_t getCurrentCUDASparseHandle();
+  AT_API hipsparseHandle_t getCurrentCUDASparseHandle();
 #endif
 
 

@@ -69,7 +69,7 @@ double THExpMinusApprox(const double x)
 # define A4   (1.0172526e-5)
   if (x < 13.0)
   {
-/*    assert(x>=0); */
+/*    ; */
     double y;
     y = A0+x*(A1+x*(A2+x*(A3+x*A4)));
     y *= y;

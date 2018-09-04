@@ -32,8 +32,8 @@ namespace at {
 
 #if ${isCUDA}
 static int getPointerDevice(void* ptr) {
-  struct cudaPointerAttributes attr;
-  THCudaCheck(cudaPointerGetAttributes(&attr, ptr));
+  struct hipPointerAttribute_t attr;
+  THCudaCheck(hipPointerGetAttributes(&attr, ptr));
   return attr.device;
 }
 #endif
@@ -55,7 +55,7 @@ Storage ${Type}::storage(bool resizable) const {
       ScalarType::${ScalarName},
       0,
 #if ${isCUDA}
-      globalContext().getTHCState()->cudaDeviceAllocator,
+      globalContext().getTHCState()->hipDeviceAllocator,
 #else
       getTHDefaultAllocator(),
 #endif
@@ -67,7 +67,7 @@ Storage ${Type}::storage(size_t size, bool resizable) const {
       ScalarType::${ScalarName},
       size,
 #if ${isCUDA}
-      globalContext().getTHCState()->cudaDeviceAllocator,
+      globalContext().getTHCState()->hipDeviceAllocator,
 #else
       getTHDefaultAllocator(),
 #endif

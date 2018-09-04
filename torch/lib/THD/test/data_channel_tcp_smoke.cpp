@@ -24,9 +24,9 @@ void master()
   auto masterChannel = std::make_shared<thd::DataChannelTCP>(thd::getInitConfig("env://")); // reads all env variable
   g_mutex.unlock();
 
-  assert(masterChannel->init());
-  assert(masterChannel->getRank() == 0);
-  assert(masterChannel->getNumProcesses() == WORKERS_NUM + 1);
+  ;
+  ;
+  ;
 
   // wait for all workers to finish
   for (auto& worker : g_all_workers) {
@@ -42,9 +42,9 @@ void worker(int id)
   auto workerChannel = std::make_shared<thd::DataChannelTCP>(thd::getInitConfig("env://")); // reads all env variable
   g_mutex.unlock();
 
-  assert(workerChannel->init());
-  assert(workerChannel->getRank() == id);
-  assert(workerChannel->getNumProcesses() == WORKERS_NUM + 1);
+  ;
+  ;
+  ;
 }
 
 

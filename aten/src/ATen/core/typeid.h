@@ -214,7 +214,7 @@ class AT_CORE_API TypeMeta {
    */
   const char* name() const noexcept {
     auto it = gTypeNames().find(id_);
-    assert(it != gTypeNames().end());
+    ;
     return it->second.c_str();
   }
 
@@ -253,7 +253,7 @@ class AT_CORE_API TypeMeta {
   template <typename T>
   static const char* TypeName() {
     auto it = gTypeNames().find(Id<T>());
-    assert(it != gTypeNames().end());
+    ;
     return it->second.c_str();
   }
 

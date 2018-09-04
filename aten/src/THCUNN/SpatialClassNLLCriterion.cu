@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "THCUNN.h"
 #include "THCHalf.h"
 #include "THCHalfAutoNumerics.cuh"
@@ -96,7 +97,7 @@ __global__ void cunn_SpatialClassNLLCriterion_updateOutput_kernel(
        i += step) {
     t = target[toffset + i] - TH_INDEX_BASE;
     if (t != ignore_index) {
-      assert(t >= 0 && t < n_classes);
+      ;
       cur_weight = weights ? weights[t] : ScalarConvert<int, T>::to(1);
       input_sum -= input[ioffset + i + map_nelem * t] * cur_weight;
       acc_weight += cur_weight;
@@ -151,7 +152,7 @@ __global__ void cunn_SpatialClassNLLCriterion_updateGradInput_kernel(
        i += step) {
     t = (int)target[toffset + i] - TH_INDEX_BASE;
     if (t != ignore_index) {
-      assert(t >= 0 && t < n_classes);
+      ;
       gradInput[ioffset + i + map_nelem * t] = -(weights ? weights[t] : ScalarConvert<int, T>::to(1)) * norm * gradOutput[0];
     }
   }

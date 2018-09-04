@@ -10,8 +10,8 @@
 // Internal implementation is entirely hidden
 struct CUDAEventInternals {
   std::atomic<int> refcount;
-  int64_t device; // Note: cudaGetDevice works with int32_t, not int64_t
-  cudaEvent_t event;
+  int64_t device; // Note: hipGetDevice works with int32_t, not int64_t
+  hipEvent_t event;
 };
 
 namespace at {
@@ -26,7 +26,7 @@ CUDAEventInternals* CUDAEvent_create(unsigned int flags) {
   std::unique_ptr<CUDAEventInternals> internals { new CUDAEventInternals() };
   internals->refcount = 1;
   internals->device = current_device();
-  AT_CUDA_CHECK(cudaEventCreateWithFlags(&internals->event, flags));
+  AT_CUDA_CHECK(hipEventCreateWithFlags(&internals->event, flags));
   return internals.release();
 }
 
@@ -36,10 +36,10 @@ void CUDAEvent_retain(CUDAEventInternals* internals) {
 
 void CUDAEvent_uncheckedFree(CUDAEventInternals* internals) {
   if (--internals->refcount) {
-    cudaEventDestroy(internals->event);
+    hipEventDestroy(internals->event);
   }
 }
-cudaEvent_t CUDAEvent_event(CUDAEventInternals* internals) {
+hipEvent_t CUDAEvent_event(CUDAEventInternals* internals) {
   return internals->event;
 }
 
@@ -48,7 +48,7 @@ int64_t CUDAEvent_device(CUDAEventInternals* internals) {
 }
 
 void CUDAEvent_record(CUDAEventInternals* internals, const CUDAStream& stream) {
-  AT_CUDA_CHECK(cudaEventRecord(internals->event, stream));
+  AT_CUDA_CHECK(hipEventRecord(internals->event, stream));
 }
 
 } // namespace detail

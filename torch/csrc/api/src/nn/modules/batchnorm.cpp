@@ -1,6 +1,6 @@
 #include <torch/nn/modules/batchnorm.h>
 
-#include <torch/cuda.h>
+#include <torch/hip/hip_runtime.h>
 #include <torch/tensor.h>
 
 #include <ATen/core/Error.h>

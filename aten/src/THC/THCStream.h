@@ -16,7 +16,7 @@ THC_API THCStream* THCStream_new(int flags);
 THC_API THCStream* THCStream_newWithPriority(int flags, int priority);
 
 // Getters
-THC_API cudaStream_t THCStream_stream(THCStream*);
+THC_API hipStream_t THCStream_stream(THCStream*);
 THC_API int THCStream_device(THCStream*);
 
 // Memory management

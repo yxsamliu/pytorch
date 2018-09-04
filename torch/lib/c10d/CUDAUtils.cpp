@@ -6,26 +6,26 @@ namespace c10d {
 
 CUDAEvent CUDAEvent::create(unsigned int flags) {
   int current_device;
-  C10D_CUDA_CHECK(cudaGetDevice(&current_device));
+  C10D_CUDA_CHECK(hipGetDevice(&current_device));
   CUDAEvent event(nullptr, current_device);
 
-  C10D_CUDA_CHECK(cudaEventCreateWithFlags(&event.event_, flags));
+  C10D_CUDA_CHECK(hipEventCreateWithFlags(&event.event_, flags));
   return event;
 }
 
 CUDAEvent::~CUDAEvent() {
   if (event_ != nullptr) {
-    // cudaEventDestroy must run on the same device of the event,
+    // hipEventDestroy must run on the same device of the event,
     // otherwise it creates a context on default device as well.
     at::DeviceGuard guard(device_);
 
-    C10D_CUDA_CHECK(cudaEventDestroy(event_));
+    C10D_CUDA_CHECK(hipEventDestroy(event_));
   }
 }
 
 CUDAStream CUDAStream::create() {
   CUDAStream stream;
-  stream.stream_ = THCStream_new(cudaStreamNonBlocking);
+  stream.stream_ = THCStream_new(hipStreamNonBlocking);
   return stream;
 }
 
@@ -36,7 +36,7 @@ CUDAStream::~CUDAStream() {
   }
 }
 
-cudaStream_t CUDAStream::getStream() const {
+hipStream_t CUDAStream::getStream() const {
   return THCStream_stream(stream_);
 }
 

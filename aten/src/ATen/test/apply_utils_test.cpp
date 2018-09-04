@@ -30,7 +30,7 @@ void test(Type& type, IntList shape, int64_t a = 0, int64_t b = 1) {
   zero_dim.fill_(2);
   zero_dim.exp_();
   AT_DISPATCH_FLOATING_TYPES(zero_dim.type(), "test0", [&] {
-    ASSERT(zero_dim.data<scalar_t>()[0] == std::exp(2));
+    ASSERT(zero_dim.data<scalar_t>()[0] == ::exp(2));
   });
 
   auto empty_t = at::empty({0}, type);

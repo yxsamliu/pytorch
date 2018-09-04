@@ -61,7 +61,7 @@ int64_t sample_poisson(double lambda, THGenerator* generator) {
     double U, V, a, b, invalpha, vr, us;
 
     double slam = std::sqrt(lambda);
-    double loglam = std::log(lambda);
+    double loglam = ::log(lambda);
     b = 0.931 + 2.53 * slam;
     a = -0.059 + 0.02483 * b;
     invalpha = 1.1239 + 1.1328 / (b - 3.4);
@@ -78,7 +78,7 @@ int64_t sample_poisson(double lambda, THGenerator* generator) {
       if ((k < 0) || ((us < 0.013) && (V > us))) {
         continue;
       }
-      if ((std::log(V) + std::log(invalpha) - std::log(a / (us * us) + b)) <=
+      if ((::log(V) + ::log(invalpha) - ::log(a / (us * us) + b)) <=
           (-lambda + k * loglam - std::lgamma((double)k + 1))) {
         return k;
       }
@@ -89,7 +89,7 @@ int64_t sample_poisson(double lambda, THGenerator* generator) {
     int64_t X;
     double prod, U, enlam;
 
-    enlam = std::exp(-lambda);
+    enlam = ::exp(-lambda);
     X = 0;
     prod = 1.0;
     while (1) {

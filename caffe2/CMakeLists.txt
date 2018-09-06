@@ -359,11 +359,14 @@ if(USE_ROCM)
   # Call again since Caffe2_HIP_INCLUDES is extended with ATen include dirs.
   # Get Compile Definitions from the directory (FindHIP.CMake bug)
   get_directory_property(MY_DEFINITIONS COMPILE_DEFINITIONS)
+  message(STATUS "COMPILE_DEFINITIONS=${COMPILE_DEFINITIONS}")
+  message(STATUS "MY_DEFINITIONS=${MY_DEFINITIONS}")
   if(MY_DEFINITIONS)
     foreach(_item ${MY_DEFINITIONS})
       LIST(APPEND HIP_HCC_FLAGS "-D${_item}")
     endforeach()
   endif()
+  message(STATUS "HIP_HCC_FLAGS=${HIP_HCC_FLAGS}")
 
   # Call again since Caffe2_HIP_INCLUDES is extended with ATen include dirs.
   hip_include_directories(${Caffe2_HIP_INCLUDES})
@@ -373,9 +376,10 @@ if(USE_ROCM)
 
   # FindHIP.CMake checks if the SHARED flag is set and adds extra logic accordingly.
   hip_add_library(caffe2_hip ${Caffe2_HIP_SRCS})
+  message(STATUS "HIP_HCC_FLAGS=${HIP_HCC_FLAGS}")
 
   # Since PyTorch files contain HIP headers, these flags are required for the necessary definitions to be added.
-  set_target_properties(caffe2_hip PROPERTIES COMPILE_FLAGS ${HIP_HIPCC_FLAGS})
+  set_target_properties(caffe2_hip PROPERTIES COMPILE_FLAGS "${HIP_HIPCC_FLAGS}")
   target_link_libraries(caffe2_hip PUBLIC caffe2)
   target_link_libraries(caffe2_hip PUBLIC ${Caffe2_HIP_DEPENDENCY_LIBS})
 

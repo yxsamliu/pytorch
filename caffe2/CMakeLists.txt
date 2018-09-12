@@ -1,3 +1,4 @@
+#variable_watch(HIP_HIPCC_FLAGS)
 # ---[ Generate and install header and cpp files
 include(../cmake/Codegen.cmake)
 
@@ -379,7 +380,8 @@ if(USE_ROCM)
   message(STATUS "HIP_HCC_FLAGS=${HIP_HCC_FLAGS}")
 
   # Since PyTorch files contain HIP headers, these flags are required for the necessary definitions to be added.
-  set_target_properties(caffe2_hip PROPERTIES COMPILE_FLAGS "${HIP_HIPCC_FLAGS}")
+  #set_target_properties(caffe2_hip PROPERTIES COMPILE_FLAGS "${HIP_HIPCC_FLAGS}")
+  target_compile_options(caffe2_hip PRIVATE ${HIP_HIPCC_FLAGS})
   target_link_libraries(caffe2_hip PUBLIC caffe2)
   target_link_libraries(caffe2_hip PUBLIC ${Caffe2_HIP_DEPENDENCY_LIBS})
 
@@ -570,9 +572,14 @@ if(BUILD_CAFFE2)
     endif()
 
     if(USE_ROCM)
+      #set(CMAKE_DEBUG_TARGET_PROPERTIES
+      #    COMPILE_DEFINITIONS
+      #    )
       hip_add_library(caffe2_pybind11_state_hip MODULE ${Caffe2_HIP_PYTHON_SRCS})
       set_target_properties(caffe2_pybind11_state_hip PROPERTIES LINKER_LANGUAGE HIP)
-      set_target_properties(caffe2_pybind11_state_hip PROPERTIES COMPILE_FLAGS "${HIP_HIPCC_FLAGS} -fvisibility=hidden")
+      message(STATUS "HIP_HIPCC_FLAGS=${HIP_HIPCC_FLAGS}")
+      #set_target_properties(caffe2_pybind11_state_hip PROPERTIES COMPILE_FLAGS "${HIP_HIPCC_FLAGS} -fvisibility=hidden")
+      target_compile_options(caffe2_pybind11_state_hip PRIVATE ${HIP_HIPCC_FLAGS} -fvisibility=hidden)
       set_target_properties(caffe2_pybind11_state_hip PROPERTIES PREFIX "")
       set_target_properties(caffe2_pybind11_state_hip PROPERTIES SUFFIX ${PY_EXT_SUFFIX})
       if (APPLE)

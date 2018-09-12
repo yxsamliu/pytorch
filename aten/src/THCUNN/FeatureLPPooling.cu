@@ -111,8 +111,8 @@ template <typename T,
           T (*PowerFunc)(T in, T power),
           T (*RootFunc)(T in, T power)>
 __global__ void
-featureLPPoolingUpdateOutput(const THCDeviceTensor<T, 4> input,
-                             THCDeviceTensor<T, 4> output,
+featureLPPoolingUpdateOutput(THCDeviceTensor<T, 4, int, DefaultPtrTraits> input,
+                             THCDeviceTensor<T, 4, int, DefaultPtrTraits> output,
                              T power) {
   // What non-feature points is this thread handling?
   int dim1Point = getDim1Point(input);
@@ -395,6 +395,7 @@ runFeatureLPPoolingUpdateOutput(THCState* state,
                                 const THCDeviceTensor<T, 4>& input,
                                 THCDeviceTensor<T, 4>& output,
                                 float power, int width, int stride) {
+#if !__HIP__
   hipStream_t stream =
     THCState_getCurrentStream(state);
   const hipDeviceProp_t* deviceProperties =
@@ -431,10 +432,10 @@ runFeatureLPPoolingUpdateOutput(THCState* state,
 
 #define L2_STRIDE_CASE(STRIDE, WIDTH)                                   \
   case STRIDE:                                                          \
-   hipLaunchKernelGGL( detail::featureLPPoolingUpdateOutput<T, WIDTH,                              \
+   ::hipLaunchKernelGGL( (detail::featureLPPoolingUpdateOutput<T, WIDTH,                              \
                                  STRIDE,                                \
                                  detail::power2,                        \
-                                 detail::root2>, dim3(grid), dim3(block), 0, stream,  \
+                                 detail::root2>), dim3(grid), dim3(block), 0, stream,  \
                                    input, output,                       \
                                    ScalarConvert<float, T>::to(power)); \
     return true;
@@ -450,10 +451,10 @@ runFeatureLPPoolingUpdateOutput(THCState* state,
 
 #define LP_STRIDE_CASE(STRIDE, WIDTH)                                   \
   case STRIDE:                                                          \
-   hipLaunchKernelGGL( detail::featureLPPoolingUpdateOutput<T, WIDTH,                              \
+   ::hipLaunchKernelGGL( (detail::featureLPPoolingUpdateOutput<T, WIDTH,                              \
                                  STRIDE,                                \
                                  detail::powerN,                        \
-                                 detail::rootN>, dim3(grid), dim3(block), 0, stream,  \
+                                 detail::rootN>), dim3(grid), dim3(block), 0, stream,  \
                                    input, output,                       \
                                    ScalarConvert<float, T>::to(power)); \
     return true;
@@ -512,6 +513,7 @@ runFeatureLPPoolingUpdateOutput(THCState* state,
 #undef L2_WIDTH_CASE
 #undef LP_STRIDE_CASE
 #undef LP_WIDTH_CASE
+#endif
 }
 
 template <typename T>

@@ -25,7 +25,9 @@
 namespace at { namespace native {
 
 template<int nt, int vt, typename func_t>
+#if !__HIP__
 __launch_bounds__(nt, 4)
+#endif
 __global__ void elementwise_kernel(int N, func_t f) {
   int tid = threadIdx.x;
   int nv = nt * vt;

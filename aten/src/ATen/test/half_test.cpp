@@ -122,8 +122,8 @@ ASSERT_SAME_TYPE(tinyness_before);
 TEST_CASE( "half common math functions test", "[]" ) {
   float threshold = 0.00001;
   assert(std::abs(std::lgamma(Half(10.0)) - std::lgamma(10.0f)) <= threshold);
-  assert(std::abs(std::exp(Half(1.0)) - std::exp(1.0f)) <= threshold);
-  assert(std::abs(std::log(Half(1.0)) - std::log(1.0f)) <= threshold);
+  assert(std::abs(::exp(Half(1.0)) - ::exp(1.0f)) <= threshold);
+  assert(std::abs(::log(Half(1.0)) - ::log(1.0f)) <= threshold);
   assert(std::abs(std::log10(Half(1000.0)) - std::log10(1000.0f)) <= threshold);
   assert(std::abs(std::log1p(Half(0.0)) - std::log1p(0.0f)) <= threshold);
   assert(std::abs(std::log2(Half(1000.0)) - std::log2(1000.0f)) <= threshold);
@@ -147,7 +147,7 @@ TEST_CASE( "half common math functions test", "[]" ) {
   assert(std::abs(std::erfc(Half(10.0)) - std::erfc(10.0f)) <= threshold);
   assert(std::abs(std::abs(Half(-3.0)) - std::abs(-3.0f)) <= threshold);
   assert(std::abs(std::round(Half(2.3)) - std::round(2.3f)) <= threshold);
-  assert(std::abs(std::pow(Half(2.0), Half(10.0)) - std::pow(2.0f, 10.0f)) <= threshold);
+  assert(std::abs(::pow(Half(2.0), Half(10.0)) - ::pow(2.0f, 10.0f)) <= threshold);
   assert(std::abs(std::atan2(Half(7.0), Half(0.0)) - std::atan2(7.0f, 0.0f)) <= threshold);
   #ifdef __APPLE__
     // @TODO: can macos do implicit conversion of Half?

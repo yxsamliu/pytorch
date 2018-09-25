@@ -123,7 +123,7 @@ static std::tuple<double, int64_t> __printFormat(std::ostream& stream, const Ten
     } else {
       if(expMax > 5 || expMax < 0) {
         sz = 7;
-        scale = std::pow(10, expMax-1);
+        scale = ::pow(10, expMax-1);
         stream << std::fixed << std::setprecision(4);
       } else {
         if(expMax == 0) {

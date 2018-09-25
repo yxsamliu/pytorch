@@ -90,7 +90,7 @@ public:
   }
 
   int getNumGPUs() const {
-    return detail::getCUDAHooks().getNumGPUs();
+    return 1;
   }
   size_t freshTypeID() {
     return next_id++;

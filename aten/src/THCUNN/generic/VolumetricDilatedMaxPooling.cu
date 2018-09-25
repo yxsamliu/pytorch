@@ -1,13 +1,14 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/VolumetricDilatedMaxPooling.cu"
 #else
 
 #define UPDATE_OUTPUT_KERNEL_WIDTH(KW) case KW:                         \
-  cuda_VolumetricDilatedMaxPooling_updateOutput<KW>                     \
-  <<<grid, block, 0, THCState_getCurrentStream(state)>>>(               \
-    inputData, inputTime, inputHeight, inputWidth, \
-    cudaIndices, cudaOutput, kT, kH, dT, dH, dW, padT, padH, padW,\
-    dilationT, dilationH, dilationW, offsetZ); \
+ hipLaunchKernelGGL( cuda_VolumetricDilatedMaxPooling_updateOutput<KW>                     \
+  , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state),                \
+    inputData, static_cast<int>(inputTime), static_cast<int>(inputHeight), static_cast<int>(inputWidth), \
+    cudaIndices, cudaOutput, static_cast<int>(kT), static_cast<int>(kH), static_cast<int>(dT), static_cast<int>(dH), static_cast<int>(dW), static_cast<int>(padT), static_cast<int>(padH), static_cast<int>(padW),\
+    static_cast<int>(dilationT), static_cast<int>(dilationH), static_cast<int>(dilationW), static_cast<int>(offsetZ)); \
     break
 
 static inline void THNN_(VolumetricDilatedMaxPooling_shapeCheck)(
@@ -267,14 +268,14 @@ void THNN_(VolumetricDilatedMaxPooling_updateOutput)(
         UPDATE_OUTPUT_KERNEL_WIDTH(6);
         UPDATE_OUTPUT_KERNEL_WIDTH(7);
       default:
-        cuda_VolumetricDilatedMaxPooling_updateOutput<<<grid, block,
-          0, THCState_getCurrentStream(state)>>>(
-                             inputData, inputTime, inputHeight, inputWidth,
+       hipLaunchKernelGGL( cuda_VolumetricDilatedMaxPooling_updateOutput, dim3(grid), dim3(block),
+          0, THCState_getCurrentStream(state), 
+                             inputData, static_cast<int>(inputTime), static_cast<int>(inputHeight), static_cast<int>(inputWidth),
                              cudaIndices, cudaOutput,
-                             kT, kH, kW, dT, dH, dW,
-                             padT, padH, padW, dilationT, dilationH, dilationW, offsetZ);
+                             static_cast<int>(kT), static_cast<int>(kH), static_cast<int>(kW), static_cast<int>(dT), static_cast<int>(dH), static_cast<int>(dW),
+                             static_cast<int>(padT), static_cast<int>(padH), static_cast<int>(padW), static_cast<int>(dilationT), static_cast<int>(dilationH), static_cast<int>(dilationW), offsetZ);
       }
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
     totalZ -= 65535;
     offsetZ += 65535;
   }
@@ -375,16 +376,16 @@ void THNN_(VolumetricDilatedMaxPooling_updateGradInput)(
               THCCeilDiv(outputHeight, static_cast<int>(block.y)),
               totalZ > 65535 ? 65535 : totalZ);
 
-    cuda_VolumetricDilatedMaxPooling_updateGradInput<<<grid, block,
-      0, THCState_getCurrentStream(state)>>>(
+   hipLaunchKernelGGL( cuda_VolumetricDilatedMaxPooling_updateGradInput<scalar_t>, dim3(grid), dim3(block),
+      0, THCState_getCurrentStream(state), 
                                              cudaGradOutput,
                                              cudaIndices,
                                              gradInputData,
-                                             inputTime, inputHeight, inputWidth,
-                                             dT, dH, dW,
-                                             padT, padH, padW,
-                                             dilationT, dilationH, dilationW, offsetZ);
-    THCudaCheck(cudaGetLastError());
+                                             static_cast<int>(inputTime), static_cast<int>(inputHeight), static_cast<int>(inputWidth),
+                                             static_cast<int>(dT), static_cast<int>(dH), static_cast<int>(dW),
+                                             static_cast<int>(padT), static_cast<int>(padH), static_cast<int>(padW),
+                                             static_cast<int>(dilationT), static_cast<int>(dilationH), static_cast<int>(dilationW), static_cast<int>(offsetZ));
+    THCudaCheck(hipGetLastError());
     totalZ -= 65535;
     offsetZ += 65535;
   }

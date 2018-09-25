@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
@@ -59,21 +60,21 @@ template<typename Value>
 class IntDividerTester {
  public:
   IntDividerTester() {
-    cudaError_t err;
+    hipError_t err;
 
-    err = cudaMalloc(&dividersBuf_, NUM_CASES * sizeof(IntDivider<Value>));
-    REQUIRE(err == cudaSuccess);
-    err = cudaMalloc(&testCasesBuf_, NUM_CASES * sizeof(TestCase<Value>));
-    REQUIRE(err == cudaSuccess);
+    err = hipMalloc(&dividersBuf_, NUM_CASES * sizeof(IntDivider<Value>));
+    REQUIRE(err == hipSuccess);
+    err = hipMalloc(&testCasesBuf_, NUM_CASES * sizeof(TestCase<Value>));
+    REQUIRE(err == hipSuccess);
   }
 
   ~IntDividerTester() {
-    cudaError_t err;
+    hipError_t err;
 
-    err = cudaFree(dividersBuf_);
-    REQUIRE(err == cudaSuccess);
-    err = cudaFree(testCasesBuf_);
-    REQUIRE(err == cudaSuccess);
+    err = hipFree(dividersBuf_);
+    REQUIRE(err == hipSuccess);
+    err = hipFree(testCasesBuf_);
+    REQUIRE(err == hipSuccess);
   }
 
   void addTestCase(Value dividend, Value divisor, int steps) {
@@ -89,25 +90,25 @@ class IntDividerTester {
   }
 
   void flush() {
-    cudaError_t err;
+    hipError_t err;
 
     if (testCases_.empty()) return;
     REQUIRE(!dividers_.empty());
 
     REQUIRE(dividers_.size() <= NUM_CASES);
     REQUIRE(testCases_.size() <= NUM_CASES);
-    err = cudaMemcpy(dividersBuf_, dividers_.data(),
+    err = hipMemcpy(dividersBuf_, dividers_.data(),
                      dividers_.size() * sizeof(IntDivider<Value>),
-                     cudaMemcpyHostToDevice);
-    REQUIRE(err == cudaSuccess);
-    err = cudaMemcpy(testCasesBuf_, testCases_.data(),
+                     hipMemcpyHostToDevice);
+    REQUIRE(err == hipSuccess);
+    err = hipMemcpy(testCasesBuf_, testCases_.data(),
                      testCases_.size() * sizeof(TestCase<Value>),
-                     cudaMemcpyHostToDevice);
-    REQUIRE(err == cudaSuccess);
+                     hipMemcpyHostToDevice);
+    REQUIRE(err == hipSuccess);
 
     int numCases = testCases_.size();
-    testIntDivider<Value><<<512, 512>>>(
-      dividersBuf_, testCasesBuf_, numCases);
+   hipLaunchKernelGGL( testIntDivider<Value>, dim3(512), dim3(512), 0, 0, 
+      dividersBuf_, testCasesBuf_, static_cast<int>(numCases));
 
     dividers_.clear();
     testCases_.clear();
@@ -185,6 +186,6 @@ TEST_CASE( "CUDA integer divider", "[cuda]" ) {
   testUint64Divider();
   testUint32Divider();
 
-  cudaError_t err = cudaDeviceSynchronize();
-  REQUIRE(err == cudaSuccess);
+  hipError_t err = hipDeviceSynchronize();
+  REQUIRE(err == hipSuccess);
 }

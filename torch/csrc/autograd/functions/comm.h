@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 
 #include <torch/csrc/autograd/function.h>
 #include <torch/csrc/autograd/variable.h>

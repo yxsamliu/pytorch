@@ -94,8 +94,8 @@ const ::gloo::ReductionFunction<T>* reductionFunction(const ReduceOp& r) {
   throw std::runtime_error("Unhandled ReduceOp");
 }
 
-std::vector<cudaStream_t> getStreamVector(AlgorithmEntry& entry) {
-  std::vector<cudaStream_t> streams(entry.streams.size());
+std::vector<hipStream_t> getStreamVector(AlgorithmEntry& entry) {
+  std::vector<hipStream_t> streams(entry.streams.size());
   for (size_t i = 0; i < entry.streams.size(); i++) {
     streams[i] = entry.streams[i].getStream();
   }
@@ -116,12 +116,12 @@ void synchronizeStreams(THCState* thcState, AlgorithmEntry* entry) {
     // Synchronize private stream with public stream.
     //
     // We must use the device guard to cover the case where the public
-    // stream is stream 0 and cudaEventRecord relies on the current
+    // stream is stream 0 and hipEventRecord relies on the current
     // device to find the right one.
     //
     deviceGuard.set_index(key.devices[i]);
-    C10D_CUDA_CHECK(cudaEventRecord(event, publicStream));
-    C10D_CUDA_CHECK(cudaStreamWaitEvent(privateStream, event, 0));
+    C10D_CUDA_CHECK(hipEventRecord(event, publicStream));
+    C10D_CUDA_CHECK(hipStreamWaitEvent(privateStream, event, 0));
   }
 }
 
@@ -145,7 +145,7 @@ void ProcessGroupGloo::WorkGloo::synchronize() {
     for (size_t i = 0; i < devices_.size(); i++) {
       auto stream = THCState_getCurrentStreamOnDevice(thcState, devices_[i]);
       auto event = events_[i].getEvent();
-      C10D_CUDA_CHECK(cudaStreamWaitEvent(stream, event, 0));
+      C10D_CUDA_CHECK(hipStreamWaitEvent(stream, event, 0));
     }
   }
 }
@@ -183,7 +183,7 @@ void ProcessGroupGloo::WorkGloo::finish(const AlgorithmEntry& entry) {
         events_[i] = CUDAEvent::create();
         const auto& event = events_[i].getEvent();
         const auto& stream = entry.streams[i].getStream();
-        C10D_CUDA_CHECK(cudaEventRecord(event, stream));
+        C10D_CUDA_CHECK(hipEventRecord(event, stream));
       }
     }
   }

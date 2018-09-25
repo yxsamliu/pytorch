@@ -22,8 +22,8 @@
 #include <sstream>
 #include <complex>
 
-#ifdef __CUDACC__
-#include <cuda_fp16.h>
+#ifdef __HIPCC__
+#include <hip/hip_fp16.h>
 #endif
 
 #if defined(__HIP_DEVICE_COMPILE__)
@@ -31,7 +31,7 @@
 #endif
 
 #ifndef AT_HOSTDEVICE
-#ifdef __CUDACC__
+#ifdef __HIPCC__
 #define AT_HOSTDEVICE __host__ __device__
 #else
 #define AT_HOSTDEVICE
@@ -64,7 +64,7 @@ struct alignas(2) Half {
   inline AT_HOSTDEVICE Half(float value);
   inline AT_HOSTDEVICE operator float() const;
 
-#ifdef __CUDACC__
+#ifdef __HIPCC__
   inline AT_HOSTDEVICE Half(const __half& value);
   inline AT_HOSTDEVICE operator __half() const;
 #endif

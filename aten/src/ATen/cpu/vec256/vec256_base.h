@@ -169,7 +169,7 @@ public:
   Vec256<T> pow(const Vec256<T> &exp) const {
     Vec256<T> ret;
     for (int64_t i = 0; i < size; i++) {
-      ret[i] = std::pow(values[i], exp[i]);
+      ret[i] = ::pow(values[i], exp[i]);
     }
     return ret;
   }

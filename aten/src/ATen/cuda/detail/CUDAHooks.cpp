@@ -16,7 +16,7 @@
 #include "ATen/cudnn/cudnn-wrapper.h"
 #endif
 
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include <cstddef>
 #include <functional>
@@ -29,23 +29,23 @@ namespace {
 
 void check_status(int32_t status) {
   AT_CHECK(
-      static_cast<cudaError_t>(status) == cudaSuccess,
+      static_cast<hipError_t>(status) == hipSuccess,
       "CUDA error (",
       static_cast<int32_t>(status),
       "): ",
-      cudaGetErrorString(static_cast<cudaError_t>(status)));
+      hipGetErrorString(static_cast<hipError_t>(status)));
 }
 
 void set_device(int32_t device) {
-  check_status(cudaSetDevice(device));
+  check_status(hipSetDevice(device));
 }
 
 void get_device(int32_t* device) {
-  check_status(cudaGetDevice(device));
+  check_status(hipGetDevice(device));
 }
 
 void unchecked_set_device(int32_t device) {
-  const auto return_code = cudaSetDevice(device);
+  const auto return_code = hipSetDevice(device);
   (void)return_code;
 }
 
@@ -85,8 +85,8 @@ std::unique_ptr<Generator> CUDAHooks::initCUDAGenerator(
 
 bool CUDAHooks::hasCUDA() const {
   int count;
-  cudaError_t err = cudaGetDeviceCount(&count);
-  if (err == cudaErrorInsufficientDriver) {
+  hipError_t err = hipGetDeviceCount(&count);
+  if (err == hipErrorInsufficientDriver) {
     return false;
   }
   return true;
@@ -106,8 +106,8 @@ bool CUDAHooks::hasCuDNN() const {
 
 int64_t CUDAHooks::current_device() const {
   int device;
-  cudaError_t err = cudaGetDevice(&device);
-  if (err == cudaSuccess) {
+  hipError_t err = hipGetDevice(&device);
+  if (err == hipSuccess) {
     return device;
   }
   return -1;
@@ -131,7 +131,7 @@ bool CUDAHooks::compiledWithMIOpen() const {
 
 bool CUDAHooks::supportsDilatedConvolutionWithCuDNN() const {
 #if AT_CUDNN_ENABLED()
-  cudaDeviceProp* prop =
+  hipDeviceProp_t* prop =
       THCState_getCurrentDeviceProperties(globalContext().getTHCState());
   // NOTE: extra parenthesis around numbers disable clang warnings about
   // dead code
@@ -194,12 +194,12 @@ void CUDAHooks::cuFFTClearPlanCache() const {
 
 int CUDAHooks::getNumGPUs() const {
   int count;
-  auto err = cudaGetDeviceCount(&count);
-  if (err == cudaErrorNoDevice) {
+  auto err = hipGetDeviceCount(&count);
+  if (err == hipErrorNoDevice) {
     return 0;
-  } else if (err != cudaSuccess) {
+  } else if (err != hipSuccess) {
     AT_ERROR(
-        "CUDA error (", static_cast<int>(err), "): ", cudaGetErrorString(err));
+        "CUDA error (", static_cast<int>(err), "): ", hipGetErrorString(err));
   }
   return count;
 }

@@ -48,7 +48,7 @@ struct bce_functor
 template <typename Dtype, typename Acctype>
 struct bce_updateOutput_no_reduce_functor
 {
-  __forceinline__ __host__ __device__
+  inline __host__ __device__
   void operator()(
       const Dtype *input,
       const Dtype *target,
@@ -80,7 +80,7 @@ struct bce_functor_weights
 template <typename Dtype, typename Acctype>
 struct bce_updateGradInput_no_reduce_functor
 {
-  __forceinline__ __host__ __device__
+  inline __host__ __device__
   void operator()(
       const Dtype *x,
       const Dtype *t,

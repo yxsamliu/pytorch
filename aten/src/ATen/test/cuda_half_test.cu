@@ -1,11 +1,12 @@
+#include "hip/hip_runtime.h"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
 #include "ATen/ATen.h"
 #include "ATen/cuda/NumericLimits.cuh"
-#include "cuda.h"
-#include "cuda_fp16.h"
-#include "cuda_runtime.h"
+#include "hip/hip_runtime.h"
+#include "hip/hip_fp16.h"
+#include "hip/hip_runtime.h"
 
 #include <assert.h>
 
@@ -79,12 +80,12 @@ __global__ void kernel(){
 }
 
 void launch_function(){
-  kernel<<<1,1>>>();
+ hipLaunchKernelGGL( kernel, dim3(1),dim3(1), 0, 0, );
 }
 
 TEST_CASE( "half common math functions tests in device", "[cuda]" ) {
   launch_function();
-  cudaError_t err = cudaDeviceSynchronize();
-  REQUIRE(err == cudaSuccess);
+  hipError_t err = hipDeviceSynchronize();
+  REQUIRE(err == hipSuccess);
 }
 

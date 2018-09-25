@@ -2,14 +2,14 @@
 
 #include "ATen/cuda/Exceptions.h"
 
-#include "cuda.h"
+#include "hip/hip_runtime.h"
 
 namespace at {
 namespace cuda {
 
 inline Device getDeviceFromPtr(void* ptr) {
-  struct cudaPointerAttributes attr;
-  AT_CUDA_CHECK(cudaPointerGetAttributes(&attr, ptr));
+  struct hipPointerAttribute_t attr;
+  AT_CUDA_CHECK(hipPointerGetAttributes(&attr, ptr));
   return {DeviceType::CUDA, attr.device};
 }
 

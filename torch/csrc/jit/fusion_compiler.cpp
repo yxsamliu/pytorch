@@ -23,8 +23,8 @@
 #include <THC/THCGenerator.hpp>
 #include "torch/csrc/cuda/cuda_check.h"
 #include <nvrtc.h>
-#include <cuda.h>
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
+#include <hip/hip_runtime.h>
 #endif
 
 #include <string>
@@ -103,7 +103,7 @@ protected:
   // arguments is a list of pointers to the arguments for the compiled CUDA/CPU
   // code.
   // The format of arguments is suitable for directly passing to a call to
-  // cuLaunchKernel as the kernel arguments.
+  // hipModuleLaunchKernel as the kernel arguments.
   // Currently the first argument is a pointer to numel (for passing to
   // CUDA code), and the remainder are pointers to the TensorInfo<T> structs
   // that compiled code uses to load Tensor data.
@@ -183,8 +183,8 @@ struct TensorInfo<T, 0> {
 };
 )");
 
-// We rewrite the code for philox RNG from curand as nvrtc couldn't resolve the
-// curand header correctly.
+// We rewrite the code for philox RNG from hiprand as nvrtc couldn't resolve the
+// hiprand header correctly.
 constexpr auto rand_support_literal = R"(
 
   class Philox {
@@ -343,7 +343,7 @@ constexpr auto half_support_literal  = R"(
   };
 
   /* All intrinsic functions are only available to nvcc compilers */
-  #if defined(__CUDACC__)
+  #if defined(__HIPCC__)
     /* Definitions of intrinsics */
     __device__ __half __float2half(const float f) {
       __half val;
@@ -356,7 +356,7 @@ constexpr auto half_support_literal  = R"(
       asm("{  cvt.f32.f16 %0, %1;}\n" : "=f"(val) : "h"(__HALF_TO_CUS(h)));
       return val;
     }
-  #endif /* defined(__CUDACC__) */
+  #endif /* defined(__HIPCC__) */
 #endif /* defined(__cplusplus) */
 #undef __HALF_TO_US
 #undef __HALF_TO_CUS
@@ -886,7 +886,7 @@ void FusedKernel::launch(at::ArrayRef<at::Tensor> inputs, std::vector<at::Tensor
 
 #ifdef USE_CUDA
 
-void checkCUDAVersion(const cudaDeviceProp & prop) {
+void checkCUDAVersion(const hipDeviceProp_t & prop) {
   if ((prop.major >= 6 && CUDA_VERSION < 8000) ||
       (prop.major >= 7 && CUDA_VERSION < 9000)) {
     std::stringstream err_string;
@@ -902,7 +902,7 @@ struct CUDAFusedKernel : public FusedKernel {
   : FusedKernel(name, agraph) {
     at::DeviceGuard device_guard(agraph.device);
 
-    TORCH_CUDA_CHECK(cudaGetDeviceProperties(&prop, agraph.device));
+    TORCH_CUDA_CHECK(hipGetDeviceProperties(&prop, agraph.device));
     checkCUDAVersion(prop);
 
     std::stringstream cu;
@@ -932,15 +932,15 @@ struct CUDAFusedKernel : public FusedKernel {
     ptx.resize(ptx_size);
     TORCH_NVRTC_CHECK(nvrtcGetPTX(program, ptx.data()));
 
-    TORCH_CU_CHECK(cuModuleLoadData(&module, ptx.data()));
-    TORCH_CU_CHECK(cuModuleGetFunction(&function, module, name.c_str()));
+    TORCH_CU_CHECK(hipModuleLoadData(&module, ptx.data()));
+    TORCH_CU_CHECK(hipModuleGetFunction(&function, module, name.c_str()));
 
-    TORCH_CU_CHECK(cuOccupancyMaxActiveBlocksPerMultiprocessor(
+    TORCH_CU_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
       &maxBlocks, function, 128, 0));
     maxBlocks *= prop.multiProcessorCount;
   }
   virtual ~CUDAFusedKernel() override {
-    TORCH_CU_CHECK(cuModuleUnload(module));
+    TORCH_CU_CHECK(hipModuleUnload(module));
   }
 protected:
   virtual at::Backend backend() const override {
@@ -958,16 +958,16 @@ protected:
 
      // it is possible that this is the first cuda call on this thread
      // so make sure we initialize the Driver API's context
-     // cudaFree(0) accomplishes this.
-     CUcontext pctx = 0;
-     TORCH_CU_CHECK(cuCtxGetCurrent(&pctx));
+     // hipFree(0) accomplishes this.
+     hipCtx_t pctx = 0;
+     TORCH_CU_CHECK(hipCtxGetCurrent(&pctx));
      if (!pctx) {
         std::unique_lock<std::mutex> cudaFreeMutexLock(
             *(THCCachingAllocator_getCudaFreeMutex()));
-        cudaFree(0);
+        hipFree(0);
      }
-     CUstream stream = at::cuda::getCurrentCUDAStream();
-     TORCH_CU_CHECK(cuLaunchKernel(
+     hipStream_t stream = at::cuda::getCurrentCUDAStream();
+     TORCH_CU_CHECK(hipModuleLaunchKernel(
        function,
        numBlocks, 1, 1,
        blockSize, 1, 1,
@@ -976,13 +976,13 @@ protected:
        nullptr));
   }
   std::vector<char> ptx;
-  CUmodule module;
-  CUfunction function;
+  hipModule_t module;
+  hipFunction_t function;
 
   // we record prop/device so if they are availiable for launch heuristics
   // querying at launch is too slow for device properties.
   int device;
-  cudaDeviceProp prop;
+  hipDeviceProp_t prop;
   int blockSize = 128;
   int maxBlocks;
 };
@@ -1573,8 +1573,8 @@ FusionCompiler & sharedFusionCompiler() {
 #ifdef USE_CUDA
 #include "torch/csrc/cuda/cuda_check.h"
 #include <nvrtc.h>
-#include <cuda.h>
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
+#include <hip/hip_runtime.h>
 #endif
 #include <string>
 #include <algorithm>

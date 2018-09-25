@@ -2,7 +2,7 @@
 #define THC_NUMERICS_INC
 
 #include <limits>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 #include <assert.h>
 #include "THCHalf.h"
 #include "ATen/ATen.h"
@@ -200,7 +200,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half exp(half a) {
-    return static_cast<at::Half>(std::exp(static_cast<at::Half>(a)));
+    return static_cast<at::Half>(::exp(static_cast<at::Half>(a)));
   }
 
   // note that exp10 is not in the std namespace.
@@ -321,7 +321,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half frac(half a) {
-    #ifdef __CUDA_ARCH__
+    #if defined(__CUDA_ARCH__) || defined(__HIP_PLATFORM_HCC__)
         return static_cast<at::Half>(a) - static_cast<at::Half>(::trunc(static_cast<at::Half>(a)));
     #else // __CUDA_ARCH__
         return static_cast<at::Half>(a) - static_cast<at::Half>(::floor(static_cast<at::Half>(a)));
@@ -513,7 +513,7 @@ struct ScalarConvert {
 template <typename Out>
 struct ScalarConvert<half, Out> {
   static __host__ __device__ Out to(const half v) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_PLATFORM_HCC__)
     return (Out) __half2float(v);
 #else
     return (Out) THC_half2float(v);
@@ -524,7 +524,7 @@ struct ScalarConvert<half, Out> {
 template <typename In>
 struct ScalarConvert<In, half> {
   static __host__ __device__ half to(const In v) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_PLATFORM_HCC__)
     return __float2half((float) v);
 #else
     return THC_float2half((float) v);

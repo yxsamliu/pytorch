@@ -403,7 +403,7 @@ THCDeviceTensor<T, Dim, IndexT, PtrTraits>::view() {
 template <typename T, int Dim,
           typename IndexT, template <typename U> class PtrTraits>
 void
-THCDeviceTensor<T, Dim, IndexT, PtrTraits>::zero(cudaStream_t stream) {
+THCDeviceTensor<T, Dim, IndexT, PtrTraits>::zero(hipStream_t stream) {
 #if defined(__CUDA_ARCH__) || defined(__HIP_PLATFORM_HCC__)
   assert(isContiguous());
 #else
@@ -412,5 +412,5 @@ THCDeviceTensor<T, Dim, IndexT, PtrTraits>::zero(cudaStream_t stream) {
   }
 #endif
 
-  cudaMemsetAsync(data(), 0, numElements() * sizeof(T), stream);
+  hipMemsetAsync(data(), 0, numElements() * sizeof(T), stream);
 }

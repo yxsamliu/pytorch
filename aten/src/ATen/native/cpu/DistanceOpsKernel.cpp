@@ -15,7 +15,7 @@ struct PDist {
   using Vec = vec256::Vec256<scalar_t>;
 
   // Depending on the value of the pnorm, there are specific implementations
-  // that are much faster than std::pow(std::abs(a - b), p), but have the same
+  // that are much faster than ::pow(std::abs(a - b), p), but have the same
   // standard loop code for how to process the input vector. To reuse the main
   // outside loop while still guaranteeing that the compiler inlines every
   // different function on p, we break the inner norm logic into structs with
@@ -78,7 +78,7 @@ struct PDist {
   struct pdist_calc {
     static inline Vec map(const Vec& diff, const Vec& p) { return diff.pow(p); }
     static inline Vec red(const Vec& agg, const Vec& up) { return agg + up; }
-    static inline scalar_t finish(const scalar_t agg, const scalar_t p) { return std::pow(agg, 1.0 / p); }
+    static inline scalar_t finish(const scalar_t agg, const scalar_t p) { return ::pow(agg, 1.0 / p); }
     static inline Vec backward(const Vec& diff, const scalar_t grad, const scalar_t dist, const Vec& p) { return dist == 0.0 ? Vec(0) : diff * diff.abs().pow(p - Vec(2)) * Vec(grad) / Vec(dist).pow(p - Vec(1)); }
   };
 

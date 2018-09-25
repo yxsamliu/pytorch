@@ -5,7 +5,7 @@
 #include "ATen/cuda/CUDAGuard.h"
 #include "ATen/cuda/CUDAEvent.h"
 
-#include "cuda_runtime.h"
+#include "hip/hip_runtime.h"
 
 #include <functional>
 #include <thread>
@@ -18,7 +18,7 @@ TEST_CASE(
     "Copying and Moving Streams",
     "Verifies streams are live through copying and moving") {
   int32_t device = -1;
-  cudaStream_t cuda_stream;
+  hipStream_t cuda_stream;
 
   // Tests that copying works as expected and preserves the stream
   at::cuda::CUDAStream copyStream;
@@ -201,10 +201,10 @@ TEST_CASE("Streampool Round Robin") {
     streams.emplace_back(at::cuda::detail::CUDAStream_createStream());
   }
 
-  std::unordered_set<cudaStream_t> stream_set{};
+  std::unordered_set<hipStream_t> stream_set{};
   bool hasDuplicates = false;
   for (auto i = decltype(streams.size()){0}; i < streams.size(); ++i) {
-    cudaStream_t cuda_stream = streams[i];
+    hipStream_t cuda_stream = streams[i];
     auto result_pair = stream_set.insert(cuda_stream);
     if (!result_pair.second) hasDuplicates = true;
   }
@@ -241,7 +241,7 @@ TEST_CASE("CUDAEvent Syncs") {
   wait_stream0.synchronize_with(event);
   wait_stream1.synchronize_with(event);
 
-  cudaStreamSynchronize(wait_stream0);
+  hipStreamSynchronize(wait_stream0);
   REQUIRE(event.happened());
 }
 
@@ -264,6 +264,6 @@ TEST_CASE("Cross-Device Events") {
 
   stream0.synchronize_with(event0);
   
-  cudaStreamSynchronize(stream0);
+  hipStreamSynchronize(stream0);
   REQUIRE(event0.happened());
 }

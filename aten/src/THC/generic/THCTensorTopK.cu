@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorTopK.cu"
 #else
@@ -33,8 +34,8 @@ THC_API void THCTensor_(topk)(THCState* state,
   // is provided to the kernel for the arguments.
 
 #define RUN_K(INDEX_T, DIM, DIR)                                        \
-  gatherTopK<scalar_t, INDEX_T, DIM, DIR>                                   \
-    <<<grid, block, 0, THCState_getCurrentStream(state)>>>(             \
+ hipLaunchKernelGGL( gatherTopK<scalar_t, INDEX_T, DIM, DIR>                                   \
+    , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state),              \
       inputInfo,                                                        \
       static_cast<INDEX_T>(sliceSize),                                  \
       static_cast<INDEX_T>(k),                                          \
@@ -170,7 +171,7 @@ THC_API void THCTensor_(topk)(THCState* state,
 
   THCudaLongTensor_free(state, input);
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #endif // THC_GENERIC_FILE

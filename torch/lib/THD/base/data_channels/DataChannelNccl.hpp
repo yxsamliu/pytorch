@@ -28,7 +28,7 @@ namespace thd {
 
 // Type aliasing
 using NcclResourcePair =
-  std::pair<std::vector<ncclComm_t>*, std::vector<cudaEvent_t>*>;
+  std::pair<std::vector<ncclComm_t>*, std::vector<hipEvent_t>*>;
 
 struct DataChannelNccl : DataChannel {
 
@@ -42,10 +42,10 @@ struct DataChannelNccl : DataChannel {
 
     NcclResources() = default;
     NcclResources(std::unique_ptr<std::vector<ncclComm_t>>&& ncclComm,
-                  std::unique_ptr<std::vector<cudaEvent_t>>&& event):
+                  std::unique_ptr<std::vector<hipEvent_t>>&& event):
 
       _commEventPair(std::pair<std::unique_ptr<std::vector<ncclComm_t>>,
-                               std::unique_ptr<std::vector<cudaEvent_t>>>
+                               std::unique_ptr<std::vector<hipEvent_t>>>
                                (std::move(ncclComm), std::move(event))) {}
     // Delete copy and assignment ctors
     NcclResources(const NcclResources&) = delete;
@@ -61,14 +61,14 @@ struct DataChannelNccl : DataChannel {
     }
 
     // Nccl CUDA event Getter
-    std::vector<cudaEvent_t>* ncclCudaEvents() {
+    std::vector<hipEvent_t>* ncclCudaEvents() {
       return _commEventPair.second.get();
     }
 
   private:
 
     std::pair<std::unique_ptr<std::vector<ncclComm_t>>,
-              std::unique_ptr<std::vector<cudaEvent_t>>> _commEventPair;
+              std::unique_ptr<std::vector<hipEvent_t>>> _commEventPair;
   };
 
 

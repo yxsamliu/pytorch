@@ -43,7 +43,7 @@ void host_softmax(Tensor output, const Tensor& input, const int64_t dim) {
 
           scalar_t tmpsum = 0;
           for (int64_t d = 0; d < dim_size; d++) {
-            scalar_t z = std::exp(input_data[d * dim_stride] - max_input);
+            scalar_t z = ::exp(input_data[d * dim_stride] - max_input);
             if (!LogSoftMax) {
               output_data[d * dim_stride] = z;
             }
@@ -51,7 +51,7 @@ void host_softmax(Tensor output, const Tensor& input, const int64_t dim) {
           }
 
           if (LogSoftMax)
-            tmpsum = max_input + std::log(tmpsum);
+            tmpsum = max_input + ::log(tmpsum);
           else
             tmpsum = 1 / tmpsum;
 
@@ -107,7 +107,7 @@ void host_softmax_backward(
           for (int64_t d = 0; d < dim_size; d++) {
             if (LogSoftMax) {
               gradInput_data[d * dim_stride] = gradOutput_data[d * dim_stride] -
-                  std::exp(output_data[d * dim_stride]) * sum;
+                  ::exp(output_data[d * dim_stride]) * sum;
             } else {
               gradInput_data[d * dim_stride] = output_data[d * dim_stride] *
                   (gradOutput_data[d * dim_stride] - sum);

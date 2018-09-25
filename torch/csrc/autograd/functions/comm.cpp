@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 
 #include <torch/csrc/autograd/functions/comm.h>
 
@@ -31,7 +31,7 @@ Scatter::Scatter(
       unsqueeze_scalars_(unsqueeze_scalars) {}
 
 variable_list Scatter::apply(variable_list&& inputs) {
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   AT_ASSERT(inputs.size() == 1);
   auto& input = inputs.front();
 
@@ -72,7 +72,7 @@ Gather::Gather(const at::Device& destination_device, int64_t dim)
     : destination_device_(destination_device), dim_(dim) {}
 
 variable_list Gather::apply(variable_list&& inputs) {
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   bool all_are_zero_dim = true;
   for (const auto& input : inputs) {
     AT_CHECK(

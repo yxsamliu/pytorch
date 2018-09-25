@@ -448,7 +448,7 @@ bool THCPByteStorage_init(PyObject *module);
 
 bool THCPStream_init(PyObject *module);
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 PyMethodDef* THCPModule_methods();
 namespace torch { namespace cuda {
 
@@ -460,7 +460,7 @@ void initModule(PyObject *module);
 namespace torch { namespace nn {
 
 void init__THNN(PyObject*);
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 void init__THCUNN(PyObject*);
 #endif
 
@@ -515,7 +515,7 @@ static PyObject* initModule() {
   THPUtils_addPyMethodDefs(methods, TorchMethods);
   THPUtils_addPyMethodDefs(methods, DataLoaderMethods);
   THPUtils_addPyMethodDefs(methods, torch::autograd::python_functions());
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   THPUtils_addPyMethodDefs(methods, THCPModule_methods());
 #endif
 #ifdef USE_CUDNN
@@ -557,7 +557,7 @@ static PyObject* initModule() {
   torch::jit::initJITBindings(module);
   torch::autograd::initNNFunctions(module);
   torch::autograd::init_legacy_variable(module);
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   torch::cuda::initModule(module);
 #endif
   ASSERT_TRUE(THPDoubleStorage_init(module));
@@ -569,7 +569,7 @@ static PyObject* initModule() {
   ASSERT_TRUE(THPCharStorage_init(module));
   ASSERT_TRUE(THPByteStorage_init(module));
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   // This will only initialise base classes and attach them to library namespace
   // They won't be ready for real usage until importing cuda module, that will
   // complete the process (but it defines Python classes before calling back into
@@ -628,7 +628,7 @@ static PyObject* initModule() {
 #endif
 
   torch::nn::init__THNN(module);
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   torch::nn::init__THCUNN(module);
 #endif
 

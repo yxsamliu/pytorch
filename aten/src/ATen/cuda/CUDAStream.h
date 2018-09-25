@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <utility>
 
-#include "cuda_runtime_api.h"
+#include "hip/hip_runtime_api.h"
 
 #include <ATen/cuda/ATenCUDAGeneral.h>
 
@@ -70,13 +70,13 @@ AT_CUDA_API CUDAStreamInternals* CUDAStream_getCurrentStream(int64_t device = -1
 AT_CUDA_API void CUDAStream_setStream(CUDAStreamInternals* internals);
 AT_CUDA_API void CUDAStream_uncheckedSetStream(CUDAStreamInternals* internals);
 
-AT_CUDA_API cudaStream_t CUDAStream_stream(CUDAStreamInternals*);
+AT_CUDA_API hipStream_t CUDAStream_stream(CUDAStreamInternals*);
 AT_CUDA_API int64_t CUDAStream_device(CUDAStreamInternals*);
 
 } // namespace detail
 
 // RAII for a CUDA stream
-// Allows use as a cudaStream_t, copying, moving, and metadata access.
+// Allows use as a hipStream_t, copying, moving, and metadata access.
 struct AT_CUDA_API CUDAStream {
 
   // Constructors
@@ -87,8 +87,8 @@ struct AT_CUDA_API CUDAStream {
   // Returns true if the CUDAStream is not null.
   explicit operator bool() const noexcept { return internals_ != nullptr; }
 
-  // Implicit conversion to cudaStream_t
-  operator cudaStream_t() const { return detail::CUDAStream_stream(internals_); }
+  // Implicit conversion to hipStream_t
+  operator hipStream_t() const { return detail::CUDAStream_stream(internals_); }
 
   // Less than operator (to allow use in sets)
   friend bool operator<(const CUDAStream& left, const CUDAStream& right) {
@@ -97,7 +97,7 @@ struct AT_CUDA_API CUDAStream {
 
   // Getters
   int64_t device() const { return detail::CUDAStream_device(internals_); }
-  cudaStream_t stream() const { return detail::CUDAStream_stream(internals_); }
+  hipStream_t stream() const { return detail::CUDAStream_stream(internals_); }
   CUDAStreamInternals* internals() const { return internals_; }
 
   void synchronize_with(const CUDAEvent& event) const;

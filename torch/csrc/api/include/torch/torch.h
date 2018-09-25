@@ -1,6 +1,6 @@
 #pragma once
 
-#include <torch/cuda.h>
+#include <torch/hip/hip_runtime.h>
 #include <torch/nn.h>
 #include <torch/optim.h>
 #include <torch/serialization.h>

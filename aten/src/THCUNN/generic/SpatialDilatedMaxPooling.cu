@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/SpatialDilatedMaxPooling.cu"
 #else
@@ -145,11 +146,11 @@ void THNN_(SpatialDilatedMaxPooling_updateOutput)(
 
   int count = THCTensor_(nElement)(state, output);
 
-  MaxPoolForward<scalar_t, accreal> <<< GET_BLOCKS(count), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state) >>>
-      (count, input_data,
-      batchSize, nInputPlane, nInputRows, nInputCols, nOutputRows, nOutputCols,
-      kH, kW, dH, dW, padH, padW, dilationH, dilationW, output_data, indices_data);
-  THCudaCheck(cudaGetLastError());
+ hipLaunchKernelGGL( MaxPoolForward<scalar_t, accreal> ,  dim3(GET_BLOCKS(count)), dim3(CUDA_NUM_THREADS), 0, THCState_getCurrentStream(state) , 
+      static_cast<const int>(count), input_data,
+      static_cast<const int>(batchSize), static_cast<const int>(nInputPlane), static_cast<const int>(nInputRows), static_cast<const int>(nInputCols), static_cast<const int>(nOutputRows), static_cast<const int>(nOutputCols),
+      static_cast<const int>(kH), static_cast<const int>(kW), static_cast<const int>(dH), static_cast<const int>(dW), static_cast<const int>(padH), static_cast<const int>(padW), static_cast<const int>(dilationH), static_cast<const int>(dilationW), output_data, indices_data);
+  THCudaCheck(hipGetLastError());
 
   if(input->dim() == 3)
     THCTensor_(resize3d)(state, output, nInputPlane, nOutputRows, nOutputCols);
@@ -227,14 +228,14 @@ void THNN_(SpatialDilatedMaxPooling_updateGradInput)(
   uint64_t maxGridZ = THCState_getCurrentDeviceProperties(state)->maxGridSize[2];
   if (maxGridY < grid.y) grid.y = maxGridY;
   if (maxGridZ < grid.z) grid.z = maxGridZ;
-  MaxPoolBackward<scalar_t, accreal> <<< grid, BACKWARD_THREADS, 0, THCState_getCurrentStream(state) >>>
-      (count,
+ hipLaunchKernelGGL( MaxPoolBackward<scalar_t, accreal> ,  dim3(grid), dim3(BACKWARD_THREADS), 0, THCState_getCurrentStream(state) , 
+      static_cast<const int>(count),
       THCTensor_(data)(state, gradOutput),
-      THCIndexTensor_(data)(state, indices),
-      batchSize, nInputPlane, nInputRows, nInputCols, nOutputRows, nOutputCols,
-      kH, kW, dH, dW, padH, padW, dilationH, dilationW,
+      static_cast<const int64_t*>(THCIndexTensor_(data)(state, indices)),
+      static_cast<const int>(batchSize), static_cast<const int>(nInputPlane), static_cast<const int>(nInputRows), static_cast<const int>(nInputCols), static_cast<const int>(nOutputRows), static_cast<const int>(nOutputCols),
+      static_cast<const int>(kH), static_cast<const int>(kW), static_cast<const int>(dH), static_cast<const int>(dW), static_cast<const int>(padH), static_cast<const int>(padW), static_cast<const int>(dilationH), static_cast<const int>(dilationW),
       THCTensor_(data)(state, gradInput));
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 
   THCTensor_(free)(state, gradOutput);
 

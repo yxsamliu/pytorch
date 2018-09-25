@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "THCUNN.h"
 #include "common.h"
 #include "THCThrustAllocator.cuh"
@@ -21,7 +22,7 @@ __global__ void cunn_LookupTable_accGradParametersKernelByFeature
    int64_t stride, 
    int padding_idx) 
 {
-  extern __shared__ char buf[];
+  HIP_DYNAMIC_SHARED( char, buf)
   Acctype* smem = (Acctype*)buf;
   Acctype* my_s = smem + WARP_SIZE*threadIdx.y;
   int* indices_batch = (int*)(buf + sizeof(Acctype)*WARP_SIZE*blockDim.y);
@@ -158,7 +159,7 @@ struct FastPow
   __host__ __device__
   static inline AccType pow(DType x, AccType norm) {
     AccType xA = ScalarConvert<DType, AccType>::to(x);
-    return std::pow(std::abs(xA), norm);
+    return ::pow(std::abs(xA), norm);
   }
 };
 
@@ -189,38 +190,8 @@ void calculate_norms_and_renorm(DType *weights,
                                 THCIndex_t *indices, 
                                 AccType normType,
                                 AccType maxNorm, 
-                                IndexType dim)
-{
-  // Some casting hacks since dynamic shared memory and templates don't work together:
-  extern __shared__ unsigned char smem[];
-  AccType *sdata = reinterpret_cast<AccType *>(smem);
-
-  IndexType tid = threadIdx.x;
-  IndexType baseIndex = (indices[blockIdx.x] - TH_INDEX_BASE) * dim;
-
-  AccType accZero = ScalarConvert<int, AccType>::to(0);
-  AccType v = accZero;
-  for (IndexType i = tid; i < dim; i += blockDim.x) {
-    v += FastPow<DType, AccType, Norm>::pow(weights[baseIndex + i], normType);
-  }
-
-  v = reduceBlock<AccType, ReduceAdd<AccType>>
-        (sdata, blockDim.x, v, ReduceAdd<AccType>(), accZero);
-
-  if (tid == 0) {
-    sdata[0] = std::pow(v, 
-        THCNumerics<AccType>::div(ScalarConvert<int, AccType>::to(1), normType)
-    );
-  }
-  __syncthreads();
-  // now we renormalize the blocks that need it
-  if (sdata[0] > maxNorm) {
-    DType factor = ScalarConvert<AccType, DType>::to(maxNorm / (sdata[0] + 1e-7));
-    for (IndexType i = tid; i < dim; i += blockDim.x) {
-      weights[baseIndex + i] *= factor;
-    }
-  }
-
+                                IndexType dim){
+assert(0);
 }
 
 #include "generic/LookupTable.cu"

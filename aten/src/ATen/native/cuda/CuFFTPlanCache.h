@@ -10,8 +10,8 @@
 #include <stdexcept>
 #include <sstream>
 #include <limits>
-#include <cufft.h>
-#include <cufftXt.h>
+#include <hipfft.h>
+#include <hipfft.h>
 
 namespace at { namespace native { namespace detail {
 
@@ -54,14 +54,14 @@ static inline void setCuFFTParams(CuFFTParams* params,
 }
 
 struct CuFFTHandleDeleter {
-  void operator()(cufftHandle* x) {
+  void operator()(hipfftHandle* x) {
     if (x != nullptr) {
-      CUFFT_CHECK(cufftDestroy(*x));
+      CUFFT_CHECK(hipfftDestroy(*x));
     }
   }
 };
 
-__forceinline__
+inline
 static bool is_pow_of_two(int64_t x) {
   return (x & (x - 1)) == 0;
 }
@@ -232,19 +232,19 @@ public:
     }
 
 #else
-    cudaDataType itype, otype, exec_type;
+    hipDataType_t itype, otype, exec_type;
     if (input.type().scalarType() == ScalarType::Float) {
-      itype = complex_input ? CUDA_C_32F : CUDA_R_32F;
-      otype = complex_output ? CUDA_C_32F : CUDA_R_32F;
-      exec_type = CUDA_C_32F;
+      itype = complex_input ? hipC32F : hipR32F;
+      otype = complex_output ? hipC32F : hipR32F;
+      exec_type = hipC32F;
     } else if (input.type().scalarType() == ScalarType::Double) {
-      itype = complex_input ? CUDA_C_64F : CUDA_R_64F;
-      otype = complex_output ? CUDA_C_64F : CUDA_R_64F;
-      exec_type = CUDA_C_64F;
+      itype = complex_input ? hipC64F : hipR64F;
+      otype = complex_output ? hipC64F : hipR64F;
+      exec_type = hipC64F;
     } else if (input.type().scalarType() == ScalarType::Half) {
-      itype = complex_input ? CUDA_C_16F : CUDA_R_16F;
-      otype = complex_output ? CUDA_C_16F : CUDA_R_16F;
-      exec_type = CUDA_C_16F;
+      itype = complex_input ? hipC16F : hipR16F;
+      otype = complex_output ? hipC16F : hipR16F;
+      exec_type = hipC16F;
     } else {
       std::ostringstream ss;
       ss << "cuFFT doesn't support tensor of type: "
@@ -254,12 +254,12 @@ public:
 #endif
 
     // create plan
-    auto raw_plan_ptr = new cufftHandle();
-    CUFFT_CHECK(cufftCreate(raw_plan_ptr));
+    auto raw_plan_ptr = new hipfftHandle();
+    CUFFT_CHECK(hipfftCreate(raw_plan_ptr));
     plan_ptr.reset(raw_plan_ptr);
 
     // disable auto allocation of workspace to use THC allocator
-    CUFFT_CHECK(cufftSetAutoAllocation(plan(), /* autoAllocate */ 0));
+    CUFFT_CHECK(hipfftSetAutoAllocation(plan(), /* autoAllocate */ 0));
 
     size_t ws_size_t;
 
@@ -328,9 +328,9 @@ public:
   }
 
 #ifdef __HIP_PLATFORM_HCC__
-  cufftHandle &plan() const { return *plan_ptr.get(); }
+  hipfftHandle &plan() const { return *plan_ptr.get(); }
 #else
-  const cufftHandle &plan() const { return *plan_ptr.get(); }
+  const hipfftHandle &plan() const { return *plan_ptr.get(); }
 #endif
 
   bool should_clone_input() const { return clone_input; }
@@ -338,15 +338,15 @@ public:
   int64_t workspace_size() const { return ws_size; }
 
 private:
-  std::unique_ptr<cufftHandle, CuFFTHandleDeleter> plan_ptr;
+  std::unique_ptr<hipfftHandle, CuFFTHandleDeleter> plan_ptr;
   bool clone_input;
   int64_t ws_size;
 };
 
 // NB: cuFFT allocates a starting plan array of size 1024. It should grow the
 //     array as more plans are created. However, a bug in cuFFT (at least
-//     present in CUDA 9.1) causes the cufftSetAutoAllocation call on the
-//     1024-th plan to fail with CUFFT_INVALID_PLAN. Therefore, we check that
+//     present in CUDA 9.1) causes the hipfftSetAutoAllocation call on the
+//     1024-th plan to fail with HIPFFT_INVALID_PLAN. Therefore, we check that
 //     cache size is leq 1023. The initial plan array size is 1024 for
 //     CUDA 8.0 ~ 9.2 so setting this as a CUDA-version-agnostic constant should
 //     be fine for now.

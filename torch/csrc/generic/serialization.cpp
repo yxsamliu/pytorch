@@ -14,7 +14,7 @@ void THPStorage_(writeFileRaw)(THWStorage *self, io fd)
 #else
   std::unique_ptr<char[]> cpu_data(new char[size * sizeof(scalar_t)]);
   data = (scalar_t*)cpu_data.get();
-  THCudaCheck(cudaMemcpy(data, THWStorage_(data)(LIBRARY_STATE self), size * sizeof(scalar_t), cudaMemcpyDeviceToHost));
+  THCudaCheck(hipMemcpy(data, THWStorage_(data)(LIBRARY_STATE self), size * sizeof(scalar_t), hipMemcpyDeviceToHost));
 #endif
   ssize_t result = doWrite(fd, &size, sizeof(int64_t));
   if (result != sizeof(int64_t))
@@ -134,7 +134,7 @@ THWStorage * THPStorage_(readFileRaw)(io file, THWStorage *_storage)
   }
 
 #ifdef THC_GENERIC_FILE
-  THCudaCheck(cudaMemcpy(THWStorage_(data)(LIBRARY_STATE storage), data, size * sizeof(scalar_t), cudaMemcpyHostToDevice));
+  THCudaCheck(hipMemcpy(THWStorage_(data)(LIBRARY_STATE storage), data, size * sizeof(scalar_t), hipMemcpyHostToDevice));
 #endif
   return storage.release();
 }

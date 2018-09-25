@@ -4,21 +4,21 @@ typedef struct CUDAStreamInternals THCStream;
 
 #include <algorithm>
 
-#include <cuda.h>
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
+#include <hip/hip_runtime.h>
 
 namespace c10d {
 
 // RAII wrapper for CUDA events.
 class CUDAEvent {
  public:
-  CUDAEvent(cudaEvent_t event, int device) : device_(device), event_(event) {}
+  CUDAEvent(hipEvent_t event, int device) : device_(device), event_(event) {}
 
   CUDAEvent() : CUDAEvent(nullptr, 0) {}
 
   ~CUDAEvent() noexcept(false);
 
-  static CUDAEvent create(unsigned int flags = cudaEventDefault);
+  static CUDAEvent create(unsigned int flags = hipEventDefault);
 
   // Must not be copyable.
   CUDAEvent& operator=(const CUDAEvent&) = delete;
@@ -37,7 +37,7 @@ class CUDAEvent {
     return *this;
   }
 
-  cudaEvent_t getEvent() const {
+  hipEvent_t getEvent() const {
     return event_;
   }
 
@@ -47,12 +47,12 @@ class CUDAEvent {
 
  protected:
   int device_;
-  cudaEvent_t event_;
+  hipEvent_t event_;
 };
 
 // RAII wrapper for CUDA streams.
 //
-// This wrapper uses THCStream instead of cudaStream_t because we need
+// This wrapper uses THCStream instead of hipStream_t because we need
 // to interact with the THC API for selecting the current stream.
 // Doing this without having a THCStream pointer is cumbersome.
 //
@@ -81,7 +81,7 @@ class CUDAStream {
     return *this;
   }
 
-  cudaStream_t getStream() const;
+  hipStream_t getStream() const;
 
   THCStream* getTHCStream() {
     return stream_;

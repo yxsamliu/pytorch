@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/VolumetricUpSamplingNearest.cu"
 #else
@@ -64,10 +65,10 @@ void THNN_(VolumetricUpSamplingNearest_updateOutput)(
 
   const int num_kernels = outputDepth * outputHeight * outputWidth;
   const int num_threads = THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock;
-  cudaStream_t stream = THCState_getCurrentStream(state);
-  nearest_neighbor_5d_kernel<scalar_t, accreal> <<<THCCeilDiv(num_kernels, num_threads), num_threads,
-	 0, stream>>>(num_kernels, idata, odata);
-  THCudaCheck(cudaGetLastError());
+  hipStream_t stream = THCState_getCurrentStream(state);
+ hipLaunchKernelGGL( nearest_neighbor_5d_kernel<scalar_t, accreal> , dim3(THCCeilDiv(num_kernels, num_threads)), dim3(num_threads),
+	 0, stream, static_cast<const int>(num_kernels), idata, odata);
+  THCudaCheck(hipGetLastError());
 }
 
 
@@ -97,10 +98,10 @@ void THNN_(VolumetricUpSamplingNearest_updateGradInput)(
   THCDeviceTensor<scalar_t, 5> data2 = toDeviceTensor<scalar_t, 5>(state, gradOutput);
   const int num_kernels = outputDepth * outputHeight * outputWidth;
   const int num_threads = THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock;
-  cudaStream_t stream = THCState_getCurrentStream(state);
-  nearest_neighbor_5d_kernel_backward<scalar_t, accreal> <<<THCCeilDiv(num_kernels, num_threads),
-	  num_threads, 0, stream>>>(num_kernels, data1, data2);
-  THCudaCheck(cudaGetLastError());
+  hipStream_t stream = THCState_getCurrentStream(state);
+ hipLaunchKernelGGL( nearest_neighbor_5d_kernel_backward<scalar_t, accreal> , dim3(THCCeilDiv(num_kernels, num_threads)),
+dim3(	  num_threads), 0, stream, static_cast<const int>(num_kernels), data1, data2);
+  THCudaCheck(hipGetLastError());
   THCTensor_(free)(state, gradOutput);
 }
 

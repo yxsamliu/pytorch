@@ -44,7 +44,7 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-CMAKE_INSTALL=${CMAKE_INSTALL-make install}
+CMAKE_INSTALL=${CMAKE_INSTALL-make VERBOSE=1 install}
 
 BUILD_SHARED_LIBS=${BUILD_SHARED_LIBS-ON}
 

@@ -342,7 +342,7 @@ def build_libs(libs):
             my_env["CMAKE_INSTALL"] = 'ninja install'
         else:
             my_env['CMAKE_GENERATOR'] = ''
-            my_env['CMAKE_INSTALL'] = 'make install'
+            my_env['CMAKE_INSTALL'] = 'make VERBOSE=1 install'
     if USE_SYSTEM_NCCL:
         my_env["NCCL_ROOT_DIR"] = NCCL_ROOT_DIR
     if USE_CUDA:

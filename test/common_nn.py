@@ -185,12 +185,14 @@ module_tests = [
         constructor_args=(5, 5e-3, 1e-3, 2),
         input_size=(2, 3, 6, 6),
         check_gradgrad=False,
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='PReLU',
         input_size=(2, 3, 4),
         reference_fn=lambda i, p: torch.clamp(i, min=0) + torch.clamp(i, max=0) * p[0][0],
         desc='1d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='PReLU',
@@ -204,6 +206,7 @@ module_tests = [
         input_size=(2, 3, 4, 5),
         desc='2d',
         reference_fn=lambda i, p: torch.clamp(i, min=0) + torch.clamp(i, max=0) * p[0][0],
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='PReLU',
@@ -217,6 +220,7 @@ module_tests = [
         input_size=(2, 3, 4, 5, 6),
         reference_fn=lambda i, p: torch.clamp(i, min=0) + torch.clamp(i, max=0) * p[0][0],
         desc='3d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='PReLU',
@@ -628,6 +632,7 @@ criterion_tests = [
         desc="1d",
         check_sum_reduction=True,
         check_gradgrad=False,
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='MultiLabelMarginLoss',
@@ -637,6 +642,7 @@ criterion_tests = [
             multilabelmarginloss_reference(i, t, reduction=get_reduction(m)),
         check_sum_reduction=True,
         check_gradgrad=False,
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='MultiLabelSoftMarginLoss',
@@ -653,6 +659,7 @@ criterion_tests = [
             multimarginloss_reference(i, t, reduction=get_reduction(m)),
         check_sum_reduction=True,
         check_gradgrad=False,
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='MultiMarginLoss',
@@ -663,6 +670,7 @@ criterion_tests = [
         desc='1d',
         check_sum_reduction=True,
         check_gradgrad=False,
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='MultiMarginLoss',
@@ -674,6 +682,7 @@ criterion_tests = [
         desc='p',
         check_sum_reduction=True,
         check_gradgrad=False,
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='MultiMarginLoss',
@@ -686,6 +695,7 @@ criterion_tests = [
         desc='margin',
         check_sum_reduction=True,
         check_gradgrad=False,
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='MultiMarginLoss',
@@ -698,6 +708,7 @@ criterion_tests = [
         desc='weights',
         check_sum_reduction=True,
         check_gradgrad=False,
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='SmoothL1Loss',

@@ -11,6 +11,7 @@ from common_nn import NNTestCase, ModuleTest, CriterionTest, iter_tensors, \
     module_tests, criterion_tests, PRECISION
 from torch.autograd.gradcheck import get_numerical_jacobian
 from torch.autograd import Variable
+from common import TestCase, run_tests, TEST_WITH_UBSAN, skipIfRocm
 
 
 class OldModuleTest(ModuleTest):
@@ -61,7 +62,8 @@ tests = [
     OldModuleTest(nn.Add,
                   constructor_args=(1, True),
                   input_size=(3, 1, 4),
-                  desc='scalar'),
+                  desc='scalar',
+                  test_cuda=(not TEST_WITH_ROCM)),
     OldModuleTest(nn.AddConstant,
                   constructor_args=(3.5,),
                   input_size=(3, 5, 4),
@@ -292,7 +294,7 @@ tests = [
     OldModuleTest(nn.Mul,
                   input_size=(2, 3, 4, 2),
                   reference_fn=lambda i, p: i * p[0][0],
-                  ),
+                  test_cuda=(not TEST_WITH_ROCM)),
     OldModuleTest(nn.MulConstant,
                   constructor_args=(4,),
                   input_size=(2, 3, 4, 2),
@@ -366,18 +368,22 @@ tests = [
     OldModuleTest(nn.SelectTable,
                   constructor_args=(1,),
                   input_size=[(1,), (2,), (3,), (4,)],
-                  reference_fn=lambda i, _: i[1]),
+                  reference_fn=lambda i, _: i[1],
+                  test_cuda=(not TEST_WITH_ROCM)),
     OldModuleTest(nn.SpatialAveragePooling,
                   constructor_args=(2, 2),
-                  input_size=(2, 3, 6, 6)),
+                  input_size=(2, 3, 6, 6),
+                  test_cuda=(not TEST_WITH_ROCM)),
     OldModuleTest(nn.SpatialAveragePooling,
                   constructor_args=(2, 2, 2, 2),
                   input_size=(2, 3, 6, 6),
-                  desc='stride'),
+                  desc='stride',
+                  test_cuda=(not TEST_WITH_ROCM)),
     OldModuleTest(nn.SpatialAveragePooling,
                   constructor_args=(2, 2, 2, 2, 1, 1),
                   input_size=(2, 3, 6, 6),
-                  desc='stride_pad'),
+                  desc='stride_pad',
+                  test_cuda=(not TEST_WITH_ROCM)),
     OldModuleTest(nn.SpatialAdaptiveMaxPooling,
                   constructor_args=(4, 4),
                   input_size=(2, 3, 8, 8),
@@ -425,7 +431,8 @@ tests = [
                   desc='stride_pad'),
     OldModuleTest(nn.SpatialMaxPooling,
                   constructor_args=(3, 3, 2, 2, 1, 1),
-                  input_size=(1, 3, 7, 7)),
+                  input_size=(1, 3, 7, 7),
+                  test_cuda=(not TEST_WITH_ROCM)),
     OldModuleTest(nn.SpatialReflectionPadding,
                   constructor_args=(1, 2, 3, 4),
                   input_size=(2, 3, 8, 8)),
@@ -474,7 +481,7 @@ tests = [
     OldModuleTest(nn.SpatialLPPooling,
                   constructor_args=(3, 2, 2, 2, 2, 2),
                   input_size=(1, 3, 7, 7),
-                  ),
+                  test_cuda=(not TEST_WITH_ROCM)),
     OldModuleTest(nn.SpatialSubSampling,
                   constructor_args=(3, 3, 3, 2, 2),
                   input_size=(1, 3, 7, 7)),
@@ -519,18 +526,22 @@ tests = [
                   desc='stride_pad'),
     OldModuleTest(nn.VolumetricConvolution,
                   constructor_args=(3, 4, 2, 2, 2),
-                  input_size=(2, 3, 3, 3, 3)),
+                  input_size=(2, 3, 3, 3, 3),
+                  test_cuda=(not TEST_WITH_ROCM)),
     OldModuleTest(nn.VolumetricConvolution,
                   constructor_args=(3, 4, 2, 2, 2, 2, 2, 2),
                   input_size=(2, 3, 5, 5, 5),
-                  desc='stride'),
+                  desc='stride',
+                  test_cuda=(not TEST_WITH_ROCM)),
     OldModuleTest(nn.VolumetricConvolution,
                   constructor_args=(3, 4, 2, 2, 2, 2, 2, 2, 1, 1, 1),
                   input_size=(2, 3, 5, 5, 5),
-                  desc='stride_padding'),
+                  desc='stride_padding',
+                  test_cuda=(not TEST_WITH_ROCM)),
     OldModuleTest(nn.VolumetricFullConvolution,
                   constructor_args=(2, 3, 2, 2, 2),
-                  input_size=(1, 2, 4, 4, 4)),
+                  input_size=(1, 2, 4, 4, 4),
+                  test_cuda=(not TEST_WITH_ROCM)),
     OldModuleTest(nn.VolumetricMaxPooling,
                   constructor_args=(2, 2, 2),
                   input_fn=lambda: (torch.randn(2, 3, 5, 5, 5) * 1000)),
@@ -596,7 +607,7 @@ for p in range(1, 4 + 1):
                       )
     )
 
-
+@skipIfRocm
 def build_spatial_unpooling_net():
     pool = nn.SpatialMaxPooling(2, 2, 2, 2)
     unpool = nn.SpatialMaxUnpooling(pool)
@@ -623,6 +634,9 @@ tests.append(
 
 def prepare_tests():
     def add_test(test):
+        #print("add_test: " + test.get_name() + "\n")
+        #if (test.get_name() < "test_b" ):
+        #    return
         test_name = test.get_name()
         cuda_test_name = test_name + '_cuda'
         if hasattr(TestNN, test_name):

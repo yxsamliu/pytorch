@@ -1,15 +1,16 @@
+#include "hip/hip_runtime.h"
 #include "ATen/Dispatch.h"
 #include "ATen/ExpandUtils.h"
 #include "ATen/NativeFunctions.h"
 #include "ATen/cuda/CUDAApplyUtils.cuh"
 #include "ATen/AccumulateType.h"
 
-#include <curand.h>
-#include <curand_kernel.h>
-#include <curand_philox4x32_x.h>
+#include <hiprand.h>
+#include <hiprand_kernel.h>
+#include <hiprand_kernel.h>
 #include <utility>
 #include <functional>
-#include <nvfunctional>
+
 
 #include "ATen/native/Distributions.h"
 
@@ -27,7 +28,7 @@
 THCGenerator* THCRandom_getGenerator(THCState* state);
 
 namespace {
-// increment should be at least the number of curand() random numbers used in
+// increment should be at least the number of hiprand() random numbers used in
 // each thread.
 std::pair<uint64_t, uint64_t> next_philox_seed(at::Generator* gen, uint64_t increment) {
   auto gen_ = THCRandom_getGenerator(at::globalContext().getTHCState());
@@ -45,13 +46,13 @@ void poisson_cuda_kernel(
       lambda,
       [seeds] __device__(
           scalar_t & ret_val, const scalar_t& lambda) {
-        curandStatePhilox4_32_10_t state;
-        curand_init(
+        hiprandStatePhilox4_32_10_t state;
+        hiprand_init(
             seeds.first,
             blockIdx.x * blockDim.x + threadIdx.x,
             seeds.second,
             &state);
-        ret_val = static_cast<scalar_t>(curand_poisson(&state, lambda));
+        ret_val = static_cast<scalar_t>(hiprand_poisson(&state, lambda));
       });
 }
 
@@ -59,42 +60,16 @@ template <typename scalar_t>
 void gamma_cuda_kernel(
     at::Tensor& ret,
     const at::Tensor& alpha,
-    std::pair<uint64_t, uint64_t> seeds) {
-  using accscalar_t = at::acc_type<scalar_t, true>;
-  at::cuda::CUDA_tensor_apply2<scalar_t, scalar_t>(
-      ret,
-      alpha,
-      [seeds] __device__(
-          scalar_t & ret_val, const scalar_t& alpha) {
-        curandStatePhilox4_32_10_t state;
-        curand_init(
-            seeds.first,
-            blockIdx.x * blockDim.x + threadIdx.x,
-            seeds.second,
-            &state);
-        BaseSampler<accscalar_t> standard_uniform([&state] __device__ () {
-          return curand_uniform(&state);
-        });
-        BaseSampler<accscalar_t> standard_normal([&state] __device__ () {
-          return curand_normal(&state);
-        });
-        auto sample = sample_gamma<scalar_t, accscalar_t>(alpha, standard_uniform, standard_normal);
-        auto min_value = std::numeric_limits<scalar_t>::lowest();
-        ret_val = (min_value > sample) ? min_value : sample;
-      });
+    std::pair<uint64_t, uint64_t> seeds){
+assert(0);
 }
 
 template <typename scalar_t>
 void gamma_grad_cuda_kernel(
     at::Tensor& ret,
     const at::Tensor& self,
-    const at::Tensor& output) {
-  using accscalar_t = at::acc_type<scalar_t, true>;
-  at::cuda::CUDA_tensor_apply3<scalar_t, scalar_t, scalar_t>(
-      ret, self, output,
-      [] __device__ (scalar_t& ret_val, const scalar_t& self_val, const scalar_t &output_val) {
-        ret_val = standard_gamma_grad_one<scalar_t, accscalar_t>(self_val, output_val);
-      });
+    const at::Tensor& output){
+assert(0);
 }
 
 template<typename scalar_t, typename prob_t>
@@ -108,13 +83,13 @@ void bernoulli_tensor_cuda_kernel(
       [seeds] __device__(
           int n, scalar_t& v1, scalar_t& v2, scalar_t& v3, scalar_t& v4,
           const prob_t& p1, const prob_t& p2, const prob_t& p3, const prob_t& p4) {
-        curandStatePhilox4_32_10_t state;
-        curand_init(
+        hiprandStatePhilox4_32_10_t state;
+        hiprand_init(
             seeds.first,
             blockIdx.x * blockDim.x + threadIdx.x,
             seeds.second,
             &state);
-        float4 rand = curand_uniform4(&state);
+        float4 rand = hiprand_uniform4(&state);
         switch (n) {
           case 4: {
             assert(0 <= p4 && p4 <= 1);
@@ -150,13 +125,13 @@ void bernoulli_scalar_cuda_kernel(
   at::cuda::CUDA_tensor_apply1<scalar_t, 4>(
       ret, [seeds, p] __device__(
         int n, scalar_t& v1, scalar_t& v2, scalar_t& v3, scalar_t& v4) {
-        curandStatePhilox4_32_10_t state;
-        curand_init(
+        hiprandStatePhilox4_32_10_t state;
+        hiprand_init(
             seeds.first,
             blockIdx.x * blockDim.x + threadIdx.x,
             seeds.second,
             &state);
-        float4 rand = curand_uniform4(&state);
+        float4 rand = hiprand_uniform4(&state);
         switch (n) {
           case 4: {
             v4 = static_cast<scalar_t>(rand.w <= p);

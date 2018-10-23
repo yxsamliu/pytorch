@@ -7,7 +7,7 @@
 #include "ATen/cuda/Exceptions.h"
 #include "c10/util/Exception.h"
 
-#include "cuda_runtime_api.h"
+#include "hip/hip_runtime_api.h"
 
 #include <cstdint>
 #include <utility>
@@ -24,7 +24,7 @@ namespace at { namespace cuda {
 */
 struct AT_CUDA_API CUDAEvent {
   // Constants
-  static constexpr unsigned int DEFAULT_FLAGS = cudaEventDisableTiming;
+  static constexpr unsigned int DEFAULT_FLAGS = hipEventDisableTiming;
 
   // Constructors
   CUDAEvent(unsigned int flags = DEFAULT_FLAGS) 
@@ -36,7 +36,7 @@ struct AT_CUDA_API CUDAEvent {
     try {
       if (is_created_) {
         at::DeviceGuard device_guard{(int)device_};
-        cudaEventDestroy(event_);
+        hipEventDestroy(event_);
       }
     } catch (...) { /* No throw */ }
   }
@@ -50,7 +50,7 @@ struct AT_CUDA_API CUDAEvent {
     return *this;
   }
 
-  operator cudaEvent_t() const { return event(); }
+  operator hipEvent_t() const { return event(); }
 
   // Less than operator (to allow use in sets)
   friend bool operator<(const CUDAEvent& left, const CUDAEvent& right) {
@@ -59,10 +59,10 @@ struct AT_CUDA_API CUDAEvent {
 
   bool isCreated() const { return is_created_; }
   int64_t device() const { return device_; }
-  cudaEvent_t event() const { return event_; }
+  hipEvent_t event() const { return event_; }
   
   bool happened() const { 
-    return (was_recorded_ && cudaEventQuery(event_) == cudaSuccess);
+    return (was_recorded_ && hipEventQuery(event_) == hipSuccess);
   }
 
   void record() { record(getCurrentCUDAStream()); }
@@ -78,13 +78,13 @@ struct AT_CUDA_API CUDAEvent {
       create(stream.device());
     }
 
-    AT_CUDA_CHECK(cudaEventRecord(event_, stream));
+    AT_CUDA_CHECK(hipEventRecord(event_, stream));
     was_recorded_ = true;
   }
 
   void block (const CUDAStream& stream) {
     if (is_created_) {
-      AT_CUDA_CHECK(cudaStreamWaitEvent(stream, event_, 0));
+      AT_CUDA_CHECK(hipStreamWaitEvent(stream, event_, 0));
     }
   }
   
@@ -94,7 +94,7 @@ private:
   bool is_created_ = false;
   bool was_recorded_ = false;
   int64_t device_ = -1;
-  cudaEvent_t event_;
+  hipEvent_t event_;
 
   void moveHelper(CUDAEvent&& other) {
     std::swap(flags_, other.flags_);
@@ -106,7 +106,7 @@ private:
 
   void create(const int64_t device) {
     at::DeviceGuard device_guard{(int)device};
-    AT_CUDA_CHECK(cudaEventCreateWithFlags(&event_, flags_));
+    AT_CUDA_CHECK(hipEventCreateWithFlags(&event_, flags_));
 
     is_created_ = true;
     device_ = device;

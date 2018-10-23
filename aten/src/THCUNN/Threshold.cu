@@ -14,7 +14,7 @@ struct ThresholdUpdateOutput
     , val_(val)
   {}
 
-  __device__ __forceinline__ void operator()(T *out, T *in)
+  __device__ inline void operator()(T *out, T *in)
   {
     T x = *in;
     *out = (x <= threshold_) ? val_ : x;  // this order propagates NaN
@@ -33,7 +33,7 @@ struct ThresholdUpdateOutputIP
     , val_(val)
   {}
 
-  __device__ __forceinline__ void operator()(T *x)
+  __device__ inline void operator()(T *x)
   {
     *x = (*x <= threshold_) ? val_ : *x;  // this order propagates NaN
   }
@@ -48,7 +48,7 @@ struct ThresholdUpdateGradInput
     : threshold_(threshold)
   {}
 
-  __device__ __forceinline__ void operator()(
+  __device__ inline void operator()(
     T *gradInput, T *input, T *gradOutput) const
   {
     *gradInput = (*input <= threshold_) ? ScalarConvert<int, T>::to(0) : *gradOutput;  // this order propagates NaN
@@ -64,7 +64,7 @@ struct ThresholdUpdateGradInputIP
     : threshold_(threshold)
   {}
 
-  __device__ __forceinline__ void operator()(
+  __device__ inline void operator()(
     T *gradOutput, T *input) const
   {
     *gradOutput = (*input <= threshold_) ? ScalarConvert<int, T>::to(0) : *gradOutput;  // this order propagates NaN

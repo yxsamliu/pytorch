@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_TENSORMATH_REDUCE_CUH
 #define THC_TENSORMATH_REDUCE_CUH
 
@@ -214,7 +215,7 @@ struct ThrustTensorDistOp {
 
 // Given the sum of values and the sum of squares, compute the variance or standard deviation.
 template<typename T, bool flag, bool apply_sqrt>
-__forceinline__ __device__ T THCTensor_computeVar(
+inline __device__ T THCTensor_computeVar(
   T sum, 
   T sum2, 
   const unsigned row_size) {
@@ -308,15 +309,15 @@ __host__ void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTyp
   dim3 grid(min(maxGridDim, num_orows), min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
   if (flag) {
-    THCTensor_kernel_varOuterDim<T, AccT, true, apply_sqrt><<<grid, threads, 0, THCState_getCurrentStream(state)>>>(
+   hipLaunchKernelGGL( THCTensor_kernel_varOuterDim<T, AccT, true, apply_sqrt>, dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
         tgt->template data<T>(), src->template data<T>(), num_orows, num_irows, row_size);
   } else {
-    THCTensor_kernel_varOuterDim<T, AccT, false, apply_sqrt><<<grid, threads, 0, THCState_getCurrentStream(state)>>>(
+   hipLaunchKernelGGL( THCTensor_kernel_varOuterDim<T, AccT, false, apply_sqrt>, dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
         tgt->template data<T>(), src->template data<T>(), num_orows, num_irows, row_size);
   }
 
-  cudaError_t errcode = cudaGetLastError();
-  if (errcode != cudaSuccess) THError(cudaGetErrorString(errcode));
+  hipError_t errcode = hipGetLastError();
+  if (errcode != hipSuccess) THError(hipGetErrorString(errcode));
 }
 
 /* Compute the variance (or standard deviation) of the innermost dimension of a tensor.
@@ -449,15 +450,15 @@ __host__ void THCTensor_varInnermostDim(THCState *state, TensorTypeK *tgt, Tenso
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
   if (flag) {
-    THCTensor_kernel_varInnermostDim<T, AccT, true, apply_sqrt><<<grid, threads, 0, THCState_getCurrentStream(state)>>>(
+   hipLaunchKernelGGL( THCTensor_kernel_varInnermostDim<T, AccT, true, apply_sqrt>, dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
         tgt->template data<T>(), src->template data<T>(), num_rows, row_size);
   } else {
-    THCTensor_kernel_varInnermostDim<T, AccT, false, apply_sqrt><<<grid, threads, 0, THCState_getCurrentStream(state)>>>(
+   hipLaunchKernelGGL( THCTensor_kernel_varInnermostDim<T, AccT, false, apply_sqrt>, dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
         tgt->template data<T>(), src->template data<T>(), num_rows, row_size);
   }
 
-  cudaError_t errcode = cudaGetLastError();
-  if (errcode != cudaSuccess) THError(cudaGetErrorString(errcode));
+  hipError_t errcode = hipGetLastError();
+  if (errcode != hipSuccess) THError(hipGetErrorString(errcode));
 }
 
 
@@ -525,14 +526,14 @@ THC_transformReduceOuterDimIndex(THCState *state,
   dim3 grid(min(maxGridDim, num_orows),
             min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
-  kernelTransformReduceOuterDimIndex
-    <<<grid, threads, 0, THCState_getCurrentStream(state)>>>(
+ hipLaunchKernelGGL( kernelTransformReduceOuterDimIndex
+    , dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
       tgt1->template data<ScalarTypeK>(),
       tgt2->template data<ScalarTypeIndex>(),
       src->template data<ScalarTypeK>(),
       num_orows, num_irows, row_size, init, binary_op);
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 /* Reduce the innermost dimension of a tensor (on thrust::pair functors which are (value, index))
@@ -622,14 +623,14 @@ THC_transformReduceInnermostDimIndex(THCState *state,
   dim3 threads(16, 32);
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
-  kernelTransformReduceInnermostDimIndex
-    <<<grid, threads, 0, THCState_getCurrentStream(state)>>>(
+ hipLaunchKernelGGL( kernelTransformReduceInnermostDimIndex
+    , dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
       tgt1->template data<ScalarTypeK>(),
       tgt2->template data<ScalarTypeIndex>(),
       src->template data<ScalarTypeK>(),
       num_rows, row_size, init, binary_op);
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 template <typename ScalarTypeK,
@@ -706,14 +707,14 @@ struct MinValuePair {
 
 template <typename T>
 struct AddOp {
-  __device__ __forceinline__ T operator()(T const &lhs, T const &rhs) {
+  __device__ inline T operator()(T const &lhs, T const &rhs) {
     return THCNumerics<T>::add(lhs, rhs);
   }
 };
 
 template <typename T>
 struct MulOp {
-  __device__ __forceinline__ T operator()(T const &lhs, T const &rhs) {
+  __device__ inline T operator()(T const &lhs, T const &rhs) {
     return THCNumerics<T>::mul(lhs, rhs);
   }
 };

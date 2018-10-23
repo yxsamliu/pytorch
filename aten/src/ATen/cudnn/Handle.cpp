@@ -42,7 +42,7 @@ std::unordered_map<int, Handle> handles;
 cudnnHandle_t getCudnnHandle()
 {
   int device;
-  AT_CUDA_CHECK(cudaGetDevice(&device));
+  AT_CUDA_CHECK(hipGetDevice(&device));
 
   std::lock_guard<std::mutex> guard(mutex);
   return handles[device].handle;

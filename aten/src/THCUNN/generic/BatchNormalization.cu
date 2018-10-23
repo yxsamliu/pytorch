@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/BatchNormalization.cu"
 #else
@@ -52,22 +53,22 @@ void THNN_(BatchNormalization_updateOutput)(
   DeviceTensor1 saveMean = THNN_(devicetensor)<1>(state, saveMean_);
   DeviceTensor1 saveStd = THNN_(devicetensor)<1>(state, saveStd_);
 
-  cudaStream_t s = THCState_getCurrentStream(state);
-  cudaDeviceProp *prop = THCState_getCurrentDeviceProperties(state);
+  hipStream_t s = THCState_getCurrentStream(state);
+  hipDeviceProp_t *prop = THCState_getCurrentDeviceProperties(state);
 
   if (!train) {
     dim3 blocks(input.getSize(1));
     dim3 threads(getNumThreads(input.getSize(2)));
-    BatchNormalizationUpdateOutputInference_kernel<scalar_t, accreal, DeviceTensor1, DeviceTensor3> <<<blocks, threads, 0, s>>>(
+   hipLaunchKernelGGL( BatchNormalizationUpdateOutputInference_kernel<scalar_t, accreal, DeviceTensor1, DeviceTensor3> , dim3(blocks), dim3(threads), 0, s, 
       input, output, runningMean, runningVar, weight, bias, eps);
   } else {
     dim3 blocks(input.getSize(1));
     dim3 threads(getNumThreads(input.getSize(2)));
-    BatchNormalizationUpdateOutput_kernel<scalar_t, accreal, DeviceTensor1, DeviceTensor3> <<<blocks, threads, 0, s>>>(
+   hipLaunchKernelGGL( BatchNormalizationUpdateOutput_kernel<scalar_t, accreal, DeviceTensor1, DeviceTensor3> , dim3(blocks), dim3(threads), 0, s, 
       input, output, weight, bias, static_cast<accreal>(eps), static_cast<accreal>(momentum), runningMean, runningVar,
       saveMean, saveStd);
   }
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 void THNN_(BatchNormalization_backward)(
@@ -92,14 +93,14 @@ void THNN_(BatchNormalization_backward)(
   DeviceTensor1 saveMean = THNN_(devicetensor)<1>(state, saveMean_);
   DeviceTensor1 saveStd = THNN_(devicetensor)<1>(state, saveStd_);
 
-  cudaStream_t s = THCState_getCurrentStream(state);
+  hipStream_t s = THCState_getCurrentStream(state);
 
   dim3 blocks(gradOutput.getSize(1));
   dim3 threads(getNumThreads(gradOutput.getSize(2)));
-  BatchNormalizationBackward_kernel<scalar_t,  accreal,  DeviceTensor1, DeviceTensor3> <<<blocks, threads, 0, s>>>(
+ hipLaunchKernelGGL( BatchNormalizationBackward_kernel<scalar_t,  accreal,  DeviceTensor1, DeviceTensor3> , dim3(blocks), dim3(threads), 0, s, 
     input, gradOutput, gradInput, gradWeight, gradBias, weight, runningMean, runningVar,
-    saveMean, saveStd, train, scale, eps);
-  THCudaCheck(cudaGetLastError());
+    saveMean, saveStd, train, scale, static_cast<double>(eps));
+  THCudaCheck(hipGetLastError());
 }
 
 #undef DeviceTensor3

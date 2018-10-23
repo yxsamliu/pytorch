@@ -1,5 +1,5 @@
 #include "torch/csrc/jit/fusers/Config.h"
-#if USE_CUDA_FUSER
+#if USE_ROCM_FUSER
 #pragma once
 
 #include "torch/csrc/jit/fusers/interface.h"
@@ -29,4 +29,4 @@ std::vector<at::Tensor> debugLaunchGraph(
 } // namespace jit 
 } // namespace torch
 
-#endif // USE_CUDA_FUSER
+#endif // USE_ROCM_FUSER

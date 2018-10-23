@@ -19,7 +19,7 @@
 #include "torch/csrc/cuda/cuda_check.h"
 #ifdef USE_CUDA
 #include "ATen/cuda/CUDAContext.h"
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
 #endif
 #ifndef _WIN32
 #include <ctime>
@@ -68,11 +68,11 @@ struct Event final {
   void record(bool record_cuda) {
 #ifdef USE_CUDA
     if (record_cuda) {
-      TORCH_CUDA_CHECK(cudaGetDevice(&device_));
-      TORCH_CUDA_CHECK(cudaEventCreate(&event));
+      TORCH_CUDA_CHECK(hipGetDevice(&device_));
+      TORCH_CUDA_CHECK(hipEventCreate(&event));
       auto stream = at::cuda::getCurrentCUDAStream();
       cpu_ns_ = getTime();
-      TORCH_CUDA_CHECK(cudaEventRecord(event, stream));
+      TORCH_CUDA_CHECK(hipEventRecord(event, stream));
       return;
     }
 #endif
@@ -103,10 +103,10 @@ struct Event final {
     if(e.device() != device()) {
       throw std::logic_error("Events are not on the same device");
     }
-    TORCH_CUDA_CHECK(cudaEventSynchronize(event));
-    TORCH_CUDA_CHECK(cudaEventSynchronize(e.event));
+    TORCH_CUDA_CHECK(hipEventSynchronize(event));
+    TORCH_CUDA_CHECK(hipEventSynchronize(e.event));
     float ms;
-    TORCH_CUDA_CHECK(cudaEventElapsedTime(&ms, event, e.event));
+    TORCH_CUDA_CHECK(hipEventElapsedTime(&ms, event, e.event));
     return ms*1000.0;
 #else
     throw std::logic_error("CUDA not enabled");
@@ -133,7 +133,7 @@ private:
   uint16_t thread_id_;
   int device_ = -1;
 #ifdef USE_CUDA
-  cudaEvent_t event = nullptr;
+  hipEvent_t event = nullptr;
 #endif
 };
 

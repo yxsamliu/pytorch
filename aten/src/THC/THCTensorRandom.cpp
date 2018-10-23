@@ -2,7 +2,7 @@
 #include "THCGenerator.hpp"
 
 #include <random>
-#include <curand.h>
+#include <hiprand.h>
 
 
 void initializeGenerator(THCState *state, THCGenerator* gen);
@@ -68,7 +68,7 @@ static THCGenerator* THCRandom_rawGenerator(THCState* state)
 {
   THCRNGState* rng_state = THCState_getRngState(state);
   int device;
-  THCudaCheck(cudaGetDevice(&device));
+  THCudaCheck(hipGetDevice(&device));
   if (device >= rng_state->num_devices) THError("Invalid device index.");
   return &rng_state->gen[device];
 }
@@ -87,7 +87,7 @@ THCGenerator* THCRandom_getGenerator(THCState* state)
   return gen;
 }
 
-struct curandStateMtgp32* THCRandom_generatorStates(struct THCState* state)
+hiprandStateMtgp32_t* THCRandom_generatorStates(struct THCState* state)
 {
   THCGenerator* gen = THCRandom_getGenerator(state);
   return gen->state.gen_states;
@@ -125,12 +125,12 @@ void THCRandom_manualSeedAll(THCState* state, uint64_t seed)
 {
   THCRNGState* rng_state = THCState_getRngState(state);
   int currentDevice;
-  THCudaCheck(cudaGetDevice(&currentDevice));
+  THCudaCheck(hipGetDevice(&currentDevice));
   for (int i = 0; i < rng_state->num_devices; ++i) {
-    THCudaCheck(cudaSetDevice(i));
+    THCudaCheck(hipSetDevice(i));
     THCRandom_manualSeed(state, seed);
   }
-  THCudaCheck(cudaSetDevice(currentDevice));
+  THCudaCheck(hipSetDevice(currentDevice));
 }
 
 /* Get the initial seed */

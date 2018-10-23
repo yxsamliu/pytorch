@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/NativeFunctions.h"
 #include "ATen/Dispatch.h"
 

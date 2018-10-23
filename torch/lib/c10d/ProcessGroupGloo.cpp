@@ -5,7 +5,7 @@
 #include <gloo/barrier_all_to_one.h>
 #include <gloo/broadcast_one_to_all.h>
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 #include <ATen/cuda/CUDAGuard.h>
 
 #include <gloo/cuda_allreduce_halving_doubling.h>
@@ -16,7 +16,7 @@
 #include <gloo/rendezvous/context.h>
 #include <gloo/transport/tcp/device.h>
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 #include <THC.h>
 #include <c10d/private/CUDAUtils.hpp>
 #endif
@@ -102,9 +102,9 @@ const ::gloo::ReductionFunction<T>* reductionFunction(const ReduceOp& r) {
   throw std::runtime_error("Unhandled ReduceOp");
 }
 
-#ifdef USE_CUDA
-std::vector<cudaStream_t> getStreamVector(AlgorithmEntry& entry) {
-  std::vector<cudaStream_t> streams(entry.streams.size());
+#ifdef USE_ROCM
+std::vector<hipStream_t> getStreamVector(AlgorithmEntry& entry) {
+  std::vector<hipStream_t> streams(entry.streams.size());
   for (size_t i = 0; i < entry.streams.size(); i++) {
     streams[i] = entry.streams[i].stream();
   }
@@ -125,12 +125,12 @@ void synchronizeStreams(THCState* thcState, AlgorithmEntry* entry) {
     // Synchronize private stream with public stream.
     //
     // We must use the device guard to cover the case where the public
-    // stream is stream 0 and cudaEventRecord relies on the current
+    // stream is stream 0 and hipEventRecord relies on the current
     // device to find the right one.
     //
     deviceGuard.set_index(key.devices[i]);
-    C10D_CUDA_CHECK(cudaEventRecord(event, publicStream));
-    C10D_CUDA_CHECK(cudaStreamWaitEvent(privateStream, event, 0));
+    C10D_CUDA_CHECK(hipEventRecord(event, publicStream));
+    C10D_CUDA_CHECK(hipStreamWaitEvent(privateStream, event, 0));
   }
 }
 #endif
@@ -139,7 +139,7 @@ void synchronizeStreams(THCState* thcState, AlgorithmEntry* entry) {
 
 ProcessGroupGloo::WorkGloo::WorkGloo()
     : completed_(false)
-#ifdef USE_CUDA
+#ifdef USE_ROCM
       ,
       cuda_(false)
 #endif
@@ -157,13 +157,13 @@ bool ProcessGroupGloo::WorkGloo::isSuccess() const {
 }
 
 void ProcessGroupGloo::WorkGloo::synchronize() {
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   if (cuda_) {
     auto thcState = ::at::globalContext().lazyInitCUDA();
     for (size_t i = 0; i < devices_.size(); i++) {
       auto stream = THCState_getCurrentStreamOnDevice(thcState, devices_[i]);
       auto event = events_[i].getEvent();
-      C10D_CUDA_CHECK(cudaStreamWaitEvent(stream, event, 0));
+      C10D_CUDA_CHECK(hipStreamWaitEvent(stream, event, 0));
     }
   }
 #endif
@@ -190,7 +190,7 @@ void ProcessGroupGloo::WorkGloo::finish(const AlgorithmEntry& entry) {
     std::unique_lock<std::mutex> lock(m_);
     completed_ = true;
     if (entry.key.type != nullptr) {
-#ifdef USE_CUDA
+#ifdef USE_ROCM
       cuda_ = entry.key.type->is_cuda();
 
       // Populate devices and events so that we can later synchronize
@@ -204,7 +204,7 @@ void ProcessGroupGloo::WorkGloo::finish(const AlgorithmEntry& entry) {
           events_[i] = CUDAEvent::create();
           const auto& event = events_[i].getEvent();
           const auto& stream = entry.streams[i].stream();
-          C10D_CUDA_CHECK(cudaEventRecord(event, stream));
+          C10D_CUDA_CHECK(hipEventRecord(event, stream));
         }
       }
 #endif
@@ -425,7 +425,7 @@ void ProcessGroupGloo::createAllreduce(AlgorithmEntry& entry) {
     return;
   }
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   if (backend == at::Backend::CUDA) {
     if (getSize() < 16) {
       entry.algorithm = std::unique_ptr<::gloo::Algorithm>(
@@ -470,7 +470,7 @@ void ProcessGroupGloo::createBroadcast(AlgorithmEntry& entry) {
     return;
   }
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   if (backend == at::Backend::CUDA) {
     entry.algorithm =
         std::unique_ptr<::gloo::Algorithm>(new ::gloo::CudaBroadcastOneToAll<T>(
@@ -512,7 +512,7 @@ EntryType ProcessGroupGloo::construct(const AlgorithmKey& key) {
   auto& srcSizes = key.srcSizes;
   entry->src.resize(srcSizes.size());
   for (size_t i = 0; i < srcSizes.size(); i++) {
-#ifdef USE_CUDA
+#ifdef USE_ROCM
     deviceGuard.set_index(key.type->is_cuda() ? key.devices[i] : -1);
 #else
     if (key.type->is_cuda()) {
@@ -523,7 +523,7 @@ EntryType ProcessGroupGloo::construct(const AlgorithmKey& key) {
     entry->src[i] = at::empty(srcSizes[i], key.type->options());
   }
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   // If these are CUDA tensors, create streams and events
   if (key.type->is_cuda()) {
     entry->streams.resize(key.devices.size());
@@ -599,7 +599,7 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupGloo::broadcast(
     entry->src[opts.rootTensor].copy_(tensors[opts.rootTensor]);
   }
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   // In case of CUDA, ensure that operations that are queued after
   // this collective wait for the collective to complete.
   if (key.type->is_cuda()) {
@@ -620,7 +620,7 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupGloo::broadcast(
         tensors[i].copy_(entry->src[i]);
       }
     };
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   }
 #endif
 
@@ -647,7 +647,7 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupGloo::allreduce(
     entry->src[i].copy_(tensors[i]);
   }
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   // In case of CUDA, ensure that operations that are queued after
   // this collective wait for the collective to complete.
   if (key.type->is_cuda()) {
@@ -668,7 +668,7 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupGloo::allreduce(
         tensors[i].copy_(entry->src[i]);
       }
     };
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   }
 #endif
   return enqueue(entry);

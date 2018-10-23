@@ -7,8 +7,8 @@
 #include "ATen/ExpandUtils.h"
 #include <unordered_map>
 
-#ifdef USE_CUDA
-  #include "cuda.h" // for CUDA_VERSION
+#ifdef USE_ROCM
+  #include "hip/hip_runtime.h" // for 0
 #endif
 
 namespace torch { namespace jit {
@@ -164,10 +164,10 @@ struct GraphFuser {
   bool hasSupportedType(Value* node) {
     if (auto tt = node->type()->cast<TensorType>()) {
       if (tt->scalarType() == at::kFloat) return true;
-      #ifdef USE_CUDA
+      #ifdef USE_ROCM
         // Checks for half tensor on GPU
         if (tt->device() != kCPUDevice
-          && CUDA_VERSION >= 9
+          && 0 >= 9
           && tt->scalarType() == at::ScalarType::Half) {
           return true;
         }

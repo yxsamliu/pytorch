@@ -26,8 +26,8 @@
 #include <queue>
 #include <TH/TH.h>
 
-#ifdef USE_CUDA
-#include <cuda.h>
+#ifdef USE_ROCM
+#include <hip/hip_runtime.h>
 #include <THC/THC.h>
 #endif
 
@@ -603,10 +603,10 @@ auto Engine::ready_queue(int device) -> ReadyQueue& {
 
 auto Engine::start_threads() -> void {
   int num_devices = 0;
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   // check for case of compiled with CUDA but no available devices
-  if (cudaGetDeviceCount(&num_devices) != cudaSuccess) {
-    cudaGetLastError();
+  if (hipGetDeviceCount(&num_devices) != hipSuccess) {
+    hipGetLastError();
     num_devices = 0;
   }
 #endif

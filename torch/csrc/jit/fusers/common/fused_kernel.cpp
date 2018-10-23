@@ -13,11 +13,11 @@
 
 #include "ATen/ATen.h"
 
-#if USE_CUDA_FUSER
+#if USE_ROCM_FUSER
   #include "THC/THCTensorRandom.h"
   #include "THC/THCGenerator.hpp"
   THCGenerator* THCRandom_getGenerator(THCState* state);
-#endif // USE_CUDA_FUSER
+#endif // USE_ROCM_FUSER
 
 #include <tuple>
 #include <iostream>
@@ -200,7 +200,7 @@ void FusedKernel::launch_with_tensors(
 
   // If the kernel call contains a random op, we need to pass in random seeds as
   // well.
-  #if USE_CUDA_FUSER
+  #if USE_ROCM_FUSER
     if (has_random && this->backend() == at::Backend::CUDA) {
       auto gen_ = THCRandom_getGenerator(at::globalContext().getTHCState());
       uint64_t offset =
@@ -208,7 +208,7 @@ void FusedKernel::launch_with_tensors(
       arguments.push_back(&gen_->state.initial_seed);
       arguments.push_back(&offset);
     }
-  #endif // USE_CUDA_FUSER
+  #endif // USE_ROCM_FUSER
   
   launch_raw(numel, arguments.data());
 }
@@ -473,9 +473,9 @@ std::tuple<
     }
   }
 
-  #if USE_CUDA_FUSER
+  #if USE_ROCM_FUSER
     bool has_half_tensor = false;
-  #endif // USE_CUDA_FUSER
+  #endif // USE_ROCM_FUSER
   size_t formal_count = 0;
   for(auto input : flat_inputs) {
     auto p = input.first;
@@ -486,12 +486,12 @@ std::tuple<
     bool is_half = input.second.scalar_type == at::ScalarType::Half;
     if (is_half) {
       AT_ASSERT(use_cuda);
-      #if USE_CUDA_FUSER
+      #if USE_ROCM_FUSER
         env.s(
           "access"
         , format("__half2float(t${formal}.data[t${formal}_offset])", env));
         has_half_tensor = true;
-      #endif // USE_CUDA_FUSER
+      #endif // USE_ROCM_FUSER
     } else {
       env.s("access", format("t${formal}.data[t${formal}_offset]", env));
     }
@@ -526,17 +526,17 @@ std::tuple<
     bool is_half = output.second.scalar_type == at::ScalarType::Half;
     if (is_half) {
       AT_ASSERT(use_cuda);
-      #if USE_CUDA_FUSER
+      #if USE_ROCM_FUSER
         body << format("${access} = __float2half(${node});\n",env);
         has_half_tensor = true;
-      #endif // USE_CUDA_FUSER
+      #endif // USE_ROCM_FUSER
     } else {
       body << format("${access} = ${node};\n",env);
     }
   }
 
   // Includes half support if any half tensors are involved
-  #if USE_CUDA_FUSER
+  #if USE_ROCM_FUSER
     if (has_half_tensor) {
       env.s("HalfHeader", cudafuser::half_support_literal);
     } else {
@@ -552,19 +552,19 @@ std::tuple<
       env.s("RandParam", "");
       env.s("RandInit", "");
     }
-  #endif // USE_CUDA_FUSER
+  #endif // USE_ROCM_FUSER
 
   env.s("tensorOffsets", tensorOffsets.str());
   env.s("kernelBody", body.str());
   env.v("formals", formals);
   env.v("argument_loads", argument_loads);
   if (use_cuda) {
-    #if USE_CUDA_FUSER
+    #if USE_ROCM_FUSER
       env.s("type_declarations", cudafuser::type_declarations_template.format(env));
       out << cudafuser::cuda_compilation_unit_template.format(env);
     #else
       throw std::runtime_error("CUDA Fusion requested but not supported.");
-    #endif // USE_CUDA_FUSER
+    #endif // USE_ROCM_FUSER
   } else {
     env.s("type_declarations", cpufuser::type_declarations_template.format(env));
     out << cpufuser::cpu_compilation_unit_template.format(env);

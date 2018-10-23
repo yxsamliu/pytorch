@@ -8,8 +8,8 @@
 #include "torch/csrc/cuda/cuda_check.h"
 
 #include "nvrtc.h"
-#include "cuda.h"
-#include "cuda_runtime.h"
+#include "hip/hip_runtime.h"
+#include "hip/hip_runtime.h"
 
 #include <stdexcept>
 #include <sstream>
@@ -19,12 +19,12 @@
 
 namespace torch { namespace jit { namespace cudafuser {
 
-void checkCUDAVersion(const cudaDeviceProp& prop) {
-  if ((prop.major >= 6 && CUDA_VERSION < 8000) ||
-      (prop.major >= 7 && CUDA_VERSION < 9000)) {
+void checkCUDAVersion(const hipDeviceProp_t& prop) {
+  if ((prop.major >= 6 && 0 < 8000) ||
+      (prop.major >= 7 && 0 < 9000)) {
     std::stringstream err_string;
     err_string << "In CUDAFusedKernel, PyTorch compiled with insufficient CUDA version: "
-         << CUDA_VERSION << " for the current GPU device " << prop.name
+         << 0 << " for the current GPU device " << prop.name
          << " with device capability " << prop.major << "." << prop.minor;
     throw std::runtime_error(err_string.str());
   }
@@ -36,7 +36,7 @@ CUDAFusedKernel::CUDAFusedKernel(
 : FusedKernel(name, agraph) {
   at::DeviceGuard device_guard(agraph.device);
 
-  TORCH_CUDA_CHECK(cudaGetDeviceProperties(&prop, agraph.device));
+  TORCH_CUDA_CHECK(hipGetDeviceProperties(&prop, agraph.device));
   checkCUDAVersion(prop);
 
   std::stringstream cu;
@@ -65,17 +65,17 @@ CUDAFusedKernel::CUDAFusedKernel(
   TORCH_NVRTC_CHECK(nvrtcGetPTXSize(program, &ptx_size));
   ptx.resize(ptx_size);
   TORCH_NVRTC_CHECK(nvrtcGetPTX(program, ptx.data()));
-  CUcontext pctx = 0;
-  TORCH_CU_CHECK(cuCtxGetCurrent(&pctx));
+  hipCtx_t pctx = 0;
+  TORCH_CU_CHECK(hipCtxGetCurrent(&pctx));
   if (!pctx) {
      std::unique_lock<std::mutex> cudaFreeMutexLock(
      *(THCCachingAllocator_getCudaFreeMutex()));
-     cudaFree(0);
+     hipFree(0);
   }
-  TORCH_CU_CHECK(cuModuleLoadData(&module, ptx.data()));
-  TORCH_CU_CHECK(cuModuleGetFunction(&function, module, name.c_str()));
+  TORCH_CU_CHECK(hipModuleLoadData(&module, ptx.data()));
+  TORCH_CU_CHECK(hipModuleGetFunction(&function, module, name.c_str()));
 
-  TORCH_CU_CHECK(cuOccupancyMaxActiveBlocksPerMultiprocessor(
+  TORCH_CU_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
     &maxBlocks, function, 128, 0));
   maxBlocks *= prop.multiProcessorCount;
 }
@@ -88,16 +88,16 @@ void CUDAFusedKernel::launch_raw(uint32_t numel, void** arguments) {
 
      // it is possible that this is the first cuda call on this thread
      // so make sure we initialize the Driver API's context
-     // cudaFree(0) accomplishes this.
-     CUcontext pctx = 0;
-     TORCH_CU_CHECK(cuCtxGetCurrent(&pctx));
+     // hipFree(0) accomplishes this.
+     hipCtx_t pctx = 0;
+     TORCH_CU_CHECK(hipCtxGetCurrent(&pctx));
      if (!pctx) {
         std::unique_lock<std::mutex> cudaFreeMutexLock(
             *(THCCachingAllocator_getCudaFreeMutex()));
-        cudaFree(0);
+        hipFree(0);
      }
-     CUstream stream = at::cuda::getCurrentCUDAStream();
-     TORCH_CU_CHECK(cuLaunchKernel(
+     hipStream_t stream = at::cuda::getCurrentCUDAStream();
+     TORCH_CU_CHECK(hipModuleLaunchKernel(
        function,
        numBlocks, 1, 1,
        blockSize, 1, 1,

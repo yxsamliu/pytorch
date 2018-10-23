@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include <ATen/Context.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <c10/util/Exception.h>
@@ -5,42 +6,42 @@
 
 #include <TH/THGeneral.h>
 
-#include <cusparse.h>
+#include <hipsparse.h>
 
 namespace at { namespace native { namespace sparse { namespace cuda {
 
 
-std::string cusparseGetErrorString(cusparseStatus_t status) {
+std::string cusparseGetErrorString(hipsparseStatus_t status) {
   switch(status)
   {
-    case CUSPARSE_STATUS_SUCCESS:
+    case HIPSPARSE_STATUS_SUCCESS:
       return "success";
 
-    case CUSPARSE_STATUS_NOT_INITIALIZED:
+    case HIPSPARSE_STATUS_NOT_INITIALIZED:
       return "library not initialized";
 
-    case CUSPARSE_STATUS_ALLOC_FAILED:
+    case HIPSPARSE_STATUS_ALLOC_FAILED:
       return "resource allocation failed";
 
-    case CUSPARSE_STATUS_INVALID_VALUE:
+    case HIPSPARSE_STATUS_INVALID_VALUE:
       return "an invalid numeric value was used as an argument";
 
-    case CUSPARSE_STATUS_ARCH_MISMATCH:
+    case HIPSPARSE_STATUS_ARCH_MISMATCH:
       return "an absent device architectural feature is required";
 
-    case CUSPARSE_STATUS_MAPPING_ERROR:
+    case HIPSPARSE_STATUS_MAPPING_ERROR:
       return "an access to GPU memory space failed";
 
-    case CUSPARSE_STATUS_EXECUTION_FAILED:
+    case HIPSPARSE_STATUS_EXECUTION_FAILED:
       return "the GPU program failed to execute";
 
-    case CUSPARSE_STATUS_INTERNAL_ERROR:
+    case HIPSPARSE_STATUS_INTERNAL_ERROR:
       return "an internal operation failed";
 
-    case CUSPARSE_STATUS_MATRIX_TYPE_NOT_SUPPORTED:
+    case HIPSPARSE_STATUS_MATRIX_TYPE_NOT_SUPPORTED:
       return "the matrix type is not supported by this function";
 
-    case CUSPARSE_STATUS_ZERO_PIVOT:
+    case HIPSPARSE_STATUS_ZERO_PIVOT:
       return "an entry of the matrix is either structural zero or numerical zero (singular block)";
 
     default:
@@ -52,33 +53,33 @@ std::string cusparseGetErrorString(cusparseStatus_t status) {
   }
 }
 
-inline void CUSPARSE_CHECK(cusparseStatus_t status)
+inline void CUSPARSE_CHECK(hipsparseStatus_t status)
 {
-  if (status != CUSPARSE_STATUS_SUCCESS) {
+  if (status != HIPSPARSE_STATUS_SUCCESS) {
     AT_ERROR("cusparse runtime error: ", cusparseGetErrorString(status));
   }
 }
 
-inline cusparseHandle_t setCUDASparseStream() {
-  cusparseHandle_t handle = at::cuda::getCurrentCUDASparseHandle();
-  cusparseSetStream(handle, at::cuda::getCurrentCUDAStream());
+inline hipsparseHandle_t setCUDASparseStream() {
+  hipsparseHandle_t handle = at::cuda::getCurrentCUDASparseHandle();
+  hipsparseSetStream(handle, at::cuda::getCurrentCUDAStream());
   return handle;
 }
 
 void Xcoo2csr(const int *coorowind, int64_t nnz, int64_t m, int *csrrowptr) {
   AT_CHECK((m <= INT_MAX) && (nnz <= INT_MAX),
-    "cusparseXcoo2csr only supports m, nnz with the bound [val] <= ",
+    "hipsparseXcoo2csr only supports m, nnz with the bound [val] <= ",
     INT_MAX);
   auto handle = setCUDASparseStream();
-  CUSPARSE_CHECK(cusparseXcoo2csr(handle, coorowind, nnz, m, csrrowptr,
-    TH_INDEX_BASE ? CUSPARSE_INDEX_BASE_ONE : CUSPARSE_INDEX_BASE_ZERO
+  CUSPARSE_CHECK(hipsparseXcoo2csr(handle, coorowind, nnz, m, csrrowptr,
+    TH_INDEX_BASE ? HIPSPARSE_INDEX_BASE_ONE : HIPSPARSE_INDEX_BASE_ZERO
   ));
 }
 
-cusparseOperation_t convertTransToCusparseOperation(char trans) {
-  if (trans == 't') return CUSPARSE_OPERATION_TRANSPOSE;
-  else if (trans == 'n') return CUSPARSE_OPERATION_NON_TRANSPOSE;
-  else if (trans == 'c') return CUSPARSE_OPERATION_CONJUGATE_TRANSPOSE;
+hipsparseOperation_t convertTransToCusparseOperation(char trans) {
+  if (trans == 't') return HIPSPARSE_OPERATION_TRANSPOSE;
+  else if (trans == 'n') return HIPSPARSE_OPERATION_NON_TRANSPOSE;
+  else if (trans == 'c') return HIPSPARSE_OPERATION_CONJUGATE_TRANSPOSE;
   else {
     AT_ERROR("trans must be one of: t, n, c");
   }
@@ -107,11 +108,11 @@ void adjustLd(char transb, int64_t m, int64_t n, int64_t k, int64_t *ldb, int64_
 void Scsrmm2(char transa, char transb, int64_t m, int64_t n, int64_t k, int64_t nnz, float alpha, float *csrvala, int *csrrowptra, int *csrcolinda, float *b, int64_t ldb, float beta, float *c, int64_t ldc)
 {
   adjustLd(transb, m, n, k, &ldb, &ldc);
-  cusparseOperation_t opa = convertTransToCusparseOperation(transa);
-  cusparseOperation_t opb = convertTransToCusparseOperation(transb);
+  hipsparseOperation_t opa = convertTransToCusparseOperation(transa);
+  hipsparseOperation_t opb = convertTransToCusparseOperation(transb);
 
   AT_CHECK((m <= INT_MAX) && (n <= INT_MAX) && (k <= INT_MAX) && (nnz <= INT_MAX)  && (ldb <= INT_MAX) && (ldc <= INT_MAX),
-    "cusparseScsrmm2 only supports m, n, k, nnz, ldb, ldc with the bound [val] <= ", INT_MAX);
+    "hipsparseScsrmm2 only supports m, n, k, nnz, ldb, ldc with the bound [val] <= ", INT_MAX);
   int i_m = (int)m;
   int i_n = (int)n;
   int i_k = (int)k;
@@ -120,22 +121,22 @@ void Scsrmm2(char transa, char transb, int64_t m, int64_t n, int64_t k, int64_t 
   int i_ldc = (int)ldc;
 
   auto handle = setCUDASparseStream();
-  cusparseMatDescr_t desc;
-  cusparseCreateMatDescr(&desc);
+  hipsparseMatDescr_t desc;
+  hipsparseCreateMatDescr(&desc);
 #if TH_INDEX_BASE == 1
-  cusparseSetMatIndexBase(&desc, CUSPARSE_INDEX_BASE_ONE);
+  hipsparseSetMatIndexBase(&desc, HIPSPARSE_INDEX_BASE_ONE);
 #endif
-  CUSPARSE_CHECK(cusparseScsrmm2(handle, opa, opb, i_m, i_n, i_k, i_nnz, &alpha, desc, csrvala, csrrowptra, csrcolinda, b, i_ldb, &beta, c, i_ldc));
+  CUSPARSE_CHECK(hipsparseScsrmm2(handle, opa, opb, i_m, i_n, i_k, i_nnz, &alpha, desc, csrvala, csrrowptra, csrcolinda, b, i_ldb, &beta, c, i_ldc));
 }
 
 void Dcsrmm2(char transa, char transb, int64_t m, int64_t n, int64_t k, int64_t nnz, double alpha, double *csrvala, int *csrrowptra, int *csrcolinda, double *b, int64_t ldb, double beta, double *c, int64_t ldc)
 {
   adjustLd(transb, m, n, k, &ldb, &ldc);
-  cusparseOperation_t opa = convertTransToCusparseOperation(transa);
-  cusparseOperation_t opb = convertTransToCusparseOperation(transb);
+  hipsparseOperation_t opa = convertTransToCusparseOperation(transa);
+  hipsparseOperation_t opb = convertTransToCusparseOperation(transb);
 
   AT_CHECK((m <= INT_MAX) && (n <= INT_MAX) && (k <= INT_MAX) && (nnz <= INT_MAX)  && (ldb <= INT_MAX) && (ldc <= INT_MAX),
-    "cusparseDcsrmm2 only supports m, n, k, nnz, ldb, ldc with the bound [val] <= ", INT_MAX);
+    "hipsparseDcsrmm2 only supports m, n, k, nnz, ldb, ldc with the bound [val] <= ", INT_MAX);
   int i_m = (int)m;
   int i_n = (int)n;
   int i_k = (int)k;
@@ -144,12 +145,12 @@ void Dcsrmm2(char transa, char transb, int64_t m, int64_t n, int64_t k, int64_t 
   int i_ldc = (int)ldc;
 
   auto handle = setCUDASparseStream();
-  cusparseMatDescr_t desc;
-  cusparseCreateMatDescr(&desc);
+  hipsparseMatDescr_t desc;
+  hipsparseCreateMatDescr(&desc);
 #if TH_INDEX_BASE == 1
-  cusparseSetMatIndexBase(&desc, CUSPARSE_INDEX_BASE_ONE);
+  hipsparseSetMatIndexBase(&desc, HIPSPARSE_INDEX_BASE_ONE);
 #endif
-  CUSPARSE_CHECK(cusparseDcsrmm2(handle, opa, opb, i_m, i_n, i_k, i_nnz, &alpha, desc, csrvala, csrrowptra, csrcolinda, b, i_ldb, &beta, c, i_ldc));
+  CUSPARSE_CHECK(hipsparseDcsrmm2(handle, opa, opb, i_m, i_n, i_k, i_nnz, &alpha, desc, csrvala, csrrowptra, csrcolinda, b, i_ldb, &beta, c, i_ldc));
   // TODO: I think this leaks the matrix descriptor.  Proper fix is to create
   // real descriptor classes
 }
@@ -162,7 +163,7 @@ void CreateIdentityPermutation(int64_t nnz, int *P) {
   int i_nnz = (int)nnz;
 
   auto handle = setCUDASparseStream();
-  cusparseCreateIdentityPermutation(handle, i_nnz, P);
+  hipsparseCreateIdentityPermutation(handle, i_nnz, P);
 }
 
 void Xcsrsort_bufferSizeExt(int64_t m, int64_t n, int64_t nnz, const int *csrRowPtr, const int *csrColInd, size_t *pBufferSizeInBytes)
@@ -175,7 +176,7 @@ void Xcsrsort_bufferSizeExt(int64_t m, int64_t n, int64_t nnz, const int *csrRow
   int i_nnz = (int)nnz;
 
   auto handle = setCUDASparseStream();
-  CUSPARSE_CHECK(cusparseXcsrsort_bufferSizeExt(handle, i_m, i_n, i_nnz, csrRowPtr, csrColInd, pBufferSizeInBytes));
+  CUSPARSE_CHECK(hipsparseXcsrsort_bufferSizeExt(handle, i_m, i_n, i_nnz, csrRowPtr, csrColInd, pBufferSizeInBytes));
 }
 
 void Xcsrsort(int64_t m, int64_t n, int64_t nnz, const int *csrRowPtr, int *csrColInd, int *P, void *pBuffer)
@@ -188,12 +189,12 @@ void Xcsrsort(int64_t m, int64_t n, int64_t nnz, const int *csrRowPtr, int *csrC
   int i_nnz = (int)nnz;
 
   auto handle = setCUDASparseStream();
-  cusparseMatDescr_t desc;
-  cusparseCreateMatDescr(&desc);
+  hipsparseMatDescr_t desc;
+  hipsparseCreateMatDescr(&desc);
 #if TH_INDEX_BASE == 1
-  cusparseSetMatIndexBase(&desc, CUSPARSE_INDEX_BASE_ONE);
+  hipsparseSetMatIndexBase(&desc, HIPSPARSE_INDEX_BASE_ONE);
 #endif
-  CUSPARSE_CHECK(cusparseXcsrsort(handle, i_m, i_n, i_nnz, desc, csrRowPtr, csrColInd, P, pBuffer));
+  CUSPARSE_CHECK(hipsparseXcsrsort(handle, i_m, i_n, i_nnz, desc, csrRowPtr, csrColInd, P, pBuffer));
   // TODO: I think this leaks the matrix descriptor.
 }
 
@@ -207,7 +208,7 @@ void Xcoosort_bufferSizeExt(int64_t m, int64_t n, int64_t nnz, const int *cooRow
   int i_nnz = (int)nnz;
 
   auto handle = setCUDASparseStream();
-  CUSPARSE_CHECK(cusparseXcoosort_bufferSizeExt(handle, i_m, i_n, i_nnz, cooRows, cooCols, pBufferSizeInBytes));
+  CUSPARSE_CHECK(hipsparseXcoosort_bufferSizeExt(handle, i_m, i_n, i_nnz, cooRows, cooCols, pBufferSizeInBytes));
 }
 
 void XcoosortByRow(int64_t m, int64_t n, int64_t nnz, int *cooRows, int *cooCols, int *P, void *pBuffer)
@@ -220,7 +221,7 @@ void XcoosortByRow(int64_t m, int64_t n, int64_t nnz, int *cooRows, int *cooCols
   int i_nnz = (int)nnz;
 
   auto handle = setCUDASparseStream();
-  CUSPARSE_CHECK(cusparseXcoosortByRow(handle, i_m, i_n, i_nnz, cooRows, cooCols, P, pBuffer));
+  CUSPARSE_CHECK(hipsparseXcoosortByRow(handle, i_m, i_n, i_nnz, cooRows, cooCols, P, pBuffer));
 }
 
 

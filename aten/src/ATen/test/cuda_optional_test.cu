@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "gtest/gtest.h"
 
 #include "ATen/ATen.h"

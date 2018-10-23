@@ -80,9 +80,9 @@ void syncStreams(
     at::cuda::CUDAStream& ncclStream = ncclStreams[i];
     CUDAEvent& ncclEvent = ncclEvents[i];
 
-    C10D_CUDA_CHECK(cudaEventRecord(ncclEvent.getEvent(), currentThcStream));
+    C10D_CUDA_CHECK(hipEventRecord(ncclEvent.getEvent(), currentThcStream));
     C10D_CUDA_CHECK(
-        cudaStreamWaitEvent(ncclStream.stream(), ncclEvent.getEvent(), 0));
+        hipStreamWaitEvent(ncclStream.stream(), ncclEvent.getEvent(), 0));
   }
 }
 
@@ -95,7 +95,7 @@ ProcessGroupNCCL::WorkNCCL::WorkNCCL(const std::vector<at::Device>& devices)
   // Now create the CUDA events
   for (size_t i = 0; i < devices.size(); ++i) {
     gpuGuard.set_index(devices[i].index());
-    cudaEvents_[i] = CUDAEvent::create(cudaEventDisableTiming);
+    cudaEvents_[i] = CUDAEvent::create(hipEventDisableTiming);
   }
 }
 
@@ -113,11 +113,11 @@ bool ProcessGroupNCCL::WorkNCCL::finishedGPUExecution() const {
     gpuGuard.set_index(devices_[i].index());
     auto& cudaEvent = cudaEvents_[i];
     // Checking the work's corresponding CUDA events' status
-    auto ret = cudaEventQuery(cudaEvent.getEvent());
-    if (ret != cudaSuccess && ret != cudaErrorNotReady) {
+    auto ret = hipEventQuery(cudaEvent.getEvent());
+    if (ret != hipSuccess && ret != hipErrorNotReady) {
       C10D_CUDA_CHECK(ret);
     }
-    if (ret == cudaErrorNotReady) {
+    if (ret == hipErrorNotReady) {
       return false;
     }
   }
@@ -140,7 +140,7 @@ void ProcessGroupNCCL::WorkNCCL::synchronize() {
         THCState_getCurrentStreamOnDevice(thcState, devices_[i].index());
     auto& cudaEvent = cudaEvents_[i];
     // Let THC stream wait for the NCCL stream
-    C10D_CUDA_CHECK(cudaStreamWaitEvent(thcStream, cudaEvent.getEvent(), 0));
+    C10D_CUDA_CHECK(hipStreamWaitEvent(thcStream, cudaEvent.getEvent(), 0));
   }
 }
 
@@ -261,11 +261,11 @@ std::vector<std::shared_ptr<NCCLComm>>& ProcessGroupNCCL::getNCCLComm(
 
     // Also create the NCCL streams and events
     streamVal[i] = at::cuda::createCUDAStream();
-    // Event created using cudaEventDisableTiming flag and not
-    // cudaEventBlockingSync flag will provide the best performance when used
-    // with cudaStreamWaitEvent() and cudaEventQuery(). Since we here don't
+    // Event created using hipEventDisableTiming flag and not
+    // hipEventBlockingSync flag will provide the best performance when used
+    // with hipStreamWaitEvent() and hipEventQuery(). Since we here don't
     // measure the performance using cudaEvent, this should be set.
-    eventVal[i] = CUDAEvent::create(cudaEventDisableTiming);
+    eventVal[i] = CUDAEvent::create(hipEventDisableTiming);
   }
 
   C10D_NCCL_CHECK(ncclGroupEnd());
@@ -398,7 +398,7 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupNCCL::allreduce(
     at::cuda::CUDAStream& ncclStream = ncclStreams_[key][i];
     CUDAEvent& cudaEvent = work->cudaEvents_[i];
 
-    C10D_CUDA_CHECK(cudaEventRecord(cudaEvent.getEvent(), ncclStream.stream()));
+    C10D_CUDA_CHECK(hipEventRecord(cudaEvent.getEvent(), ncclStream.stream()));
   }
 
   return work;
@@ -448,7 +448,7 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupNCCL::broadcast(
     at::cuda::CUDAStream& ncclStream = ncclStreams_[key][i];
     CUDAEvent& cudaEvent = work->cudaEvents_[i];
 
-    C10D_CUDA_CHECK(cudaEventRecord(cudaEvent.getEvent(), ncclStream.stream()));
+    C10D_CUDA_CHECK(hipEventRecord(cudaEvent.getEvent(), ncclStream.stream()));
   }
 
   return work;
@@ -500,7 +500,7 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupNCCL::reduce(
     at::cuda::CUDAStream& ncclStream = ncclStreams_[key][i];
     CUDAEvent& cudaEvent = work->cudaEvents_[i];
 
-    C10D_CUDA_CHECK(cudaEventRecord(cudaEvent.getEvent(), ncclStream.stream()));
+    C10D_CUDA_CHECK(hipEventRecord(cudaEvent.getEvent(), ncclStream.stream()));
   }
 
   return work;
@@ -576,7 +576,7 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupNCCL::allgather(
     at::cuda::CUDAStream& ncclStream = ncclStreams_[key][i];
     CUDAEvent& cudaEvent = work->cudaEvents_[i];
 
-    C10D_CUDA_CHECK(cudaEventRecord(cudaEvent.getEvent(), ncclStream.stream()));
+    C10D_CUDA_CHECK(hipEventRecord(cudaEvent.getEvent(), ncclStream.stream()));
   }
   return work;
 }

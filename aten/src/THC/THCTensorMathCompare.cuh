@@ -10,7 +10,7 @@
 template <typename T, typename TOut>
 struct TensorLTValueOp {
   TensorLTValueOp(T v) : value(v) {}
-  __device__ __forceinline__ void operator()(TOut* out, T* in) {
+  __device__ inline void operator()(TOut* out, T* in) {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::lt(*in, value));
   }
 
@@ -20,7 +20,7 @@ struct TensorLTValueOp {
 template <typename T, typename TOut>
 struct TensorGTValueOp {
   TensorGTValueOp(T v) : value(v) {}
-  __device__ __forceinline__ void operator()(TOut* out, T* in) {
+  __device__ inline void operator()(TOut* out, T* in) {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::gt(*in, value));
   }
 
@@ -31,7 +31,7 @@ struct TensorGTValueOp {
 template <typename T, typename TOut>
 struct TensorLEValueOp {
   TensorLEValueOp(T v) : value(v) {}
-  __device__ __forceinline__ void operator()(TOut* out, T* in) {
+  __device__ inline void operator()(TOut* out, T* in) {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::le(*in, value));
   }
 
@@ -41,7 +41,7 @@ struct TensorLEValueOp {
 template <typename T, typename TOut>
 struct TensorGEValueOp {
   TensorGEValueOp(T v) : value(v) {}
-  __device__ __forceinline__ void operator()(TOut* out, T* in) {
+  __device__ inline void operator()(TOut* out, T* in) {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::ge(*in, value));
   }
 
@@ -51,7 +51,7 @@ struct TensorGEValueOp {
 template <typename T, typename TOut>
 struct TensorEQValueOp {
   TensorEQValueOp(T v) : value(v) {}
-  __device__ __forceinline__ void operator()(TOut* out, T* in) {
+  __device__ inline void operator()(TOut* out, T* in) {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::eq(*in, value));
   }
 
@@ -61,7 +61,7 @@ struct TensorEQValueOp {
 template <typename T, typename TOut>
 struct TensorNEValueOp {
   TensorNEValueOp(T v) : value(v) {}
-  __device__ __forceinline__ void operator()(TOut* out, T* in) {
+  __device__ inline void operator()(TOut* out, T* in) {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::ne(*in, value));
   }
 
@@ -79,7 +79,7 @@ void THC_logicalValue(THCState *state,
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #endif // THC_TENSORMATH_COMPARE_CUH

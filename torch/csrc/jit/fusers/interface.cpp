@@ -6,9 +6,9 @@
   #include "torch/csrc/jit/fusers/cpu/interface.h"
 #endif // USE_CPU_FUSER
 
-#if USE_CUDA_FUSER
+#if USE_ROCM_FUSER
   #include "torch/csrc/jit/fusers/cuda/interface.h"
-#endif // USE_CUDA_FUSER
+#endif // USE_ROCM_FUSER
 
 #include <stdexcept>
 
@@ -32,9 +32,9 @@ std::shared_ptr<FusionHandle> getFusionHandle(Node* fusion_group) {
     throw std::runtime_error("CPU fusion is not supported on this build.");
   }
 
-  #if USE_CUDA_FUSER
+  #if USE_ROCM_FUSER
     return cudafuser::getFusionHandle(fusion_group);
-  #endif // USE_CUDA_FUSER
+  #endif // USE_ROCM_FUSER
 
   throw std::runtime_error("CUDA fusion is not supported on this build.");
 }
@@ -48,9 +48,9 @@ bool canFuseOnCPU() {
 }
 
 bool canFuseOnGPU() {
-  #if USE_CUDA_FUSER
+  #if USE_ROCM_FUSER
     return true;
-  #endif  // USE_CUDA_FUSER
+  #endif  // USE_ROCM_FUSER
 
   return false;
 }
@@ -70,9 +70,9 @@ std::vector<at::Tensor> debugLaunchGraph(
     throw std::runtime_error("CPU fusion is not supported on this build.");
   }
 
-  #if USE_CUDA_FUSER
+  #if USE_ROCM_FUSER
     return cudafuser::debugLaunchGraph(graph, device, inputs);
-  #endif // USE_CUDA_FUSER
+  #endif // USE_ROCM_FUSER
 
   throw std::runtime_error("CUDA fusion is not supported on this build.");
 }

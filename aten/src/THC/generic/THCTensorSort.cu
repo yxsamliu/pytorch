@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorSort.cu"
 #else
@@ -53,8 +54,8 @@ void THCTensor_(sortKeyValueInplace)(THCState* state,
     dim3 block(blockSize);                                              \
                                                                         \
     if (dir) {                                                          \
-      bitonicSortKVInPlace<scalar_t, int64_t, A, -1, GTComp<scalar_t>, TYPE, SIZE> \
-        <<<grid, block, 0, THCState_getCurrentStream(state)>>>(         \
+     hipLaunchKernelGGL( bitonicSortKVInPlace<scalar_t, int64_t, A, -1, GTComp<scalar_t>, TYPE, SIZE> \
+        , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state),          \
           keyInfo,                                                      \
           static_cast<TYPE>(keySlices),                                 \
           static_cast<TYPE>(keySliceSize),                              \
@@ -63,8 +64,8 @@ void THCTensor_(sortKeyValueInplace)(THCState* state,
           static_cast<TYPE>(valueInfo.strides[collapseValueDim]),       \
           GTComp<scalar_t>());                                          \
     } else {                                                            \
-      bitonicSortKVInPlace<scalar_t, int64_t, A, -1, LTComp<scalar_t>, TYPE, SIZE> \
-        <<<grid, block, 0, THCState_getCurrentStream(state)>>>(         \
+     hipLaunchKernelGGL( bitonicSortKVInPlace<scalar_t, int64_t, A, -1, LTComp<scalar_t>, TYPE, SIZE> \
+        , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state),          \
           keyInfo,                                                      \
           static_cast<TYPE>(keySlices),                                 \
           static_cast<TYPE>(keySliceSize),                              \
@@ -148,7 +149,7 @@ void THCTensor_(sortKeyValueInplace)(THCState* state,
 #undef HANDLE_SORT_CASE
 #undef HANDLE_A_CASE
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 void THCTensor_(sortViaThrust)(THCState* state,
@@ -331,7 +332,7 @@ void THCTensor_(sort)(THCState* state,
     THCTensor_(sortViaThrust)(state, sorted, indices, input, dim, (bool) order);
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #endif

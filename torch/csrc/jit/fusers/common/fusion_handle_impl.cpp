@@ -282,11 +282,11 @@ std::unique_ptr<FusedKernel> FusionHandleImpl::compileSpec(
   std::string name = "kernel_" + std::to_string(next_kernel_id++);
   FusedKernel* raw_func;
   if (device != kCPUDevice) {
-    #if USE_CUDA_FUSER
+    #if USE_ROCM_FUSER
       raw_func = new cudafuser::CUDAFusedKernel(name, agraph);
     #else
       throw std::runtime_error("CUDA Fusion is not supported on this build.");
-    #endif // USE_CUDA_FUSER
+    #endif // USE_ROCM_FUSER
   } else {
     raw_func = new cpufuser::CPUFusedKernel(
       name

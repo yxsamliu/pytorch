@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/cuda/CUDAContext.h"
 #include "ATen/TensorUtils.h"
@@ -185,7 +186,7 @@ Tensor embedding_bag_backward_cuda_sum_avg(
 
   auto grad_weight = at::zeros({num_weights, grad.size(1)}, grad.options());
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
 
   ptrdiff_t numel = indices.numel();
   int64_t stride = grad_weight.stride(0);
@@ -245,16 +246,16 @@ Tensor embedding_bag_backward_cuda_sum_avg(
   dim3 block(32, 4);
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(
       grad.type(), "embedding_bag_backward_cuda_sum_avg_kernel", [&] {
-        EmbeddingBag_accGradParametersKernel_sum_avg<
-            scalar_t><<<grid, block, 0, stream>>>(
-            sorted_indices.data<int64_t>(), orig_indices.data<int64_t>(),
+       hipLaunchKernelGGL( EmbeddingBag_accGradParametersKernel_sum_avg<
+            scalar_t>, dim3(grid), dim3(block), 0, stream, 
+            static_cast<int64_t *>(sorted_indices.data<int64_t>()), static_cast<int64_t *>(orig_indices.data<int64_t>()),
             grad.data<scalar_t>(), grad_weight.data<scalar_t>(),
-            offset2bag.data<int64_t>(),
-            count.defined() ? count.data<int64_t>() : nullptr, numel, stride,
-            mode, bag_size.data<int64_t>());
+            static_cast<int64_t *>(offset2bag.data<int64_t>()),
+            static_cast<int64_t *>(count.defined() ? count.data<int64_t>() : nullptr), static_cast<ptrdiff_t>(numel), static_cast<int64_t>(stride),
+            static_cast<int>(mode), static_cast<int64_t *>(bag_size.data<int64_t>()));
       });
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return grad_weight;
 }
 
@@ -294,20 +295,20 @@ Tensor embedding_bag_backward_cuda_max(const Tensor &grad,
 
   int64_t numBags = grad.size(0);
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
 
   dim3 block = dim3(32, 8);
   int grid = 1024;
 
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(
       grad.type(), "embedding_bag_backward_cuda_max", [&] {
-        EmbeddingBag_accGradParametersKernel_max<
-            scalar_t><<<grid, block, 0, stream>>>(
-            max_indices.data<int64_t>(), grad.data<scalar_t>(),
-            grad_weight.data<scalar_t>(), stride, numBags);
+       hipLaunchKernelGGL( EmbeddingBag_accGradParametersKernel_max<
+            scalar_t>, dim3(grid), dim3(block), 0, stream, 
+            static_cast<int64_t *>(max_indices.data<int64_t>()), grad.data<scalar_t>(),
+            grad_weight.data<scalar_t>(), static_cast<int64_t>(stride), static_cast<int64_t>(numBags));
       });
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return grad_weight;
 }
 }
@@ -334,7 +335,7 @@ _embedding_bag_cuda(const Tensor &weight, const Tensor &indices,
   auto offset2bag =
       at::zeros({indices.size(0)}, indices.options()); // offset2bag = [0 0 0 0 0]
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
 
   auto output = at::zeros({offsets.size(0), weight.size(1)}, weight.options());
 
@@ -350,15 +351,15 @@ _embedding_bag_cuda(const Tensor &weight, const Tensor &indices,
   dim3 block = dim3(32, 8);
   int grid = 1024;
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(weight.type(), "embedding_bag_cuda", [&] {
-    EmbeddingBag_updateOutputKernel<scalar_t><<<grid, block, 0, stream>>>(
-        indices.data<int64_t>(), offsets.data<int64_t>(),
+   hipLaunchKernelGGL( EmbeddingBag_updateOutputKernel<scalar_t>, dim3(grid), dim3(block), 0, stream, 
+        static_cast<int64_t *>(indices.data<int64_t>()), static_cast<int64_t *>(offsets.data<int64_t>()),
         weight.data<scalar_t>(), output.data<scalar_t>(),
-        offset2bag.data<int64_t>(), numIndices, numBags, featureSize,
-        weight.stride(0), weight.stride(1), mode, bag_size.data<int64_t>(),
-        mode == MODE_MAX ? max_indices.data<int64_t>() : NULL);
+        static_cast<int64_t *>(offset2bag.data<int64_t>()), static_cast<int64_t>(numIndices), static_cast<int64_t>(numBags), static_cast<int64_t>(featureSize),
+        static_cast<int64_t>(weight.stride(0)), static_cast<int64_t>(weight.stride(1)), static_cast<int>(mode), static_cast<int64_t *>(bag_size.data<int64_t>()),
+        static_cast<int>(mode) == MODE_MAX ? max_indices.data<int64_t>() : NULL);
   });
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return std::tuple<Tensor, Tensor, Tensor, Tensor>(output, offset2bag, bag_size, max_indices);
 }
 

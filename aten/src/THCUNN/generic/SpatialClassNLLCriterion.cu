@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/SpatialClassNLLCriterion.cu"
 #else
@@ -77,14 +78,14 @@ void THNN_(SpatialClassNLLCriterion_updateOutput)(
     }
 
     int64_t count = batch_size * H * W;
-    SpatialClassNLLCriterion_updateOutput_no_reduce_kernel<scalar_t>
-      <<<GET_BLOCKS(count), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state)>>>(
-        count,
+   hipLaunchKernelGGL( SpatialClassNLLCriterion_updateOutput_no_reduce_kernel<scalar_t>
+      , dim3(GET_BLOCKS(count)), dim3(CUDA_NUM_THREADS), 0, THCState_getCurrentStream(state), 
+        static_cast<int64_t>(count),
         toDeviceTensor<scalar_t, 4>(state, input),
         toDeviceTensor<THCIndex_t, 3>(state, target),
         toDeviceTensor<scalar_t, 3>(state, output),
         weights ? THCTensor_(data)(state, weights) : NULL,
-        ignore_index);
+        static_cast<int64_t>(ignore_index));
 
     if (weights) {
       THCTensor_(free)(state, weights);
@@ -111,26 +112,26 @@ void THNN_(SpatialClassNLLCriterion_updateOutput)(
   THCTensor_(fill)(state, output, ScalarConvert<int, scalar_t>::to(0));
   THCTensor_(fill)(state, total_weight, ScalarConvert<int, scalar_t>::to(0));
 
-  cunn_SpatialClassNLLCriterion_updateOutput_kernel<scalar_t, accreal>
-    <<<total_blocks, CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state)>>>(
+ hipLaunchKernelGGL( cunn_SpatialClassNLLCriterion_updateOutput_kernel<scalar_t, accreal>
+    , dim3(total_blocks), dim3(CUDA_NUM_THREADS), 0, THCState_getCurrentStream(state), 
       output_data,
       total_weight_data,
       input_data,
-      target_data,
+      static_cast<THCIndex_t *>(target_data),
       weights_data,
-      reduction == Reduction::ElementwiseMean,
-      THCTensor_(size)(state, input, 0),
-      THCTensor_(size)(state, input, 1),
-      THCTensor_(size)(state, input, 2) * THCTensor_(size)(state, input, 3),
-      blocks_per_sample,
-      ignore_index
+      static_cast<int>(reduction == Reduction::ElementwiseMean),
+      static_cast<int>(THCTensor_(size)(state, input, 0)),
+      static_cast<int>(THCTensor_(size)(state, input, 1)),
+      static_cast<int>(THCTensor_(size)(state, input, 2) * THCTensor_(size)(state, input, 3)),
+      static_cast<int>(blocks_per_sample),
+      static_cast<int64_t>(ignore_index)
   );
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   if (reduction == Reduction::ElementwiseMean) {
-    cunn_SpatialClassNLLCriterion_sizeAverage_kernel<<<1, 1, 0, THCState_getCurrentStream(state)>>>(
+   hipLaunchKernelGGL( cunn_SpatialClassNLLCriterion_sizeAverage_kernel<scalar_t>, dim3(1), dim3(1), 0, THCState_getCurrentStream(state), 
       output_data, total_weight_data
     );
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
   }
 
   if (weights)
@@ -177,14 +178,14 @@ void THNN_(SpatialClassNLLCriterion_updateGradInput)(
     }
 
     int64_t count = batch_size * H * W;
-    SpatialClassNLLCriterion_updateGradInput_no_reduce_kernel<scalar_t>
-      <<<GET_BLOCKS(count), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state)>>>(
-        count,
+   hipLaunchKernelGGL( SpatialClassNLLCriterion_updateGradInput_no_reduce_kernel<scalar_t>
+      , dim3(GET_BLOCKS(count)), dim3(CUDA_NUM_THREADS), 0, THCState_getCurrentStream(state), 
+        static_cast<int64_t>(count),
         toDeviceTensor<THCIndex_t, 3>(state, target),
         toDeviceTensor<scalar_t, 3>(state, gradOutput),
         toDeviceTensor<scalar_t, 4>(state, gradInput),
         weights ? THCTensor_(data)(state, weights) : NULL,
-        ignore_index);
+        static_cast<int64_t>(ignore_index));
 
     if (weights) {
       THCTensor_(free)(state, weights);
@@ -208,21 +209,21 @@ void THNN_(SpatialClassNLLCriterion_updateGradInput)(
   blocks_per_sample = (blocks_per_sample == 0) ? 1 : blocks_per_sample;
   int total_blocks = blocks_per_sample * batch_size;
 
-  cunn_SpatialClassNLLCriterion_updateGradInput_kernel
-    <<<total_blocks, CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state)>>>(
+ hipLaunchKernelGGL( cunn_SpatialClassNLLCriterion_updateGradInput_kernel<scalar_t>
+    , dim3(total_blocks), dim3(CUDA_NUM_THREADS), 0, THCState_getCurrentStream(state), 
       gradInput_data,
       gradOutput_data,
-      target_data,
+      static_cast<THCIndex_t *>(target_data),
       weights_data,
       total_weight_data,
-      reduction == Reduction::ElementwiseMean,
-      THCTensor_(size)(state, input, 0),
-      THCTensor_(size)(state, input, 1),
-      THCTensor_(size)(state, input, 2) *THCTensor_(size)(state, input, 3),
-      blocks_per_sample,
-      ignore_index
+      static_cast<int>(reduction == Reduction::ElementwiseMean),
+      static_cast<int>(THCTensor_(size)(state, input, 0)),
+      static_cast<int>(THCTensor_(size)(state, input, 1)),
+      static_cast<int>(THCTensor_(size)(state, input, 2) *THCTensor_(size)(state, input, 3)),
+      static_cast<int>(blocks_per_sample),
+      static_cast<int64_t>(ignore_index)
   );
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 
   if (weights)
     THCTensor_(free)(state, weights);

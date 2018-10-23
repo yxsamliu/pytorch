@@ -1,4 +1,4 @@
-#include <torch/cuda.h>
+#include <torch/hip/hip_runtime.h>
 
 #include <ATen/Context.h>
 

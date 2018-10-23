@@ -12,8 +12,8 @@
 #include <unordered_map>
 #include <iostream>
 
-#ifdef USE_CUDA
-#include <cuda_runtime.h>
+#ifdef USE_ROCM
+#include <hip/hip_runtime.h>
 #endif
 
 

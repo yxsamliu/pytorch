@@ -14,7 +14,7 @@ struct DefaultPtrTraits {
   typedef T* PtrType;
 };
 
-#ifdef __CUDACC__
+#ifdef __HIPCC__
 template <typename T>
 struct RestrictPtrTraits {
   typedef T* __restrict__ PtrType;

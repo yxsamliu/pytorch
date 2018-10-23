@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "THCUNN.h"
 #include "common.h"
 #include "TH/THHalf.h"
@@ -36,7 +37,7 @@ static int getNumThreads(int nElem) {
 }
 
 // Returns the index of the most significant 1 bit in `val`.
-__device__ __forceinline__ int getMSB(int val) {
+__device__ inline int getMSB(int val) {
   return 31 - __clz(val);
 }
 
@@ -57,7 +58,7 @@ struct Float2 {
 template <typename Dtype, typename Acctype, typename DeviceTensor3>
 struct SumOp {
   __device__ SumOp(const DeviceTensor3 t) : tensor(t) {}
-  __device__ __forceinline__ Acctype operator()(int batch, int plane, int n) {
+  __device__ inline Acctype operator()(int batch, int plane, int n) {
     return ScalarConvert<Dtype, Acctype>::to(tensor[batch][plane][n]);
   }
   const DeviceTensor3 tensor;
@@ -66,7 +67,7 @@ struct SumOp {
 template <typename Dtype, typename Acctype, typename DeviceTensor3>
 struct VarOp {
   __device__ VarOp(Acctype m, const DeviceTensor3 t) : mean(m), tensor(t) {}
-  __device__ __forceinline__ Acctype operator()(int batch, int plane, int n) {
+  __device__ inline Acctype operator()(int batch, int plane, int n) {
     Dtype val = tensor[batch][plane][n];
     return (val - mean) * (val - mean);
   }
@@ -78,7 +79,7 @@ template <typename Dtype, typename Acctype, typename DeviceTensor3>
 struct GradOp {
   __device__ GradOp(Acctype m, const DeviceTensor3 i, const DeviceTensor3 g)
     : mean(m), input(i), gradOutput(g) {}
-  __device__ __forceinline__ Float2<Dtype, Acctype> operator()(int batch, int plane, int n) {
+  __device__ inline Float2<Dtype, Acctype> operator()(int batch, int plane, int n) {
     Dtype g = gradOutput[batch][plane][n];
     Dtype c = ScalarConvert<Acctype, Dtype>::to(input[batch][plane][n] - mean);
     return Float2<Dtype, Acctype>(g, g * c);
@@ -90,7 +91,7 @@ struct GradOp {
 
 // Sum across all threads within a warp
 template <typename T>
-static __device__ __forceinline__ T warpSum(T val) {
+static __device__ inline T warpSum(T val) {
 #if __CUDA_ARCH__ >= 300
   for (int i = 0; i < getMSB(WARP_SIZE); ++i) {
     val += WARP_SHFL_XOR(val, 1 << i, WARP_SIZE);
@@ -108,7 +109,7 @@ static __device__ __forceinline__ T warpSum(T val) {
 }
 
 template <typename Dtype, typename Acctype>
-static __device__ __forceinline__ Float2<Dtype, Acctype> warpSum(Float2<Dtype, Acctype> value) {
+static __device__ inline Float2<Dtype, Acctype> warpSum(Float2<Dtype, Acctype> value) {
   value.v1 = warpSum(value.v1);
   value.v2 = warpSum(value.v2);
   return value;

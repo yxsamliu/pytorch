@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorTopK.cu"
 #else
@@ -33,8 +34,8 @@ void THCTensor_(topk)(THCState* state,
   // is provided to the kernel for the arguments.
 
 #define RUN_K(INDEX_T, DIM, DIR)                                        \
-  gatherTopK<scalar_t, INDEX_T, DIM, DIR>                                   \
-    <<<grid, block, 0, THCState_getCurrentStream(state)>>>(             \
+ hipLaunchKernelGGL( gatherTopK<scalar_t, INDEX_T, DIM, DIR>                                   \
+    , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state),              \
       inputInfo,                                                        \
       static_cast<INDEX_T>(sliceSize),                                  \
       static_cast<INDEX_T>(k),                                          \
@@ -105,7 +106,7 @@ void THCTensor_(topk)(THCState* state,
     THError("Slice to sort is too large");                              \
   }                                                                     \
                                                                         \
-  dim3 block(std::min(THCRoundUp(sliceSize, (int64_t) TOPK_WARP_SIZE), (int64_t) 1024)); \
+  dim3 block(::min(THCRoundUp(sliceSize, (int64_t) TOPK_WARP_SIZE), (int64_t) 1024)); \
                                                                         \
   /* This is used as a template parameter to calculate indices. */      \
   /* We only specialize it if all collapsed dim sizes are the */        \
@@ -175,7 +176,7 @@ void THCTensor_(topk)(THCState* state,
 
   THCudaLongTensor_free(state, input);
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #endif // THC_GENERIC_FILE

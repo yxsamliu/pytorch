@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include <ATen/Context.h>
 #include <ATen/Dispatch.h>
 #include <ATen/native/cuda/Loops.cuh>

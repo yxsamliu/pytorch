@@ -1,7 +1,7 @@
 #include "Cuda.hpp"
 #include <unordered_map>
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 THCState** _THDCudaState;
 
 void THDSetCudaStatePtr(THCState **state) {
@@ -9,13 +9,13 @@ void THDSetCudaStatePtr(THCState **state) {
 }
 
 static int nextStreamId = 1; // 0 for the default stream
-static std::unordered_map<cudaStream_t, int> streamIdMap;
+static std::unordered_map<hipStream_t, int> streamIdMap;
 
-void THDRegisterCudaStream(cudaStream_t stream) {
+void THDRegisterCudaStream(hipStream_t stream) {
   streamIdMap.emplace(stream, nextStreamId++);
 }
 
-int THDGetStreamId(cudaStream_t stream) {
+int THDGetStreamId(hipStream_t stream) {
   if (!stream) return 0;
   auto it = streamIdMap.find(stream);
   if (it == streamIdMap.end()) {

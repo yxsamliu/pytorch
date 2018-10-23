@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/cuda/CUDAContext.h"
 #include "ATen/Config.h"
@@ -12,8 +13,8 @@
 
 #include <thrust/execution_policy.h>
 #include <thrust/unique.h>
-#include <cufft.h>
-#include <cufftXt.h>
+#include <hipfft.h>
+#include <hipfft.h>
 #include <cmath>
 
 namespace at { namespace native {
@@ -43,7 +44,7 @@ struct cnt_to_dst_idx_functor : public thrust::unary_function<int64_t, int64_t>
 #endif
   cnt_to_dst_idx_functor & operator=(const cnt_to_dst_idx_functor&) = default;
 
-  __host__ __device__ __forceinline__
+  __host__ __device__ inline
   int64_t operator()(const int64_t& i) const
   {
     int64_t imag = i % 2;
@@ -72,7 +73,7 @@ struct dst_idx_to_src_functor : public thrust::unary_function<int64_t, scalar_t>
     }
   }
 
-  __device__ __forceinline__
+  __device__ inline
   scalar_t operator()(const int64_t& write_idx_with_imag) const
   {
     int64_t imag = write_idx_with_imag % 2;
@@ -101,7 +102,7 @@ struct dst_idx_to_src_functor : public thrust::unary_function<int64_t, scalar_t>
 // input should be a contiguous batched tensor of same size as full (twosided)
 // signals, but only contains half (onesided) of the values.
 // This function modifies inplace.
-__forceinline__
+inline
 static void _fft_fill_with_conjugate_symmetry_(Tensor& input,
                       int64_t size_last_dim, int64_t last_dim_start_slice) {
   if (last_dim_start_slice >= size_last_dim) {
@@ -111,7 +112,7 @@ static void _fft_fill_with_conjugate_symmetry_(Tensor& input,
   // copy
   int64_t n = input.numel() / size_last_dim * (size_last_dim - last_dim_start_slice);
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
   auto allocator = THCThrustAllocator(globalContext().lazyInitCUDA());
   auto policy = thrust::cuda::par(allocator).on(stream);
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "_fft_fill_with_conjugate_symmetry_", [&] {
@@ -187,10 +188,10 @@ static inline Tensor _run_cufft(
   auto output = at::empty(output_sizes, input.options());
 
   // set to current stream
-  CUFFT_CHECK(cufftSetStream(plan, at::cuda::getCurrentCUDAStream()));
+  CUFFT_CHECK(hipfftSetStream(plan, at::cuda::getCurrentCUDAStream()));
 
   auto ws = at::empty({ config.workspace_size() }, at::device(at::kCUDA).dtype(at::kByte));
-  CUFFT_CHECK(cufftSetWorkArea(plan, ws.data_ptr()));
+  CUFFT_CHECK(hipfftSetWorkArea(plan, ws.data_ptr()));
 
   // run
 #ifdef __HIP_PLATFORM_HCC__
@@ -230,7 +231,7 @@ static inline Tensor _run_cufft(
     }
 #else
   CUFFT_CHECK(cufftXtExec(plan, input.data_ptr(), output.data_ptr(),
-    inverse ? CUFFT_INVERSE : CUFFT_FORWARD));
+    inverse ? HIPFFT_BACKWARD : HIPFFT_FORWARD));
 #endif
 
   // rescale if needed by normalized flag or inverse transform

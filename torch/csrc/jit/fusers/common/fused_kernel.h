@@ -1,5 +1,5 @@
 #include "torch/csrc/jit/fusers/Config.h"
-#if USE_CPU_FUSER || USE_CUDA_FUSER
+#if USE_CPU_FUSER || USE_ROCM_FUSER
 #pragma once
 
 #include "torch/csrc/jit/fusers/common/annotated_graph.h"
@@ -55,7 +55,7 @@ protected:
   // arguments is a list of pointers to the arguments for the compiled CUDA/CPU
   // code.
   // The format of arguments is suitable for directly passing to a call to
-  // cuLaunchKernel as the kernel arguments.
+  // hipModuleLaunchKernel as the kernel arguments.
   // Currently the first argument is a pointer to numel (for passing to
   // CUDA code), and the remainder are pointers to the TensorInfo<T> structs
   // that compiled code uses to load Tensor data.
@@ -85,4 +85,4 @@ protected:
 } // namespace jit 
 } // namespace torch
 
-#endif // USE_CPU_FUSER || USE_CUDA_FUSER
+#endif // USE_CPU_FUSER || USE_ROCM_FUSER

@@ -9,7 +9,7 @@
 #include "torch/csrc/utils/python_numbers.h"
 #include "torch/csrc/utils/python_compat.h"
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 #include <THC/THC.h>
 #endif
 
@@ -171,7 +171,7 @@ void setBackCompatKeepdimWarn(bool warn);
 bool getBackCompatKeepdimWarn();
 bool maybeThrowBackCompatKeepdimWarn(char *func);
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 std::vector <THCStream*> THPUtils_PySequence_to_THCStreamList(PyObject *obj);
 #endif
 

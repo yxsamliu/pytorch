@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/NativeFunctions.h"
 #include "c10/util/Exception.h"

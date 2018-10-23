@@ -4,8 +4,8 @@
 #include <limits>
 #include <ATen/core/Macros.h>
 
-#ifdef __CUDACC__
-#include <cuda_fp16.h>
+#ifdef __HIPCC__
+#include <hip/hip_fp16.h>
 #endif
 
 #if defined(__HIP_DEVICE_COMPILE__)
@@ -34,7 +34,7 @@ inline AT_HOST_DEVICE Half::operator float() const {
 #endif
 }
 
-#ifdef __CUDACC__
+#ifdef __HIPCC__
 inline AT_HOST_DEVICE Half::Half(const __half& value) {
   x = *reinterpret_cast<const unsigned short*>(&value);
 }

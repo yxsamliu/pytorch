@@ -377,7 +377,7 @@ PyObject* c10d_init(PyObject* _unused) {
           &::c10d::ProcessGroup::Work::wait,
           py::call_guard<py::gil_scoped_release>());
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   module.def(
       "_dist_broadcast_coalesced",
       &::c10d::distBroadcastCoalesced,

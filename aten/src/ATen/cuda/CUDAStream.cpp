@@ -18,11 +18,11 @@ struct CUDAStreamInternals {
   CUDAStreamInternals() = default;
 
   ~CUDAStreamInternals() {
-    if (stream) cudaStreamDestroy(stream);
+    if (stream) hipStreamDestroy(stream);
   }
 
   int64_t device = -1; 
-  cudaStream_t stream = nullptr;
+  hipStream_t stream = nullptr;
 };
 
 namespace at {
@@ -33,7 +33,7 @@ namespace detail {
 // Global stream state and constants
 static int64_t num_gpus = -1;
 static constexpr int kStreamsPerPool = 32;
-static constexpr unsigned int kDefaultFlags = cudaStreamNonBlocking;
+static constexpr unsigned int kDefaultFlags = hipStreamNonBlocking;
 
 // Note: stream priority is not supported by HIP
 // Note: lower numbers are higher priorities, zero is default priority
@@ -103,19 +103,19 @@ static void initDeviceStreamState(const int64_t device) {
     hipri_stream.device = device;
     
     #ifndef __HIP_PLATFORM_HCC__
-      AT_CUDA_CHECK(cudaStreamCreateWithPriority(
+      AT_CUDA_CHECK(hipStreamCreateWithPriority(
         &lowpri_stream.stream
       , kDefaultFlags
       , kLowPriority));
-      AT_CUDA_CHECK(cudaStreamCreateWithPriority(
+      AT_CUDA_CHECK(hipStreamCreateWithPriority(
         &hipri_stream.stream
       , kDefaultFlags
       , kHighPriority));
     #else
-      AT_CUDA_CHECK(cudaStreamCreateWithFlags(
+      AT_CUDA_CHECK(hipStreamCreateWithFlags(
         &lowpri_stream.stream
       , kDefaultFlags));
-      AT_CUDA_CHECK(cudaStreamCreateWithFlags(
+      AT_CUDA_CHECK(hipStreamCreateWithFlags(
         &hipri_stream.stream
       , kDefaultFlags));
     #endif // __HIP_PLATFORM_HCC__
@@ -198,7 +198,7 @@ void CUDAStream_uncheckedSetStream(CUDAStreamInternals* ptr) {
 }
 
 // Getters
-cudaStream_t CUDAStream_stream(CUDAStreamInternals* ptr) {
+hipStream_t CUDAStream_stream(CUDAStreamInternals* ptr) {
   AT_ASSERT(ptr);
   return ptr->stream;
 }
@@ -210,7 +210,7 @@ int64_t CUDAStream_device(CUDAStreamInternals* ptr) {
 
 void CUDAStream_synchronize_with(CUDAStreamInternals* ptr, const CUDAEvent& event) {
     if (event.isCreated())
-      AT_CUDA_CHECK(cudaStreamWaitEvent(ptr->stream, event, 0));
+      AT_CUDA_CHECK(hipStreamWaitEvent(ptr->stream, event, 0));
 }
 
 } // namespace detail

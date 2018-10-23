@@ -1,5 +1,5 @@
 #include "torch/csrc/jit/fusers/Config.h"
-#if USE_CUDA_FUSER
+#if USE_ROCM_FUSER
 #pragma once
 
 #include "torch/csrc/jit/fusers/common/fused_kernel.h"
@@ -8,8 +8,8 @@
 #include "ATen/ATen.h"
 
 #include "nvrtc.h"
-#include "cuda.h"
-#include "cuda_runtime.h"
+#include "hip/hip_runtime.h"
+#include "hip/hip_runtime.h"
 
 #include <cstdint>
 #include <vector>
@@ -21,7 +21,7 @@ struct CUDAFusedKernel : public ::torch::jit::FusedKernel {
   CUDAFusedKernel(const std::string& name, AnnotatedGraph& agraph);
 
   virtual ~CUDAFusedKernel() override {
-    cuModuleUnload(module);
+    hipModuleUnload(module);
   }
 
 protected:
@@ -41,13 +41,13 @@ protected:
   virtual void launch_raw(uint32_t numel, void ** arguments) override;
 
   std::vector<char> ptx;
-  CUmodule module;
-  CUfunction function;
+  hipModule_t module;
+  hipFunction_t function;
 
   // we record prop/device so if they are availiable for launch heuristics
   // querying at launch is too slow for device properties.
   int device;
-  cudaDeviceProp prop;
+  hipDeviceProp_t prop;
   int blockSize = 128;
   int maxBlocks;
 };
@@ -56,4 +56,4 @@ protected:
 } // namespace jit
 } // namespace torch
 
-#endif // USE_CUDA_FUSER
+#endif // USE_ROCM_FUSER

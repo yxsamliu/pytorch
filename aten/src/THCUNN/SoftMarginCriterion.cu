@@ -51,7 +51,7 @@ struct softmargin_updateGradInput_functor
 template <typename Dtype, typename Acctype>
 struct softmargin_updateGradInput_no_reduce_functor
 {
-  __forceinline__ __host__ __device__ void operator()(
+  inline __host__ __device__ void operator()(
       const Dtype *x,
       const Dtype *y,
       Dtype *gradInput) const

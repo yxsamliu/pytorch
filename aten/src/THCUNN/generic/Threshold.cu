@@ -31,7 +31,7 @@ void THNN_(Threshold_updateOutput)(
     );
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 void THNN_(Threshold_updateGradInput)(
@@ -64,7 +64,7 @@ void THNN_(Threshold_updateGradInput)(
     );
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #endif

@@ -854,6 +854,7 @@ class TestDictDataLoader(TestCase):
             self.assertEqual(n[0], idx)
             self.assertEqual(n[1], idx + 1)
 
+    @skipIfRocm
     @unittest.skipIf(not TEST_CUDA, "CUDA unavailable")
     @skipIfRocm
     def test_pin_memory(self):

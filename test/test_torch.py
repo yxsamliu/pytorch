@@ -8234,6 +8234,7 @@ class TestTorch(TestCase):
             self.assertEqual(torch.empty_like(a).shape, a.shape)
             self.assertEqual(torch.empty_like(a).type(), a.type())
 
+    @skipIfRocm
     @unittest.skipIf(not torch.cuda.is_available(), 'no CUDA')
     @skipIfRocm
     def test_pin_memory(self):

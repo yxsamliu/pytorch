@@ -2241,6 +2241,7 @@ class TestNN(NNTestCase):
         self._test_dropout(nn.Dropout3d, False, input)
 
     @unittest.skipIf(not TEST_CUDA, "CUDA unavailable")
+    @skipIfRocm
     def test_Dropout_cuda(self):
         input = torch.Tensor(1000)
         self._test_dropout(nn.Dropout, True, input)
@@ -2673,6 +2674,7 @@ class TestNN(NNTestCase):
 
     @unittest.skipIf(not TEST_CUDA, "CUDA unavailable")
     @repeat_test_for_types(ALL_TENSORTYPES)
+    @skipIfRocm
     def test_MaxPool1d_indices_cuda(self, dtype=torch.float):
         self._test_maxpool_indices(1, device="cuda", dtype=dtype)
 
@@ -2681,6 +2683,7 @@ class TestNN(NNTestCase):
 
     @unittest.skipIf(not TEST_CUDA, "CUDA unavailable")
     @repeat_test_for_types(ALL_TENSORTYPES)
+    @skipIfRocm
     def test_MaxPool2d_indices_cuda(self, dtype=torch.float):
         self._test_maxpool_indices(2, device="cuda", dtype=dtype)
 
@@ -6652,6 +6655,10 @@ def _rand_tensor_non_equal(*size):
 
 
 def add_test(test, decorator=None):
+    #print("add_test: " + test.get_name() + "\n")
+    if (test.get_name() < "test_Conv3d"):
+        print("skip " + test.get_name() + '\n')
+        return
     def add(test_name, fn):
         if hasattr(TestNN, test_name):
             raise RuntimeError('Found two tests with the same name: ' + test_name)
@@ -6777,6 +6784,7 @@ new_criterion_tests = [
         target_size=(),
         reference_fn=lambda i, t, _: 1. / i.numel() * (i - t).abs().sum(),
         desc='scalar',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='KLDivLoss',
@@ -6794,7 +6802,8 @@ new_criterion_tests = [
         reference_fn=lambda i, t, m: ((i - t).abs().pow(2).sum() /
                                       (i.numel() if get_reduction(m) == 'elementwise_mean' else 1)),
         check_sum_reduction=True,
-        desc='scalar'
+        desc='scalar',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='MSELoss',
@@ -6814,6 +6823,7 @@ new_criterion_tests = [
             (i.numel() if get_reduction(m) == 'elementwise_mean' else 1),
         desc='scalar_weights',
         check_gradgrad=False,
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='HingeEmbeddingLoss',
@@ -6831,6 +6841,7 @@ new_criterion_tests = [
         reference_fn=lambda i, t, m:
             smoothl1loss_reference(i, t, reduction=get_reduction(m)),
         desc='scalar',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='MultiLabelSoftMarginLoss',
@@ -7075,7 +7086,6 @@ def mseloss_no_reduce_test():
         reference_fn=lambda i, m: (i - target).pow(2),
         pickle=False)
 
-
 def mseloss_no_reduce_scalar_test():
     input_size = ()
     target = torch.randn(input_size)
@@ -7085,7 +7095,8 @@ def mseloss_no_reduce_scalar_test():
             lambda i: F.mse_loss(i, target.type_as(i), reduction='none')),
         input_size=input_size,
         reference_fn=lambda i, m: (i - target).pow(2),
-        pickle=False)
+        pickle=False,
+        test_cuda=(not TEST_WITH_ROCM))
 
 
 def nllloss_no_reduce_test():
@@ -7098,7 +7109,8 @@ def nllloss_no_reduce_test():
         input_fn=lambda: torch.rand(15, 10).log(),
         reference_fn=lambda i, _:
             loss_reference_fns['NLLLoss'](i, t.type_as(i).long(), **kwargs),
-        pickle=False)
+        pickle=False,
+        test_cuda=(not TEST_WITH_ROCM))
 
 
 def nllloss_no_reduce_ignore_index_test():
@@ -7177,7 +7189,8 @@ def nllloss2d_no_reduce_test():
         input_fn=lambda: torch.rand(2, 3, 5, 5).log(),
         reference_fn=lambda i, _:
             loss_reference_fns['NLLLossNd'](i, t.type_as(i).long(), **kwargs),
-        pickle=False)
+        pickle=False,
+        test_cuda=(not TEST_WITH_ROCM))
 
 
 def nllloss2d_no_reduce_ignore_index_test():
@@ -7190,7 +7203,8 @@ def nllloss2d_no_reduce_ignore_index_test():
         input_fn=lambda: torch.rand(2, 3, 5, 5).log(),
         reference_fn=lambda i, _:
             loss_reference_fns['NLLLossNd'](i, t.type_as(i).long(), **kwargs),
-        pickle=False)
+        pickle=False,
+        test_cuda=(not TEST_WITH_ROCM))
 
 
 def nllloss2d_no_reduce_weights_test():
@@ -7207,7 +7221,8 @@ def nllloss2d_no_reduce_weights_test():
         input_fn=lambda: torch.rand(2, 3, 5, 5).log(),
         reference_fn=lambda i, _:
             loss_reference_fns['NLLLossNd'](i, t.type_as(i).long(), **kwargs(i)),
-        pickle=False)
+        pickle=False,
+        test_cuda=(not TEST_WITH_ROCM))
 
 
 def nlllossNd_no_reduce_test():
@@ -7220,7 +7235,8 @@ def nlllossNd_no_reduce_test():
         input_fn=lambda: torch.rand(2, 3, 5, 5, 2, 2).log(),
         reference_fn=lambda i, _:
             loss_reference_fns['NLLLossNd'](i, t.type_as(i).long(), **kwargs),
-        pickle=False)
+        pickle=False,
+        test_cuda=(not TEST_WITH_ROCM))
 
 
 def nlllossNd_no_reduce_ignore_index_test():
@@ -7233,7 +7249,8 @@ def nlllossNd_no_reduce_ignore_index_test():
         input_fn=lambda: torch.rand(2, 3, 5, 5, 2, 2).log(),
         reference_fn=lambda i, _:
             loss_reference_fns['NLLLossNd'](i, t.type_as(i).long(), **kwargs),
-        pickle=False)
+        pickle=False,
+        test_cuda=(not TEST_WITH_ROCM))
 
 
 def nlllossNd_no_reduce_weights_test():
@@ -7250,7 +7267,8 @@ def nlllossNd_no_reduce_weights_test():
         input_fn=lambda: torch.rand(2, 3, 5, 5, 2, 2).log(),
         reference_fn=lambda i, _:
             loss_reference_fns['NLLLossNd'](i, t.type_as(i).long(), **kwargs(i)),
-        pickle=False)
+        pickle=False,
+        test_cuda=(not TEST_WITH_ROCM))
 
 
 def smoothl1loss_no_reduce_test():
@@ -7872,12 +7890,14 @@ new_module_tests = [
         module_name='MaxPool1d',
         constructor_args=(4,),
         input_size=(2, 10, 4),
+        test_cuda=(not TEST_WITH_ROCM),
     ),
     dict(
         module_name='MaxPool1d',
         constructor_args=(4, 4),
         input_size=(2, 10, 4),
         desc='stride',
+        test_cuda=(not TEST_WITH_ROCM),
     ),
     dict(
         module_name='Conv2d',
@@ -7954,93 +7974,110 @@ new_module_tests = [
         fullname='Conv2d_depthwise',
         constructor=lambda: nn.Conv2d(4, 4, (3, 3), groups=4),
         input_size=(2, 4, 6, 6),
+        test_cuda=(not TEST_WITH_ROCM),
     ),
     dict(
         fullname='Conv2d_depthwise_with_multiplier',
         constructor=lambda: nn.Conv2d(4, 8, (3, 3), groups=4),
         input_size=(2, 4, 6, 6),
+        test_cuda=(not TEST_WITH_ROCM),
     ),
     dict(
         fullname='Conv2d_depthwise_strided',
         constructor=lambda: nn.Conv2d(4, 4, (3, 3), stride=(2, 2), groups=4),
         input_size=(2, 4, 6, 6),
+        test_cuda=(not TEST_WITH_ROCM),
     ),
     dict(
         fullname='Conv2d_depthwise_padded',
         constructor=lambda: nn.Conv2d(4, 4, (3, 3), padding=(1, 1), groups=4),
         input_size=(2, 4, 6, 6),
+        test_cuda=(not TEST_WITH_ROCM),
     ),
     dict(
         fullname='Conv2d_depthwise_dilated',
         constructor=lambda: nn.Conv2d(4, 4, (2, 2), dilation=(2, 2), groups=4),
         input_size=(2, 4, 5, 5),
+        test_cuda=(not TEST_WITH_ROCM),
     ),
     dict(
         module_name='MaxPool2d',
         constructor_args=((3, 3), (2, 2), (1, 1)),
         input_size=(1, 3, 7, 7),
+        test_cuda=(not TEST_WITH_ROCM),
     ),
     dict(
         module_name='AvgPool1d',
         constructor_args=(2,),
         input_size=(2, 3, 6),
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='AvgPool1d',
         constructor_args=((2,), (2,)),
         input_size=(2, 3, 6),
         desc='stride',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='AvgPool1d',
         constructor_args=(2, 2, 1),
         input_size=(2, 3, 6),
         desc='stride_pad',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='AvgPool2d',
         constructor_args=((2, 2),),
         input_size=(2, 3, 6, 6),
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='AvgPool2d',
         constructor_args=((2, 2), (2, 2)),
         input_size=(2, 3, 6, 6),
         desc='stride',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='AvgPool2d',
         constructor_args=((2, 2), (2, 2), (1, 1)),
         input_size=(2, 3, 6, 6),
         desc='stride_pad',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='LPPool2d',
         constructor_args=(2, (2, 2), 2),
         input_size=(1, 3, 7, 7),
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='LPPool2d',
         constructor_args=(1.5, 2),
         input_fn=lambda: torch.rand(1, 3, 7, 7),
         desc='norm',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='LPPool1d',
         constructor_args=(1.5, 2),
         input_fn=lambda: torch.rand(1, 3, 7),
         desc='norm',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='LPPool1d',
         constructor_args=(2, 2, 3),
         input_size=(1, 3, 7),
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='LocalResponseNorm',
         constructor_args=(3, ),
         input_size=(1, 5, 7),
         desc='1d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='LocalResponseNorm',
@@ -8068,11 +8105,13 @@ new_module_tests = [
         module_name='ReplicationPad1d',
         constructor_args=((1, 2),),
         input_size=(2, 3, 4),
+        test_cuda=(not TEST_WITH_ROCM),
     ),
     dict(
         module_name='ReplicationPad2d',
         constructor_args=((1, 2, 3, 4),),
         input_size=(2, 3, 4, 4),
+        test_cuda=(not TEST_WITH_ROCM),
     ),
     dict(
         module_name='ZeroPad2d',
@@ -8105,6 +8144,7 @@ new_module_tests = [
         constructor_args=(3, 4, (2, 3, 4)),
         input_size=(2, 3, 3, 4, 5),
         cudnn=True,
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Conv3d',
@@ -8112,6 +8152,7 @@ new_module_tests = [
         input_size=(2, 3, 3, 4, 5),
         cudnn=True,
         desc='no_bias',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Conv3d',
@@ -8119,6 +8160,7 @@ new_module_tests = [
         input_size=(2, 3, 5, 5, 5),
         cudnn=True,
         desc='stride',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Conv3d',
@@ -8126,22 +8168,26 @@ new_module_tests = [
         input_size=(2, 3, 5, 5, 5),
         cudnn=True,
         desc='stride_padding',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         fullname='Conv3d_groups',
         constructor=lambda: nn.Conv3d(4, 6, kernel_size=3, groups=2),
         input_size=(2, 4, 4, 5, 4),
         cudnn=True,
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         fullname='Conv3d_dilated',
         constructor=lambda: nn.Conv3d(3, 4, kernel_size=2, dilation=2),
         input_size=(2, 3, 5, 5, 5),
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         fullname='Conv3d_dilated_strided',
         constructor=lambda: nn.Conv3d(3, 4, kernel_size=2, dilation=2, stride=2),
         input_size=(2, 3, 5, 5, 5),
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='ConvTranspose3d',
@@ -8218,6 +8264,7 @@ new_module_tests = [
         module_name='ReplicationPad3d',
         constructor_args=((1, 2, 3, 4, 5, 6),),
         input_size=(2, 3, 5, 5, 5),
+        test_cuda=(not TEST_WITH_ROCM),
     ),
     dict(
         module_name='Embedding',
@@ -8294,132 +8341,154 @@ new_module_tests = [
         constructor_args=(12, None, 'nearest'),
         input_size=(1, 2, 4),
         desc='nearest_1d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=((12, ), None, 'nearest'),
         input_size=(1, 2, 3),
         desc='nearest_tuple_1d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(None, 4, 'nearest'),
         input_size=(1, 2, 4),
         desc='nearest_scale_1d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(12, None, 'linear', False),
         input_size=(1, 2, 4),
         desc='linear_1d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=((4, ), None, 'linear', False),
         input_size=(1, 2, 3),
         desc='linear_tuple_1d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(None, 4, 'linear', False),
         input_size=(1, 2, 4),
         desc='linear_scale_1d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(12, None, 'linear', True),
         input_size=(1, 2, 4),
         desc='linear_1d_align_corners',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(None, 4, 'linear', True),
         input_size=(1, 2, 4),
         desc='linear_scale_1d_align_corners',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(12, None, 'nearest'),
         input_size=(1, 2, 4, 4),
         desc='nearest_2d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=((12, 16), None, 'nearest'),
         input_size=(1, 2, 3, 4),
         desc='nearest_tuple_2d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(None, 4, 'nearest'),
         input_size=(1, 2, 4, 4),
         desc='nearest_scale_2d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(12, None, 'bilinear', False),
         input_size=(1, 2, 4, 4),
         desc='bilinear_2d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=((4, 6), None, 'bilinear', False),
         input_size=(1, 2, 2, 3),
         desc='bilinear_tuple_2d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(None, 4, 'bilinear', False),
         input_size=(1, 2, 4, 4),
         desc='bilinear_scale_2d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(None, (2, 2), 'bilinear', False),
         input_size=(1, 2, 4, 4),
         desc='bilinear_scale_tuple_shared_2d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(None, (2, 1), 'bilinear', False),
         input_size=(1, 2, 4, 4),
         desc='bilinear_scale_tuple_skewed_2d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=((4, 6), None, 'bilinear', True),
         input_size=(1, 2, 4, 4),
         desc='bilinear_tuple_2d_align_corners',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(None, (2, 1), 'bilinear', True),
         input_size=(1, 2, 4, 4),
         desc='bilinear_scale_tuple_skewed_2d_align_corners',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(12, None, 'nearest'),
         input_size=(1, 2, 4, 4, 4),
         desc='nearest_3d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=((12, 16, 16), None, 'nearest'),
         input_size=(1, 2, 3, 4, 4),
         desc='nearest_tuple_3d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(None, 4, 'nearest'),
         input_size=(1, 2, 4, 4, 4),
         desc='nearest_scale_3d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=(12, None, 'trilinear', False),
         input_size=(1, 2, 4, 4, 4),
         desc='trilinear_3d',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
@@ -8434,12 +8503,14 @@ new_module_tests = [
         desc='trilinear_scale_3d',
         # See https://github.com/pytorch/pytorch/issues/5006
         precision=3e-4,
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
         constructor_args=((4, 6, 6), None, 'trilinear', True),
         input_size=(1, 2, 2, 3, 3),
         desc='trilinear_tuple_3d_align_corners',
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='Upsample',
@@ -8448,6 +8519,7 @@ new_module_tests = [
         desc='trilinear_scale_3d_align_corners',
         # See https://github.com/pytorch/pytorch/issues/5006
         precision=3e-4,
+        test_cuda=(not TEST_WITH_ROCM)
     ),
     dict(
         module_name='AdaptiveMaxPool1d',
@@ -8882,20 +8954,23 @@ add_test(NewModuleTest(
         nn.MaxPool1d(2, return_indices=True),
         nn.MaxUnpool1d(2)),
     input_size=(1, 1, 4),
-    fullname='MaxUnpool1d_net',))
+    fullname='MaxUnpool1d_net',
+    test_cuda=(not TEST_WITH_ROCM)))
 add_test(NewModuleTest(
     constructor=lambda: UnpoolingNet(
         nn.MaxPool2d(2, return_indices=True),
         nn.MaxUnpool2d(2)),
     input_size=(1, 1, 2, 4),
-    fullname='MaxUnpool2d_net',))
+    fullname='MaxUnpool2d_net',
+    test_cuda=(not TEST_WITH_ROCM)))
 add_test(NewModuleTest(
     constructor=lambda: UnpoolingNet(
         nn.MaxPool3d(2, return_indices=True),
         nn.MaxUnpool3d(2)),
     input_size=(1, 1, 2, 4, 6),
     fullname='MaxUnpool3d_net',
-    check_gradgrad=False,))
+    check_gradgrad=False,
+    test_cuda=(not TEST_WITH_ROCM)))
 
 
 class _AdaptiveLogSoftmaxWithLoss(nn.AdaptiveLogSoftmaxWithLoss):

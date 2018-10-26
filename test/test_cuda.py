@@ -353,8 +353,8 @@ tests = [
     ('mode', small_3d, lambda t: []),
     ('mode', small_3d, lambda t: [1], 'dim'),
     ('mode', small_3d, lambda t: [-1], 'neg_dim'),
-    ('mvlgamma', lambda t: tensor_clamp(small_2d(t), 0.1, 10), lambda t: [1], '2d_p=1', float_types_no_half),
-    ('mvlgamma', lambda t: tensor_clamp(small_2d(t), 0.6, 10), lambda t: [2], '2d_p=2', float_types_no_half),
+    ('mvlgamma', lambda t: tensor_clamp(small_2d(t), 0.1, 10), lambda t: [1], '2d_p=1', float_types_no_half, False, skipIfRocm),
+    ('mvlgamma', lambda t: tensor_clamp(small_2d(t), 0.6, 10), lambda t: [2], '2d_p=2', float_types_no_half, False, skipIfRocm),
     ('remainder', small_3d, lambda t: [3], 'value', types, False, "skipIfRocm:HalfTensor"),
     ('remainder', small_3d, lambda t: [-3], 'negative_value', signed_types),
     ('remainder', small_3d, lambda t: [small_3d_positive(t)], 'tensor'),
@@ -1183,6 +1183,7 @@ class TestCuda(TestCase):
         z = torch.cat([x, y], 0)
         self.assertEqual(z.get_device(), x.get_device())
 
+    @skipIfRocm
     def test_cat(self):
         SIZE = 10
         for dim in range(-3, 3):
@@ -1499,6 +1500,7 @@ class TestCuda(TestCase):
     def test_rot90(self):
         TestTorch._test_rot90(self, use_cuda=True)
 
+    @skipIfRocm
     def test_signal_window_functions(self):
         TestTorch._test_signal_window_functions(self, device=torch.device('cuda'))
 
@@ -1876,6 +1878,7 @@ class TestCuda(TestCase):
         torch.cuda.nvtx.mark("bar")
         torch.cuda.nvtx.range_pop()
 
+    @skipIfRocm
     def test_randperm_cuda(self):
         cuda = torch.device('cuda:0')
 

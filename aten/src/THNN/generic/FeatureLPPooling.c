@@ -1,6 +1,10 @@
 #ifndef TH_GENERIC_FILE
 #define TH_GENERIC_FILE "generic/FeatureLPPooling.c"
 #else
+// ToDo: Remove this after backend issue fixed.
+#if __HIP__
+#pragma clang optimize off
+#endif
 
 #ifndef FEATURE_LP_DEFS
 #define FEATURE_LP_DEFS

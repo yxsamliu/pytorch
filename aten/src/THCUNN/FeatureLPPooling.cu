@@ -6,10 +6,6 @@
 #include "THCDeviceUtils.cuh"
 #include "THCNumerics.cuh"
 #include "THCTensorTypeUtils.cuh"
-// ToDo: Remove this after backend issue fixed.
-#if __HIP__
-#pragma clang optimize off
-#endif
 
 #define OUTPUT_FEATURES_PER_THREAD 32
 #define MAX_WARPS_PER_RUN 4

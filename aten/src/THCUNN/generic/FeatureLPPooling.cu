@@ -1,10 +1,6 @@
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/FeatureLPPooling.cu"
 #else
-// ToDo: Remove this after backend issue fixed.
-#if __HIP__
-#pragma clang optimize off
-#endif
 
 #include "../common.h"
 

@@ -1144,7 +1144,6 @@ class TestCuda(TestCase):
     def test_scatter_gpu(self):
         self._test_scatter(torch.randn(4, 4).cuda(), dim=0)
 
-    @skipIfRocm
     def test_scatter_gpu_dim(self):
         self._test_scatter(torch.randn(4, 4).cuda(), dim=1)
 
@@ -1678,7 +1677,6 @@ class TestCuda(TestCase):
     @unittest.skipIf(not PY3,
                      "spawn start method is not supported in Python 2, \
                      but we need it for creating another process with CUDA")
-    @skipIfRocm
     def test_multinomial_invalid_probs_cuda(self):
         test_method = TestCuda._test_multinomial_invalid_probs_cuda
         self._spawn_method(test_method, torch.Tensor([1, -1, 1]))

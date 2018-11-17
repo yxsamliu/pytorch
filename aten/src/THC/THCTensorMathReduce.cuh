@@ -27,9 +27,6 @@ struct WelfordData {
   int count_; // do we need int64_t?
 
   __host__ __device__ WelfordData() {
-    mean_ = T(0);
-    m_2_n_ = T(0);
-    count_ = 0;
   }
 
   __host__ __device__ WelfordData(const U data_) {

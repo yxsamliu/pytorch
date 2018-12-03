@@ -368,7 +368,7 @@ tests = [
     ('std', small_3d, lambda t: [1], 'dim', types, False, skipIfRocm),
     ('std', small_3d, lambda t: [-1], 'neg_dim', types, False, skipIfRocm),
     ('var', small_3d, lambda t: []),
-    ('var', small_3d, lambda t: [1], 'dim'),
+    ('var', small_3d, lambda t: [1], 'dim', skipIfRocm),
     ('var', small_3d, lambda t: [-1], 'neg_dim'),
     ('ndimension', small_3d, lambda t: [],),
     ('nelement', small_3d, lambda t: [],),

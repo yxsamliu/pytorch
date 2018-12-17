@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THCUNN_VOL2COL_H
 #define THCUNN_VOL2COL_H
 
@@ -44,7 +43,7 @@ CUDA_KERNEL_LOOP(index, n) {
 }
 
 template <typename Dtype>
-void vol2col(hipStream_t stream, const Dtype* data_vol, const int channels,
+void vol2col(cudaStream_t stream, const Dtype* data_vol, const int channels,
     const int depth, const int height, const int width,
     const int depth_col, const int height_col, const int width_col,
     const int ksize_t, const int ksize_h, const int ksize_w,
@@ -56,13 +55,13 @@ void vol2col(hipStream_t stream, const Dtype* data_vol, const int channels,
   // kernel responsible for copying a single-channel grid.
   int num_kernels = channels * depth_col * height_col * width_col;
   // Launch
- hipLaunchKernelGGL( vol2col_kernel<Dtype> , dim3(GET_BLOCKS(num_kernels)), dim3(CUDA_NUM_THREADS), 0, stream,  
-      static_cast<const int>(num_kernels), data_vol, static_cast<const int>(depth), static_cast<const int>(height), static_cast<const int>(width), static_cast<const int>(ksize_t), static_cast<const int>(ksize_h), static_cast<const int>(ksize_w),
-      static_cast<const int>(pad_t), static_cast<const int>(pad_h), static_cast<const int>(pad_w), static_cast<const int>(stride_t), static_cast<const int>(stride_h), static_cast<const int>(stride_w),
-      static_cast<const int>(dilation_t), static_cast<const int>(dilation_h), static_cast<const int>(dilation_w),
-      static_cast<const int>(depth_col), static_cast<const int>(height_col), static_cast<const int>(width_col), data_col
+  vol2col_kernel <<<GET_BLOCKS(num_kernels), CUDA_NUM_THREADS, 0, stream>>> (
+      num_kernels, data_vol, depth, height, width, ksize_t, ksize_h, ksize_w,
+      pad_t, pad_h, pad_w, stride_t, stride_h, stride_w,
+      dilation_t, dilation_h, dilation_w,
+      depth_col, height_col, width_col, data_col
   );
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 template <typename Dtype, typename Acctype>
@@ -117,7 +116,7 @@ __global__ void vol2im_kernel(const int n, const Dtype* data_col,
 }
 
 template <typename Dtype, typename Acctype>
-void col2vol(hipStream_t stream, const Dtype* data_col, const int channels,
+void col2vol(cudaStream_t stream, const Dtype* data_col, const int channels,
     const int depth, const int height, const int width,
     const int output_depth, const int output_height, const int output_width,
     const int patch_t, const int patch_h, const int patch_w,
@@ -128,13 +127,13 @@ void col2vol(hipStream_t stream, const Dtype* data_col, const int channels,
   int num_kernels = channels * depth * height * width;
   // To avoid involving atomic operations, we will launch one kernel per
   // bottom dimension, and then in the kernel add up the top dimensions.
- hipLaunchKernelGGL( vol2im_kernel<Dtype, Acctype> , dim3(GET_BLOCKS(num_kernels)), dim3(CUDA_NUM_THREADS), 0, stream,  
-      static_cast<const int>(num_kernels), data_col, static_cast<const int>(depth), static_cast<const int>(height), static_cast<const int>(width), static_cast<const int>(channels),
-      static_cast<const int>(patch_t), static_cast<const int>(patch_h), static_cast<const int>(patch_w), static_cast<const int>(pad_t), static_cast<const int>(pad_h), static_cast<const int>(pad_w), static_cast<const int>(stride_t), static_cast<const int>(stride_h), static_cast<const int>(stride_w),
-      static_cast<const int>(dilation_t), static_cast<const int>(dilation_h), static_cast<const int>(dilation_w),
-      static_cast<const int>(output_depth), static_cast<const int>(output_height), static_cast<const int>(output_width), data_vol
+  vol2im_kernel<Dtype, Acctype> <<<GET_BLOCKS(num_kernels), CUDA_NUM_THREADS, 0, stream>>> (
+      num_kernels, data_col, depth, height, width, channels,
+      patch_t, patch_h, patch_w, pad_t, pad_h, pad_w, stride_t, stride_h, stride_w,
+      dilation_t, dilation_h, dilation_w,
+      output_depth, output_height, output_width, data_vol
   );
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 #endif

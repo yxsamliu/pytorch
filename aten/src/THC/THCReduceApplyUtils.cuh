@@ -1,7 +1,7 @@
 #ifndef THC_REDUCE_APPLY_UTILS_INC
 #define THC_REDUCE_APPLY_UTILS_INC
 
-#include <hip/hip_runtime.h>
+#include <cuda.h>
 #include <assert.h>
 #include "THCGeneral.h"
 #include "THCTensor.h"
@@ -13,7 +13,7 @@
 enum TensorArgType { ReadWrite, ReadOnly };
 
 template <typename IndexType>
-__device__ inline IndexType getLinearBlockId() {
+__device__ __forceinline__ IndexType getLinearBlockId() {
   return blockIdx.z * gridDim.y * gridDim.x +
     blockIdx.y * gridDim.x +
     blockIdx.x;

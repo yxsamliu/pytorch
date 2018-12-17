@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/VolumetricAveragePooling.cu"
 #else
@@ -235,20 +234,20 @@ void THNN_(VolumetricAveragePooling_updateOutput)(
         LAUNCH_UPDATE_OUTPUT_KERNEL_WIDTH(6);
         LAUNCH_UPDATE_OUTPUT_KERNEL_WIDTH(7);
       default:
-       hipLaunchKernelGGL( cuda_VolumetricAveragePooling_updateOutput<scalar_t, accreal>
-          , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
+        cuda_VolumetricAveragePooling_updateOutput<scalar_t, accreal>
+          <<<grid, block, 0, THCState_getCurrentStream(state)>>>(
             cudaInput,
             cudaOutput,
-            static_cast<int>(kT), static_cast<int>(kH), static_cast<int>(kW),
-            static_cast<int>(dT), static_cast<int>(dH), static_cast<int>(dW),
-            static_cast<int>(padT), static_cast<int>(padH), static_cast<int>(padW),
+            kT, kH, kW,
+            dT, dH, dW,
+            padT, padH, padW,
             count_include_pad,
-            static_cast<int>(offsetZ));
+            offsetZ);
         break;
       }
     totalZ -= 65535;
     offsetZ += 65535;
-    THCudaCheck(hipGetLastError());
+    THCudaCheck(cudaGetLastError());
   }
 
   THCTensor_(free)(state, input);
@@ -341,10 +340,10 @@ void THNN_(VolumetricAveragePooling_updateGradInput)(
       dim3 grid(THCCeilDiv(inputWidth, static_cast<int>(block.x)),
                 THCCeilDiv(inputHeight, static_cast<int>(block.y)),
                 totalZ > 65535 ? 65535 : totalZ);
-     hipLaunchKernelGGL( cuda_VolumetricAveragePooling_updateGradInput_Stride1<scalar_t, accreal>
-        , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-          cudaGradOutput, cudaGradInput, static_cast<int>(kT), static_cast<int>(kH), static_cast<int>(kW), 1.0f/(static_cast<int>(kT) * static_cast<int>(kH) * static_cast<int>(kW)), static_cast<int>(offsetZ));
-      THCudaCheck(hipGetLastError());
+      cuda_VolumetricAveragePooling_updateGradInput_Stride1<scalar_t, accreal>
+        <<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+          cudaGradOutput, cudaGradInput, kT, kH, kW, 1.0f/(kT * kH * kW), offsetZ);
+      THCudaCheck(cudaGetLastError());
       totalZ -= 65535;
       offsetZ += 65535;
     }
@@ -359,19 +358,19 @@ void THNN_(VolumetricAveragePooling_updateGradInput)(
                 totalZ > 65535 ? 65535 : totalZ);
       if (kernelsOverlap)
       {
-       hipLaunchKernelGGL( cuda_VolumetricAveragePooling_updateGradInput_atomicAdd<scalar_t, accreal>
-          , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-            cudaGradOutput, cudaGradInput, static_cast<int>(kT), static_cast<int>(kH), static_cast<int>(kW), static_cast<int>(dT), static_cast<int>(dH), static_cast<int>(dW),
-            static_cast<int>(padT), static_cast<int>(padH), static_cast<int>(padW), count_include_pad, static_cast<int>(offsetZ));
+        cuda_VolumetricAveragePooling_updateGradInput_atomicAdd<scalar_t, accreal>
+          <<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+            cudaGradOutput, cudaGradInput, kT, kH, kW, dT, dH, dW,
+            padT, padH, padW, count_include_pad, offsetZ);
       }
       else
       {
-       hipLaunchKernelGGL( cuda_VolumetricAveragePooling_updateGradInput<scalar_t, accreal>
-          , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-            cudaGradOutput, cudaGradInput, static_cast<int>(kT), static_cast<int>(kH), static_cast<int>(kW), static_cast<int>(dT), static_cast<int>(dH), static_cast<int>(dW),
-            static_cast<int>(padT), static_cast<int>(padH), static_cast<int>(padW), count_include_pad, static_cast<int>(offsetZ));
+        cuda_VolumetricAveragePooling_updateGradInput<scalar_t, accreal>
+          <<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+            cudaGradOutput, cudaGradInput, kT, kH, kW, dT, dH, dW,
+            padT, padH, padW, count_include_pad, offsetZ);
       }
-      THCudaCheck(hipGetLastError());
+      THCudaCheck(cudaGetLastError());
       totalZ -= 65535;
       offsetZ += 65535;
     }

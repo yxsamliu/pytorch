@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/RReLU.cu"
 #else
@@ -17,7 +16,7 @@ void THNN_(RReLU_updateOutput)(
            void *generator)
 {
   THCUNN_assertSameGPU(state, 3, input, output, noise);
-  hiprandStateMtgp32_t* gen_states = THCRandom_generatorStates(state);
+  struct curandStateMtgp32* gen_states = THCRandom_generatorStates(state);
 
   if (train)
   {
@@ -28,18 +27,18 @@ void THNN_(RReLU_updateOutput)(
     ptrdiff_t n = THCTensor_(nElement)(state, input);
     if (inplace)
     {
-     hipLaunchKernelGGL( rreluUpdateOutputTrain<scalar_t>, dim3(NUM_BLOCKS(n)), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
-        static_cast<int>(n), gen_states, input_data, noise_data, input_data, static_cast<double>(lower), static_cast<double>(upper));
+      rreluUpdateOutputTrain<<<NUM_BLOCKS(n), BLOCK_SIZE, 0, THCState_getCurrentStream(state)>>>(
+        n, gen_states, input_data, noise_data, input_data, lower, upper);
       THCTensor_(set)(state, output, input);
     }
     else
     {
       THCTensor_(resizeAs)(state, output, input);
       scalar_t *output_data = THCTensor_(data)(state, output);
-     hipLaunchKernelGGL( rreluUpdateOutputTrain<scalar_t>, dim3(NUM_BLOCKS(n)), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
-        static_cast<int>(n), gen_states, input_data, noise_data, output_data, static_cast<double>(lower), static_cast<double>(upper));
+      rreluUpdateOutputTrain<<<NUM_BLOCKS(n), BLOCK_SIZE, 0, THCState_getCurrentStream(state)>>>(
+        n, gen_states, input_data, noise_data, output_data, lower, upper);
     }
-    THCudaCheck(hipGetLastError());
+    THCudaCheck(cudaGetLastError());
     THCTensor_(free)(state, input);
   }
   else

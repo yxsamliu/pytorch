@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/SpatialReplicationPadding.cu"
 #else
@@ -60,8 +59,8 @@ void THNN_(SpatialReplicationPadding_updateOutput)(
             devOutput.getSize(0));
   dim3 blockSize(outputPlaneSize > 256 ? 256 : outputPlaneSize);
 
- hipLaunchKernelGGL( SpatialReplicationPadding_updateOutput<scalar_t>, dim3(gridSize), dim3(blockSize), 0, THCState_getCurrentStream(state), 
-    devInput, devOutput, static_cast<int>(padT), static_cast<int>(padB), static_cast<int>(padL), static_cast<int>(padR));
+  SpatialReplicationPadding_updateOutput<<<gridSize, blockSize, 0, THCState_getCurrentStream(state)>>>(
+    devInput, devOutput, padT, padB, padL, padR);
 
 }
 
@@ -120,8 +119,8 @@ void THNN_(SpatialReplicationPadding_updateGradInput)(
             devGradOutput.getSize(0));
   dim3 blockSize(outputPlaneSize > 256 ? 256 : outputPlaneSize);
 
- hipLaunchKernelGGL( SpatialReplicationPadding_updateGradInput<scalar_t>, dim3(gridSize), dim3(blockSize), 0, THCState_getCurrentStream(state), 
-    devGradInput, devGradOutput, static_cast<int>(padT), static_cast<int>(padB), static_cast<int>(padL), static_cast<int>(padR));
+  SpatialReplicationPadding_updateGradInput<<<gridSize, blockSize, 0, THCState_getCurrentStream(state)>>>(
+    devGradInput, devGradOutput, padT, padB, padL, padR);
 
 }
 

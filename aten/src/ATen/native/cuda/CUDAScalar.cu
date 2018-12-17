@@ -2,7 +2,7 @@
 #include "ATen/NativeFunctions.h"
 
 #include "ATen/cuda/CUDAContext.h"
-#include "hip/hip_runtime.h"
+#include "cuda.h"
 
 namespace at {
 namespace native {
@@ -12,9 +12,9 @@ Scalar _local_scalar_dense_cuda(const Tensor& self) {
   AT_DISPATCH_ALL_TYPES_AND_HALF(
       self.type(), "_local_scalar_dense_cuda", [&] {
         scalar_t value;
-        hipStream_t stream = at::cuda::getCurrentCUDAStream();
-        AT_CUDA_CHECK(hipMemcpyAsync(&value, self.data<scalar_t>(), sizeof(scalar_t), hipMemcpyDeviceToHost, stream));
-        AT_CUDA_CHECK(hipStreamSynchronize(stream));
+        cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+        AT_CUDA_CHECK(cudaMemcpyAsync(&value, self.data<scalar_t>(), sizeof(scalar_t), cudaMemcpyDeviceToHost, stream));
+        AT_CUDA_CHECK(cudaStreamSynchronize(stream));
         r = Scalar(value);
       });
   return r;

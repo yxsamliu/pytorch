@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_SORT_UTILS_INC
 #define THC_SORT_UTILS_INC
 

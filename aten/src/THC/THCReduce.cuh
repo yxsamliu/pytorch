@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_REDUCE_INC
 #define THC_REDUCE_INC
 
@@ -18,7 +17,7 @@
 #define CHUNKPERBLOCK 256
 
 template <typename IndexType>
-__device__ inline IndexType getReduceNoncontigDimSliceIndex() {
+__device__ __forceinline__ IndexType getReduceNoncontigDimSliceIndex() {
   // Each thread handles one slice
   return getLinearBlockId<IndexType>() * THC_NONCONTIG_REDUCE_BLOCK_SIZE + threadIdx.x;
 }
@@ -27,13 +26,13 @@ __device__ inline IndexType getReduceNoncontigDimSliceIndex() {
 template <typename T>
 struct SimpleCopyOp
 {
-  __device__ inline T operator()(volatile const T val) const volatile
+  __device__ __forceinline__ T operator()(volatile const T val) const volatile
   {
     return val;
   }
 };
 
-__device__ inline int lastpow2(int n)
+__device__ __forceinline__ int lastpow2(int n)
 {
   int out = 1 << (31 - __clz(n));
   if(n == out)
@@ -49,7 +48,7 @@ template
    typename ModifyOp,
    typename ReduceOp,
    typename FinalizeOp>
-__device__ inline void reduceChunk
+__device__ __forceinline__ void reduceChunk
   (T* out,
    U* in,
    const int& inbounds,
@@ -296,7 +295,7 @@ kernelReduceNoncontigDim(TensorInfo<T, IndexType> out,
 }
 
 template <typename IndexType>
-__device__ inline IndexType getReduceContigDimSliceIndex() {
+__device__ __forceinline__ IndexType getReduceContigDimSliceIndex() {
   // Each block handles one slice
   return getLinearBlockId<IndexType>();
 }
@@ -344,7 +343,7 @@ kernelReduceContigDim(TensorInfo<T, IndexType> out,
 
   // Reduce within the block
   // FIXME: extern name
-  HIP_DYNAMIC_SHARED( char, smemChar)
+  extern __shared__ char smemChar[];
   AccT* smem = (AccT*) smemChar;
   r = reduceBlock<AccT, ReduceOp>(smem, blockDim.x, r, reduceOp, init);
 
@@ -503,20 +502,20 @@ bool THC_reduceDim(THCState* state,
   // index can be similarly collapsed. That is what this unrolling is for.
 #define HANDLE_CASE(TYPE, OUT, IN)                                      \
   if (contigReduction) {                                                \
-   hipLaunchKernelGGL( kernelReduceContigDim<ScalarType,                                   \
+    kernelReduceContigDim<ScalarType,                                   \
                           TYPE, AccT, ModifyOp, ReduceOp, FinalizeOp,   \
                           OUT, IN>                                      \
-      , dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state),      \
-        outInfo, inInfo, reductionSize,                                \
+      <<<grid, block, smemSize, THCState_getCurrentStream(state)>>>     \
+        (outInfo, inInfo, reductionSize,                                \
         (TYPE) outElements, init, modifyOp, reduceOp, finalizeOp);      \
   } else {                                                              \
     if(block.y == 1){                                                   \
-       hipLaunchKernelGGL( kernelReduceNoncontigDim<                                       \
+        kernelReduceNoncontigDim<                                       \
                           ScalarType,                                   \
                           TYPE, AccT, ModifyOp, ReduceOp, FinalizeOp,   \
                           OUT, IN>                                      \
-        , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state),           \
-        outInfo, inInfo, reductionStride, reductionSize,               \
+        <<<grid, block, 0, THCState_getCurrentStream(state)>>>          \
+        (outInfo, inInfo, reductionStride, reductionSize,               \
         (TYPE) outElements, init, modifyOp, reduceOp, finalizeOp);      \
     }                                                                   \
     else                                                                \
@@ -528,17 +527,17 @@ bool THC_reduceDim(THCState* state,
         {                                                                    \
           stagingData = THCudaMalloc(state, sizeof(AccT)*outElements*grid.y);\
           semaphores = THCudaMalloc(state, sizeof(int)*grid.x);              \
-          THCudaCheck(hipMemsetAsync                                        \
+          THCudaCheck(cudaMemsetAsync                                        \
             (semaphores,                                                     \
              0,                                                              \
              sizeof(int)*grid.x,                                             \
              THCState_getCurrentStream(state)));                             \
         }                                                                    \
                                                                              \
-       hipLaunchKernelGGL( kernelReduceNoncontigDim_shared                                      \
+        kernelReduceNoncontigDim_shared                                      \
           <ScalarType, TYPE, AccT, ModifyOp, ReduceOp, FinalizeOp,  OUT, IN> \
-          , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state),              \
-          outInfo,                                                          \
+          <<<grid, block, 0, THCState_getCurrentStream(state)>>>             \
+          (outInfo,                                                          \
            inInfo,                                                           \
            reductionStride,                                                  \
            reductionSize,                                                    \

@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #pragma once
 
 #include <ATen/cuda/detail/TensorInfo.cuh>

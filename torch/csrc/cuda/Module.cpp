@@ -31,7 +31,7 @@ THCState *state;
 
 void THCPModule_setDevice(int device)
 {
-  THCudaCheck(hipSetDevice(device));
+  THCudaCheck(cudaSetDevice(device));
 }
 
 PyObject * THCPModule_setDevice_wrap(PyObject *self, PyObject *arg)
@@ -50,7 +50,7 @@ PyObject * THCPModule_getDevice_wrap(PyObject *self)
 {
   HANDLE_TH_ERRORS
   int device;
-  THCudaCheck(hipGetDevice(&device));
+  THCudaCheck(cudaGetDevice(&device));
   return PyLong_FromLong(device);
   END_HANDLE_TH_ERRORS
 }
@@ -59,8 +59,8 @@ PyObject * THCPModule_getDeviceCount_wrap(PyObject *self)
 {
   HANDLE_TH_ERRORS
   int ndevice;
-  if (hipGetDeviceCount(&ndevice) != hipSuccess) {
-    hipGetLastError();
+  if (cudaGetDeviceCount(&ndevice) != cudaSuccess) {
+    cudaGetLastError();
     ndevice = 0;
   }
   return PyLong_FromLong(ndevice);
@@ -89,8 +89,8 @@ PyObject * THCPModule_setStream_wrap(PyObject *self, PyObject *obj)
 PyObject * THCPModule_isDriverSufficient(PyObject *self)
 {
   int count;
-  hipError_t err = hipGetDeviceCount(&count);
-  if (err == hipErrorInsufficientDriver) {
+  cudaError_t err = cudaGetDeviceCount(&count);
+  if (err == cudaErrorInsufficientDriver) {
     return PyBool_FromLong(0);
   }
   return PyBool_FromLong(1);
@@ -99,11 +99,11 @@ PyObject * THCPModule_isDriverSufficient(PyObject *self)
 PyObject * THCPModule_getDriverVersion(PyObject *self)
 {
   int driverVersion = -1;
-  hipError_t err = hipDriverGetVersion(&driverVersion);
-  if (err != hipSuccess) {
+  cudaError_t err = cudaDriverGetVersion(&driverVersion);
+  if (err != cudaSuccess) {
     PyErr_Format(PyExc_RuntimeError,
-                    "Error calling hipDriverGetVersion: %d %s",
-                    err, hipGetErrorString(err));
+                    "Error calling cudaDriverGetVersion: %d %s",
+                    err, cudaGetErrorString(err));
     return nullptr;
   }
   return PyLong_FromLong((int64_t) driverVersion);
@@ -111,7 +111,7 @@ PyObject * THCPModule_getDriverVersion(PyObject *self)
 
 PyObject * THCPModule_getCompiledVersion(PyObject *self)
 {
-  return PyLong_FromLong((long) 0);
+  return PyLong_FromLong((long) CUDA_VERSION);
 }
 
 PyObject * THCPModule_getRNGState(PyObject *_unused)
@@ -190,7 +190,7 @@ PyObject * THCPModule_cudaHostAllocator(PyObject *_unused)
 PyObject * THCPModule_cudaSynchronize(PyObject *_unused)
 {
   HANDLE_TH_ERRORS
-  THCudaCheck(hipDeviceSynchronize());
+  THCudaCheck(cudaDeviceSynchronize());
   Py_RETURN_NONE;
   END_HANDLE_TH_ERRORS
 }
@@ -295,22 +295,22 @@ PyObject * THCPModule_maxMemoryCached(PyObject *_unused, PyObject *arg)
 static void bindCudaDeviceProperties(PyObject* module) {
   // Add class and method to torch.cuda
   auto m = py::handle(module).cast<py::module>();
-  py::class_<hipDeviceProp_t>(m, "_CudaDeviceProperties")
-    .def_readonly("name", &hipDeviceProp_t::name)
-    .def_readonly("major", &hipDeviceProp_t::major)
-    .def_readonly("minor", &hipDeviceProp_t::minor)
-    .def_readonly("is_multi_gpu_board", &hipDeviceProp_t::isMultiGpuBoard)
-    .def_readonly("is_integrated", &hipDeviceProp_t::integrated)
-    .def_readonly("multi_processor_count", &hipDeviceProp_t::multiProcessorCount)
-    .def_readonly("total_memory", &hipDeviceProp_t::totalGlobalMem)
-    .def("__repr__", [](const hipDeviceProp_t &prop) {
+  py::class_<cudaDeviceProp>(m, "_CudaDeviceProperties")
+    .def_readonly("name", &cudaDeviceProp::name)
+    .def_readonly("major", &cudaDeviceProp::major)
+    .def_readonly("minor", &cudaDeviceProp::minor)
+    .def_readonly("is_multi_gpu_board", &cudaDeviceProp::isMultiGpuBoard)
+    .def_readonly("is_integrated", &cudaDeviceProp::integrated)
+    .def_readonly("multi_processor_count", &cudaDeviceProp::multiProcessorCount)
+    .def_readonly("total_memory", &cudaDeviceProp::totalGlobalMem)
+    .def("__repr__", [](const cudaDeviceProp &prop) {
       std::ostringstream stream;
       stream << "_CudaDeviceProperties(name='" << prop.name << "', major=" << prop.major
              << ", minor=" << prop.minor << ", total_memory=" << prop.totalGlobalMem / (1024 * 1024)
              << "MB, multi_processor_count=" << prop.multiProcessorCount << ")";
       return stream.str();
     });
-  m.def("_get_device_properties", [](int device) -> hipDeviceProp_t * {
+  m.def("_get_device_properties", [](int device) -> cudaDeviceProp * {
     return at::cuda::getDeviceProperties(device);
   }, py::return_value_policy::reference);
 }
@@ -375,7 +375,7 @@ void THCPModule_useNccl()
 PyObject * THCPModule_getCurrentBlasHandle_wrap(PyObject *self)
 {
   HANDLE_TH_ERRORS
-  rocblas_handle handle = THCState_getCurrentBlasHandle(state);
+  cublasHandle_t handle = THCState_getCurrentBlasHandle(state);
   return PyLong_FromVoidPtr(handle);
   END_HANDLE_TH_ERRORS
 }

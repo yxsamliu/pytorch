@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/LookupTableBag.cu"
 #else
@@ -30,7 +29,7 @@ void THNN_(LookupTableBag_updateOutput)(
     bag_size_data = THCIndexTensor_(data)(state, bag_size);
   }
 
-  hipStream_t stream = THCState_getCurrentStream(state);
+  cudaStream_t stream = THCState_getCurrentStream(state);
 
   std::vector<int64_t> outputSize = {numBags, stride};
   THCTensor_(resize)(state, output, outputSize, {});
@@ -39,20 +38,20 @@ void THNN_(LookupTableBag_updateOutput)(
 
   dim3 block = dim3(32, 8);
   int grid = 1024;
- hipLaunchKernelGGL( cunn_LookupTableBag_updateOutputKernel<scalar_t, accreal>, dim3(grid), dim3(block), 0, stream, 
-    static_cast<int64_t *>(THCIndexTensor_(data)(state, input)),
-    static_cast<int64_t *>(THCIndexTensor_(data)(state, offsets)),
+  cunn_LookupTableBag_updateOutputKernel<scalar_t, accreal><<<grid, block, 0, stream>>>(
+    THCIndexTensor_(data)(state, input),
+    THCIndexTensor_(data)(state, offsets),
     THCTensor_(data)(state, weight),
     THCTensor_(data)(state, output),
-    static_cast<int64_t *>(THCIndexTensor_(data)(state, offset2bag)),
-    static_cast<int64_t>(numIndices),
-    static_cast<int64_t>(numBags),
-    static_cast<int64_t>(stride),
-    static_cast<int>(mode),
-    static_cast<int64_t *>(bag_size_data)
+    THCIndexTensor_(data)(state, offset2bag),
+    numIndices,
+    numBags,
+    stride,
+    mode,
+    bag_size_data
   );
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 
@@ -93,7 +92,7 @@ void THNN_(LookupTableBag_accGradParameters)(
   ptrdiff_t numel = THCIndexTensor_(nElement)(state, input);
   int64_t stride = THCTensor_(stride)(state, gradWeight, 0);
 
-  hipStream_t stream = THCState_getCurrentStream(state);
+  cudaStream_t stream = THCState_getCurrentStream(state);
 
   THCIndexTensor_(resize)(state, sortedIndices, input->sizes(), {});
   THCIndexTensor_(resize)(state, origIndices, input->sizes(), {});
@@ -173,22 +172,22 @@ void THNN_(LookupTableBag_accGradParameters)(
 
   dim3 grid(THCCeilDiv(numel, (ptrdiff_t) 4), THCCeilDiv(stride, (int64_t) 128));
   dim3 block(32, 4);
- hipLaunchKernelGGL( cunn_LookupTableBag_accGradParametersKernel<scalar_t, accreal>, dim3(grid), dim3(block), 0, stream, 
-    static_cast<int64_t *>(sortedIndices_data),
-    static_cast<int64_t *>(origIndices_data),
+  cunn_LookupTableBag_accGradParametersKernel<scalar_t, accreal><<<grid, block, 0, stream>>>(
+    sortedIndices_data,
+    origIndices_data,
     THCTensor_(data)(state, gradOutput),
     THCTensor_(data)(state, gradWeight),
-    static_cast<int64_t *>(offset2bag_data),
-    static_cast<int64_t *>(count_data),
+    offset2bag_data,
+    count_data,
     scale,
-    static_cast<ptrdiff_t>(numel),
-    static_cast<int64_t>(stride),
-    static_cast<int>(mode),
-    static_cast<int64_t *>(bag_size_data)
+    numel,
+    stride,
+    mode,
+    bag_size_data
   );
 
   THCTensor_(free)(state, gradOutput);
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 #endif

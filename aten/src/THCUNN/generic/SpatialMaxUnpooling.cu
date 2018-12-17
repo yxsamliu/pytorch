@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/SpatialMaxUnpooling.cu"
 #else
@@ -38,10 +37,10 @@ void THNN_(SpatialMaxUnpooling_updateOutput)(
 
   int count = THCTensor_(nElement)(state, input);
 
- hipLaunchKernelGGL( MaxUnpoolForward<scalar_t> ,  dim3(GET_BLOCKS(count)), dim3(CUDA_NUM_THREADS), 0, THCState_getCurrentStream(state) , 
-      static_cast<const int>(count), THCTensor_(data)(state, input), static_cast<const int64_t*>(THCIndexTensor_(data)(state, indices)),
-      static_cast<const int>(batchSize), static_cast<const int>(nInputPlane), static_cast<const int>(nInputRows), static_cast<const int>(nInputCols), static_cast<const int>(oheight), static_cast<const int>(owidth), THCTensor_(data)(state, output));
-  THCudaCheck(hipGetLastError());
+  MaxUnpoolForward <<< GET_BLOCKS(count), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state) >>>
+      (count, THCTensor_(data)(state, input), THCIndexTensor_(data)(state, indices),
+      batchSize, nInputPlane, nInputRows, nInputCols, oheight, owidth, THCTensor_(data)(state, output));
+  THCudaCheck(cudaGetLastError());
 
   if(input->dim() == 3)
     THCTensor_(resize3d)(state, output, nInputPlane, oheight, owidth);
@@ -91,10 +90,10 @@ void THNN_(SpatialMaxUnpooling_updateGradInput)(
 
   int count = THCTensor_(nElement)(state, input);
 
- hipLaunchKernelGGL( MaxUnpoolBackward<scalar_t> ,  dim3(GET_BLOCKS(count)), dim3(CUDA_NUM_THREADS), 0, THCState_getCurrentStream(state) , 
-      static_cast<const int>(count), THCTensor_(data)(state, gradOutput), static_cast<const int64_t*>(THCIndexTensor_(data)(state, indices)),
-      static_cast<const int>(batchSize), static_cast<const int>(nInputPlane), static_cast<const int>(nInputRows), static_cast<const int>(nInputCols), static_cast<const int>(oheight), static_cast<const int>(owidth), THCTensor_(data)(state, gradInput));
-  THCudaCheck(hipGetLastError());
+  MaxUnpoolBackward <<< GET_BLOCKS(count), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state) >>>
+      (count, THCTensor_(data)(state, gradOutput), THCIndexTensor_(data)(state, indices),
+      batchSize, nInputPlane, nInputRows, nInputCols, oheight, owidth, THCTensor_(data)(state, gradInput));
+  THCudaCheck(cudaGetLastError());
 
   // clean
   THCTensor_(free)(state, input);

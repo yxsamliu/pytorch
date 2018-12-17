@@ -1,7 +1,7 @@
 #ifndef THC_TENSOR_TYPE_UTILS_INC
 #define THC_TENSOR_TYPE_UTILS_INC
 
-#include <hip/hip_runtime.h>
+#include <cuda.h>
 #include <assert.h>
 #include "THCGeneral.h"
 #include "TH/THHalf.h"

@@ -7,8 +7,8 @@
 #include <mutex>
 
 typedef struct THCGeneratorState {
-  hiprandStateMtgp32_t* gen_states;
-  mtgp32_kernel_params_t *kernel_params;
+  struct curandStateMtgp32* gen_states;
+  struct mtgp32_kernel_params *kernel_params;
   int initf;
   uint64_t initial_seed;
   std::atomic<int64_t> philox_seed_offset;

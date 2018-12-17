@@ -6,7 +6,7 @@
 #include <ATen/cuda/Exceptions.h>
 #include <ATen/cuda/CUDAStream.h>
 
-#include <hip/hip_runtime_api.h>
+#include <cuda_runtime_api.h>
 
 namespace at {
 namespace cuda {
@@ -23,21 +23,21 @@ struct CUDAGuardImpl final : public c10::detail::DeviceGuardImplInterface {
     AT_ASSERT(d.type() == DeviceType::CUDA);
     Device old_device = getDevice();
     if (old_device.index() != d.index()) {
-      AT_CUDA_CHECK(hipSetDevice(d.index()));
+      AT_CUDA_CHECK(cudaSetDevice(d.index()));
     }
     return old_device;
   }
   Device getDevice() const override {
     int device;
-    AT_CUDA_CHECK(hipGetDevice(&device));
+    AT_CUDA_CHECK(cudaGetDevice(&device));
     return Device(DeviceType::CUDA, device);
   }
   void setDevice(Device d) const override {
     AT_ASSERT(d.type() == DeviceType::CUDA);
-    AT_CUDA_CHECK(hipSetDevice(d.index()));
+    AT_CUDA_CHECK(cudaSetDevice(d.index()));
   }
   void uncheckedSetDevice(Device d) const noexcept override {
-    hipSetDevice(d.index());
+    cudaSetDevice(d.index());
   }
   Stream getStream(Device d) const noexcept override {
     return CUDAStream(CUDAStream_getCurrentStream(d.index())).unwrap();

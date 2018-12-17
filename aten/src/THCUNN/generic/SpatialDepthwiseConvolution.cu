@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/SpatialDepthwiseConvolution.cu"
 #else
@@ -71,23 +70,23 @@ void THNN_(SpatialDepthwiseConvolution_updateOutput)(
   dim3 grid(blocks);
   dim3 block(CUDA_NUM_THREADS);
   if (kW == 3 && kH == 3) {
- hipLaunchKernelGGL( spatialDepthwiseConvolutionUpdateOutput<scalar_t, accreal, unsigned int, 3>, dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-    dInput, dOutput, dWeight, dBias, bias != NULL, n, static_cast<const int>(outputChannels), static_cast<const int>(depthwiseMultiplier),
-    static_cast<const int>(width), static_cast<const int>(height), static_cast<const int>(outputWidth), static_cast<const int>(outputHeight),
-    static_cast<const int>(kW), static_cast<const int>(kH), static_cast<const int>(dW), static_cast<const int>(dH), static_cast<const int>(padW), static_cast<const int>(padH), static_cast<const int>(dilationW), static_cast<const int>(dilationH));
+  spatialDepthwiseConvolutionUpdateOutput<scalar_t, accreal, unsigned int, 3><<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+    dInput, dOutput, dWeight, dBias, bias != NULL, n, outputChannels, depthwiseMultiplier,
+    width, height, outputWidth, outputHeight,
+    kW, kH, dW, dH, padW, padH, dilationW, dilationH);
   } else if (kW == 1 && kH == 1) {
- hipLaunchKernelGGL( spatialDepthwiseConvolutionUpdateOutput<scalar_t, accreal, unsigned int, 1>, dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-    dInput, dOutput, dWeight, dBias, bias != NULL, n, static_cast<const int>(outputChannels), static_cast<const int>(depthwiseMultiplier),
-    static_cast<const int>(width), static_cast<const int>(height), static_cast<const int>(outputWidth), static_cast<const int>(outputHeight),
-    static_cast<const int>(kW), static_cast<const int>(kH), static_cast<const int>(dW), static_cast<const int>(dH), static_cast<const int>(padW), static_cast<const int>(padH), static_cast<const int>(dilationW), static_cast<const int>(dilationH));
+  spatialDepthwiseConvolutionUpdateOutput<scalar_t, accreal, unsigned int, 1><<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+    dInput, dOutput, dWeight, dBias, bias != NULL, n, outputChannels, depthwiseMultiplier,
+    width, height, outputWidth, outputHeight,
+    kW, kH, dW, dH, padW, padH, dilationW, dilationH);
   } else {
- hipLaunchKernelGGL( spatialDepthwiseConvolutionUpdateOutput<scalar_t, accreal, unsigned int, 0>, dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-    dInput, dOutput, dWeight, dBias, bias != NULL, n, static_cast<const int>(outputChannels), static_cast<const int>(depthwiseMultiplier),
-    static_cast<const int>(width), static_cast<const int>(height), static_cast<const int>(outputWidth), static_cast<const int>(outputHeight),
-    static_cast<const int>(kW), static_cast<const int>(kH), static_cast<const int>(dW), static_cast<const int>(dH), static_cast<const int>(padW), static_cast<const int>(padH), static_cast<const int>(dilationW), static_cast<const int>(dilationH));
+  spatialDepthwiseConvolutionUpdateOutput<scalar_t, accreal, unsigned int, 0><<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+    dInput, dOutput, dWeight, dBias, bias != NULL, n, outputChannels, depthwiseMultiplier,
+    width, height, outputWidth, outputHeight,
+    kW, kH, dW, dH, padW, padH, dilationW, dilationH);
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 
   THCTensor_(free)(state, input);
   THCTensor_(free)(state, weight);
@@ -151,49 +150,49 @@ void THNN_(SpatialDepthwiseConvolution_updateGradInput)(
   dim3 block(CUDA_NUM_THREADS);
   if (kW == 3 && kH == 3)
     if (dW == 1 && dH == 1){
-     hipLaunchKernelGGL( spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 3, 1>, dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-      dGradOutput, dGradInput, dWeight, n, static_cast<const int>(inputChannels), static_cast<const int>(depthwiseMultiplier), static_cast<const int>(outputChannels), static_cast<const int>(width),
-      static_cast<const int>(height), static_cast<const int>(outputWidth), static_cast<const int>(outputHeight), static_cast<const int>(kW), static_cast<const int>(kH), static_cast<const int>(dW), static_cast<const int>(dH), static_cast<const int>(padW), static_cast<const int>(padH), static_cast<const int>(dilationW), static_cast<const int>(dilationH));
+      spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 3, 1><<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+      dGradOutput, dGradInput, dWeight, n, inputChannels, depthwiseMultiplier, outputChannels, width,
+      height, outputWidth, outputHeight, kW, kH, dW, dH, padW, padH, dilationW, dilationH);
     } else if (dW == 2 && dH == 2) {
-     hipLaunchKernelGGL( spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 3, 2>, dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-      dGradOutput, dGradInput, dWeight, n, static_cast<const int>(inputChannels), static_cast<const int>(depthwiseMultiplier), static_cast<const int>(outputChannels), static_cast<const int>(width),
-      static_cast<const int>(height), static_cast<const int>(outputWidth), static_cast<const int>(outputHeight), static_cast<const int>(kW), static_cast<const int>(kH), static_cast<const int>(dW), static_cast<const int>(dH), static_cast<const int>(padW), static_cast<const int>(padH), static_cast<const int>(dilationW), static_cast<const int>(dilationH));
+      spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 3, 2><<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+      dGradOutput, dGradInput, dWeight, n, inputChannels, depthwiseMultiplier, outputChannels, width,
+      height, outputWidth, outputHeight, kW, kH, dW, dH, padW, padH, dilationW, dilationH);
     } else {
-     hipLaunchKernelGGL( spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 3, 0>, dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-      dGradOutput, dGradInput, dWeight, n, static_cast<const int>(inputChannels), static_cast<const int>(depthwiseMultiplier), static_cast<const int>(outputChannels), static_cast<const int>(width),
-      static_cast<const int>(height), static_cast<const int>(outputWidth), static_cast<const int>(outputHeight), static_cast<const int>(kW), static_cast<const int>(kH), static_cast<const int>(dW), static_cast<const int>(dH), static_cast<const int>(padW), static_cast<const int>(padH), static_cast<const int>(dilationW), static_cast<const int>(dilationH));
+      spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 3, 0><<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+      dGradOutput, dGradInput, dWeight, n, inputChannels, depthwiseMultiplier, outputChannels, width,
+      height, outputWidth, outputHeight, kW, kH, dW, dH, padW, padH, dilationW, dilationH);
     }
   else if (kW == 1 && kH == 1)
     if (dW == 1 && dH == 1){
-     hipLaunchKernelGGL( spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 1, 1>, dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-      dGradOutput, dGradInput, dWeight, n, static_cast<const int>(inputChannels), static_cast<const int>(depthwiseMultiplier), static_cast<const int>(outputChannels), static_cast<const int>(width),
-      static_cast<const int>(height), static_cast<const int>(outputWidth), static_cast<const int>(outputHeight), static_cast<const int>(kW), static_cast<const int>(kH), static_cast<const int>(dW), static_cast<const int>(dH), static_cast<const int>(padW), static_cast<const int>(padH), static_cast<const int>(dilationW), static_cast<const int>(dilationH));
+      spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 1, 1><<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+      dGradOutput, dGradInput, dWeight, n, inputChannels, depthwiseMultiplier, outputChannels, width,
+      height, outputWidth, outputHeight, kW, kH, dW, dH, padW, padH, dilationW, dilationH);
     } else if (dW == 2 && dH == 2) {
-     hipLaunchKernelGGL( spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 1, 2>, dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-      dGradOutput, dGradInput, dWeight, n, static_cast<const int>(inputChannels), static_cast<const int>(depthwiseMultiplier), static_cast<const int>(outputChannels), static_cast<const int>(width),
-      static_cast<const int>(height), static_cast<const int>(outputWidth), static_cast<const int>(outputHeight), static_cast<const int>(kW), static_cast<const int>(kH), static_cast<const int>(dW), static_cast<const int>(dH), static_cast<const int>(padW), static_cast<const int>(padH), static_cast<const int>(dilationW), static_cast<const int>(dilationH));
+      spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 1, 2><<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+      dGradOutput, dGradInput, dWeight, n, inputChannels, depthwiseMultiplier, outputChannels, width,
+      height, outputWidth, outputHeight, kW, kH, dW, dH, padW, padH, dilationW, dilationH);
     } else {
-     hipLaunchKernelGGL( spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 1, 0>, dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-      dGradOutput, dGradInput, dWeight, n, static_cast<const int>(inputChannels), static_cast<const int>(depthwiseMultiplier), static_cast<const int>(outputChannels), static_cast<const int>(width),
-      static_cast<const int>(height), static_cast<const int>(outputWidth), static_cast<const int>(outputHeight), static_cast<const int>(kW), static_cast<const int>(kH), static_cast<const int>(dW), static_cast<const int>(dH), static_cast<const int>(padW), static_cast<const int>(padH), static_cast<const int>(dilationW), static_cast<const int>(dilationH));
+      spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 1, 0><<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+      dGradOutput, dGradInput, dWeight, n, inputChannels, depthwiseMultiplier, outputChannels, width,
+      height, outputWidth, outputHeight, kW, kH, dW, dH, padW, padH, dilationW, dilationH);
     }
   else
     if (dW == 1 && dH == 1){
-     hipLaunchKernelGGL( spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 0, 1>, dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-      dGradOutput, dGradInput, dWeight, n, static_cast<const int>(inputChannels), static_cast<const int>(depthwiseMultiplier), static_cast<const int>(outputChannels), static_cast<const int>(width),
-      static_cast<const int>(height), static_cast<const int>(outputWidth), static_cast<const int>(outputHeight), static_cast<const int>(kW), static_cast<const int>(kH), static_cast<const int>(dW), static_cast<const int>(dH), static_cast<const int>(padW), static_cast<const int>(padH), static_cast<const int>(dilationW), static_cast<const int>(dilationH));
+      spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 0, 1><<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+      dGradOutput, dGradInput, dWeight, n, inputChannels, depthwiseMultiplier, outputChannels, width,
+      height, outputWidth, outputHeight, kW, kH, dW, dH, padW, padH, dilationW, dilationH);
     } else if (dW == 2 && dH == 2) {
-     hipLaunchKernelGGL( spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 0, 2>, dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-      dGradOutput, dGradInput, dWeight, n, static_cast<const int>(inputChannels), static_cast<const int>(depthwiseMultiplier), static_cast<const int>(outputChannels), static_cast<const int>(width),
-      static_cast<const int>(height), static_cast<const int>(outputWidth), static_cast<const int>(outputHeight), static_cast<const int>(kW), static_cast<const int>(kH), static_cast<const int>(dW), static_cast<const int>(dH), static_cast<const int>(padW), static_cast<const int>(padH), static_cast<const int>(dilationW), static_cast<const int>(dilationH));
+      spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 0, 2><<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+      dGradOutput, dGradInput, dWeight, n, inputChannels, depthwiseMultiplier, outputChannels, width,
+      height, outputWidth, outputHeight, kW, kH, dW, dH, padW, padH, dilationW, dilationH);
     } else {
-     hipLaunchKernelGGL( spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 0, 0>, dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-      dGradOutput, dGradInput, dWeight, n, static_cast<const int>(inputChannels), static_cast<const int>(depthwiseMultiplier), static_cast<const int>(outputChannels), static_cast<const int>(width),
-      static_cast<const int>(height), static_cast<const int>(outputWidth), static_cast<const int>(outputHeight), static_cast<const int>(kW), static_cast<const int>(kH), static_cast<const int>(dW), static_cast<const int>(dH), static_cast<const int>(padW), static_cast<const int>(padH), static_cast<const int>(dilationW), static_cast<const int>(dilationH));
+      spatialDepthwiseConvolutionUpdateGradInput<scalar_t, accreal, unsigned int, 0, 0><<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+      dGradOutput, dGradInput, dWeight, n, inputChannels, depthwiseMultiplier, outputChannels, width,
+      height, outputWidth, outputHeight, kW, kH, dW, dH, padW, padH, dilationW, dilationH);
     }
 
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 
   THCTensor_(free)(state, weight);
   THCTensor_(free)(state, gradOutput);
@@ -254,11 +253,11 @@ void THNN_(SpatialDepthwiseConvolution_accGradParameters)(
   dim3 block(getGradParamsNumThreads(batchSize));
   int smem = block.x * sizeof(accreal);
 
- hipLaunchKernelGGL( spatialDepthwiseConvolutionAccGradParameters<scalar_t, accreal, unsigned int>, dim3(grid), dim3(block), smem, THCState_getCurrentStream(state), 
-      dGradOutput, dInput, dGradWeight, static_cast<const int>(batchSize), static_cast<const int>(inputChannels), static_cast<const int>(outputChannels), static_cast<const int>(depthwiseMultiplier),
-      static_cast<const int>(width), static_cast<const int>(height), static_cast<const int>(outputWidth), static_cast<const int>(outputHeight), static_cast<const int>(kW), static_cast<const int>(kH), static_cast<const int>(dW), static_cast<const int>(dH), static_cast<const int>(padW), static_cast<const int>(padH), static_cast<const int>(dilationW), static_cast<const int>(dilationH));
+  spatialDepthwiseConvolutionAccGradParameters<scalar_t, accreal, unsigned int><<<grid, block, smem, THCState_getCurrentStream(state)>>>(
+      dGradOutput, dInput, dGradWeight, batchSize, inputChannels, outputChannels, depthwiseMultiplier,
+      width, height, outputWidth, outputHeight, kW, kH, dW, dH, padW, padH, dilationW, dilationH);
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 
   THCTensor_(free)(state, gradOutput);
 }

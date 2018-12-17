@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "THCUNN.h"
 #include "TH/THHalf.h"
 #include "THCHalfAutoNumerics.cuh"

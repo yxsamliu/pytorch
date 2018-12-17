@@ -66,7 +66,7 @@ void THC_logicalTensor(THCState *state,
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 #endif // THC_TENSORMATH_COMPARET_CUH

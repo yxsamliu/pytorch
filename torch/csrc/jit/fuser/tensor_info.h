@@ -1,6 +1,6 @@
 #pragma once
 #include "torch/csrc/jit/fuser/config.h"
-#if USE_ROCM_FUSER || USE_CPU_FUSER
+#if USE_CUDA_FUSER || USE_CPU_FUSER
 
 #include "torch/csrc/WindowsTorchApiMacro.h"
 
@@ -25,4 +25,4 @@ struct TORCH_API TensorInfo {
 } // namespace jit 
 } // namespace torch
 
-#endif // USE_ROCM_FUSER || USE_CPU_FUSER
+#endif // USE_CUDA_FUSER || USE_CPU_FUSER

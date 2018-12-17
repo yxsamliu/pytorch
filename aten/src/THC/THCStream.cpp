@@ -9,7 +9,7 @@ THC_API THCStream* THCStream_new() {
   return at::cuda::detail::CUDAStream_getStreamFromPool();
 }
 
-THC_API hipStream_t THCStream_stream(THCStream* stream) {
+THC_API cudaStream_t THCStream_stream(THCStream* stream) {
   return at::cuda::detail::CUDAStream_stream(stream);
 }
 

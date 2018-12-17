@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_TENSORSORT_CUH
 #define THC_TENSORSORT_CUH
 

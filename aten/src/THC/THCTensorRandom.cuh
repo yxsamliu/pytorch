@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_TENSOR_RANDOM_CUH
 #define THC_TENSOR_RANDOM_CUH
 
@@ -6,19 +5,19 @@
 #include "THCReduceApplyUtils.cuh"
 #include "THCTensorMathReduce.cuh"
 
-#include <hiprand_kernel.h>
+#include <curand_kernel.h>
 
-#define MAX_NUM_BLOCKS 64
+#define MAX_NUM_BLOCKS 200
 #define BLOCK_SIZE 256
-/* Separate kernel because hiprand_log_normal gets extra parameters. */
+/* Separate kernel because curand_log_normal gets extra parameters. */
 
 template <typename T>
-__global__ void generateLogNormal(hiprandStateMtgp32_t *state, int size, T *result, double mean, double stddev)
+__global__ void generateLogNormal(curandStateMtgp32 *state, int size, T *result, double mean, double stddev)
 {
   int idx = blockIdx.x * BLOCK_SIZE + threadIdx.x;
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
-    float x = hiprand_log_normal(&state[blockIdx.x], mean, stddev);
+    float x = curand_log_normal(&state[blockIdx.x], mean, stddev);
     if (i < size) {
       result[i] = ScalarConvert<float, T>::to(x);
     }
@@ -26,12 +25,12 @@ __global__ void generateLogNormal(hiprandStateMtgp32_t *state, int size, T *resu
 }
 
 template <>
-__global__ void generateLogNormal<double>(hiprandStateMtgp32_t *state, int size, double *result, double mean, double stddev)
+__global__ void generateLogNormal<double>(curandStateMtgp32 *state, int size, double *result, double mean, double stddev)
 {
   int idx = blockIdx.x * BLOCK_SIZE + threadIdx.x;
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
-    double x = hiprand_log_normal_double(&state[blockIdx.x], mean, stddev);
+    double x = curand_log_normal_double(&state[blockIdx.x], mean, stddev);
     if (i < size) {
       result[i] = x;
     }
@@ -93,7 +92,7 @@ condDiv(T *q, int64_t *J, int64_t inputsize, T q_max) {
 // Normalizes the L1 norm of every row to 1; used by multinomial
 template <typename T>
 __global__ void renormRowsL1(T* dist, long rows, long cols) {
-  HIP_DYNAMIC_SHARED( unsigned char, my_smem)
+  extern __shared__  unsigned char my_smem[];
   T *smem = reinterpret_cast<T *>(my_smem);
   T zero = ScalarConvert<int, T>::to(0);
   T val;
@@ -166,7 +165,7 @@ sampleMultinomialOnce(int64_t* dest,
                       int stride_dist,        // dist->stride(0)
                       int stride_categories   // dist->stride(1)
                       ) {
-  HIP_DYNAMIC_SHARED( unsigned char, my_smem)
+  extern __shared__  unsigned char my_smem[];
   __shared__ bool found;
 
   // Shared Memory hold blockdim.x T for holding the cumulative sum,
@@ -295,7 +294,7 @@ sampleMultinomialOnce(int64_t* dest,
 
 template <typename T>
 __global__ void
-sampleMultinomialWithReplacement(hiprandStateMtgp32_t* state,
+sampleMultinomialWithReplacement(curandStateMtgp32* state,
                                  int totalSamples,
                                  int64_t* dest,
                                  int64_t distributions,
@@ -304,7 +303,7 @@ sampleMultinomialWithReplacement(hiprandStateMtgp32_t* state,
   // At the moment, each warp computes one sample value in the binary
   // search due to divergence. It seems possible to compute multiple
   // values and limit divergence though later on. However, no matter
-  // what, all block threads must participate in the hiprand_uniform
+  // what, all block threads must participate in the curand_uniform
   // call to update the generator state.
 
   // The block determines the distribution for which we generate a point
@@ -317,7 +316,7 @@ sampleMultinomialWithReplacement(hiprandStateMtgp32_t* state,
       int sample = sampleBase + threadIdx.y;
 
       // All threads participate in this
-      T r = ScalarConvert<float, T>::to(hiprand_uniform(&state[blockIdx.x]));
+      T r = ScalarConvert<float, T>::to(curand_uniform(&state[blockIdx.x]));
 
       if (threadIdx.x == 0 && sample < totalSamples) {
         // Find the bucket that a uniform sample lies in
@@ -335,7 +334,7 @@ sampleMultinomialWithReplacement(hiprandStateMtgp32_t* state,
 
 template <typename T>
 __global__ void
-sampleMultinomialWithoutReplacement(hiprandStateMtgp32_t* state,
+sampleMultinomialWithoutReplacement(curandStateMtgp32* state,
                                     int totalSamples,
                                     int sample,
                                     int64_t* dest,
@@ -346,7 +345,7 @@ sampleMultinomialWithoutReplacement(hiprandStateMtgp32_t* state,
   // At the moment, each warp computes one sample value in the binary
   // search due to divergence. It seems possible to compute multiple
   // values and limit divergence though later on. However, no matter
-  // what, all block threads must participate in the hiprand_uniform
+  // what, all block threads must participate in the curand_uniform
   // call to update the generator state.
 
   // The block and warp determines the distribution for which we
@@ -358,7 +357,7 @@ sampleMultinomialWithoutReplacement(hiprandStateMtgp32_t* state,
     int64_t curDist = curDistBase + threadIdx.y;
 
     // All threads must participate in this
-    T r = ScalarConvert<float, T>::to(hiprand_uniform(&state[blockIdx.x]));
+    T r = ScalarConvert<float, T>::to(curand_uniform(&state[blockIdx.x]));
 
     if (threadIdx.x == 0 && curDist < distributions) {
       // Find the bucket that a uniform sample lies in

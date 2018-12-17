@@ -595,7 +595,7 @@ scalar_t THCTensor_(get4d)(THCState *state, const THCTensor *tensor, int64_t x0,
 int THCTensor_(checkGPU)(THCState *state, unsigned int nTensors, ...)
 {
   int curDev = -1;
-  THCudaCheck(hipGetDevice(&curDev));
+  THCudaCheck(cudaGetDevice(&curDev));
   va_list args;
   va_start(args, nTensors);
   int valid = 1;

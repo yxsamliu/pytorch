@@ -31,7 +31,7 @@ struct smoothl1_updateOutput_no_reduce_functor
 {
   smoothl1_updateOutput_no_reduce_functor() {}
 
-  inline __host__ __device__ void operator()(
+  __forceinline__ __host__ __device__ void operator()(
       const Dtype *x,
       const Dtype *y,
       Dtype *out) const

@@ -19,8 +19,8 @@
 
 #define AT_CUDA_CHECK(EXPR)                                \
   do {                                                     \
-    hipError_t __err = EXPR;                              \
-    if (__err != hipSuccess) {                            \
-      AT_ERROR("CUDA error: ", hipGetErrorString(__err)); \
+    cudaError_t __err = EXPR;                              \
+    if (__err != cudaSuccess) {                            \
+      AT_ERROR("CUDA error: ", cudaGetErrorString(__err)); \
     }                                                      \
   } while (0)

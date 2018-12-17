@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/TemporalMaxPooling.cu"
 #else
@@ -110,9 +109,9 @@ void THNN_(TemporalMaxPooling_updateOutput)(
   }
 
   dim3 threads(nthreads);
- hipLaunchKernelGGL( cunn_TemporalMaxPooling_updateOutputKernel<scalar_t> ,  dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state) , 
-      input_data, output_data, static_cast<THCIndex_t *>(indices_data), static_cast<int>(input_w), static_cast<int>(input_n), static_cast<int>(output_w), static_cast<int>(kW), static_cast<int>(dW));
-  THCudaCheck(hipGetLastError());
+  cunn_TemporalMaxPooling_updateOutputKernel <<< blocks, threads, 0, THCState_getCurrentStream(state) >>>(
+      input_data, output_data, indices_data, input_w, input_n, output_w, kW, dW);
+  THCudaCheck(cudaGetLastError());
   THCTensor_(free)(state, input);
 
 }
@@ -175,13 +174,13 @@ void THNN_(TemporalMaxPooling_updateGradInput)(
 
   dim3 threads(nthreads);
   if (kW <= dW) {
-   hipLaunchKernelGGL( cunn_TemporalMaxPooling_updateGradInputKernel<scalar_t> ,  dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state) , 
-        gradInput_data, gradOutput_data, static_cast<THCIndex_t *>(indices_data), static_cast<int>(input_w), static_cast<int>(input_n), static_cast<int>(output_w), static_cast<int>(kW), static_cast<int>(dW));
+    cunn_TemporalMaxPooling_updateGradInputKernel <<< blocks, threads, 0, THCState_getCurrentStream(state) >>>(
+        gradInput_data, gradOutput_data, indices_data, input_w, input_n, output_w, kW, dW);
   } else {
-   hipLaunchKernelGGL( cunn_TemporalMaxPooling_updateGradInputKernelAtomic<scalar_t> ,  dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state) , 
-        gradInput_data, gradOutput_data, static_cast<THCIndex_t *>(indices_data), static_cast<int>(input_w), static_cast<int>(input_n), static_cast<int>(output_w), static_cast<int>(kW), static_cast<int>(dW));
+    cunn_TemporalMaxPooling_updateGradInputKernelAtomic <<< blocks, threads, 0, THCState_getCurrentStream(state) >>>(
+        gradInput_data, gradOutput_data, indices_data, input_w, input_n, output_w, kW, dW);
   }
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
   THCTensor_(free)(state, gradOutput);
 
 }

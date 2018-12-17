@@ -11,7 +11,7 @@ namespace at { namespace cuda {
 
 at::Allocator* getPinnedMemoryAllocator() {
   auto state = globalContext().lazyInitCUDA();
-  return state->hipHostAllocator;
+  return state->cudaHostAllocator;
 }
 
 }} // namespace at::cuda

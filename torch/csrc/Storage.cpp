@@ -18,7 +18,7 @@
 #include "copy_utils.h"
 #include "DynamicTypes.h"
 
-#ifdef USE_ROCM
+#ifdef USE_CUDA
 #include <THC/THCStorage.hpp>
 #endif
 
@@ -28,7 +28,7 @@
 #include "generic/Storage.cpp"
 #include <TH/THGenerateHalfType.h>
 
-// NB: If you ever divest libtorch of USE_ROCM, you'll have to virtualize
+// NB: If you ever divest libtorch of USE_CUDA, you'll have to virtualize
 // the CUDA call.
 template<>
 void THPPointer<THStorage>::free() {
@@ -37,7 +37,7 @@ void THPPointer<THStorage>::free() {
       THStorage_free(ptr);
     } else {
       AT_ASSERT(ptr->data_ptr().device().is_cuda());
-#ifdef USE_ROCM
+#ifdef USE_CUDA
       THStorage_free(ptr);
 #else
       AT_ERROR("Cannot free THCStorage when not built with CUDA");

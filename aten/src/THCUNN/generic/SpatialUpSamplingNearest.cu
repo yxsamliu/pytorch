@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/SpatialUpSamplingNearest.cu"
 #else
@@ -60,10 +59,10 @@ void THNN_(SpatialUpSamplingNearest_updateOutput)(
 
   const int num_kernels = outputHeight * outputWidth;
   const int num_threads = THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock;
-  hipStream_t stream = THCState_getCurrentStream(state);
- hipLaunchKernelGGL( nearest_neighbor_4d_kernel<scalar_t, accreal> , dim3(THCCeilDiv(num_kernels, num_threads)), dim3(num_threads),
-	 0, stream, static_cast<const int>(num_kernels), idata, odata);
-  THCudaCheck(hipGetLastError());
+  cudaStream_t stream = THCState_getCurrentStream(state);
+  nearest_neighbor_4d_kernel<scalar_t, accreal> <<<THCCeilDiv(num_kernels, num_threads), num_threads,
+	 0, stream>>>(num_kernels, idata, odata);
+  THCudaCheck(cudaGetLastError());
 }
 
 
@@ -91,11 +90,11 @@ void THNN_(SpatialUpSamplingNearest_updateGradInput)(
 
   const int num_kernels = outputHeight * outputWidth;
   const int num_threads = THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock;
-  hipStream_t stream = THCState_getCurrentStream(state);
+  cudaStream_t stream = THCState_getCurrentStream(state);
 
- hipLaunchKernelGGL( nearest_neighbor_4d_kernel_backward<scalar_t, accreal> , dim3(THCCeilDiv(num_kernels, num_threads)),
-dim3(	  num_threads), 0, stream, static_cast<const int>(num_kernels), data1, data2);
-  THCudaCheck(hipGetLastError());
+  nearest_neighbor_4d_kernel_backward<scalar_t, accreal> <<<THCCeilDiv(num_kernels, num_threads),
+	  num_threads, 0, stream>>>(num_kernels, data1, data2);
+  THCudaCheck(cudaGetLastError());
   THCTensor_(free)(state, gradOutput);
 }
 

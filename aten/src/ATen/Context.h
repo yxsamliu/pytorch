@@ -92,7 +92,7 @@ class CAFFE2_API Context {
   }
 
   int getNumGPUs() const {
-    return 1;
+    return detail::getCUDAHooks().getNumGPUs();
   }
   size_t freshTypeID() {
     return next_id++;

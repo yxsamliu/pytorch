@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_SCAN_UTILS_INC
 #define THC_SCAN_UTILS_INC
 

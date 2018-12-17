@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <utility>
 
-#include "hip/hip_runtime_api.h"
+#include "cuda_runtime_api.h"
 
 #include <ATen/cuda/ATenCUDAGeneral.h>
 #include <c10/util/Exception.h>
@@ -72,13 +72,13 @@ AT_CUDA_API CUDAStreamInternals* CUDAStream_getCurrentStream(int64_t device = -1
 AT_CUDA_API void CUDAStream_setStream(CUDAStreamInternals* internals);
 AT_CUDA_API void CUDAStream_uncheckedSetStream(CUDAStreamInternals* internals);
 
-AT_CUDA_API hipStream_t CUDAStream_stream(const CUDAStreamInternals*);
+AT_CUDA_API cudaStream_t CUDAStream_stream(const CUDAStreamInternals*);
 AT_CUDA_API int64_t CUDAStream_device(const CUDAStreamInternals*);
 
 } // namespace detail
 
 // RAII for a CUDA stream
-// Allows use as a hipStream_t, copying, moving, and metadata access.
+// Allows use as a cudaStream_t, copying, moving, and metadata access.
 struct AT_CUDA_API CUDAStream {
 
   enum Unchecked { UNCHECKED };
@@ -91,14 +91,14 @@ struct AT_CUDA_API CUDAStream {
 
   explicit CUDAStream(Unchecked, Stream stream) : stream_(stream) {}
 
-  // Implicit conversion to hipStream_t
-  operator hipStream_t() const { return stream(); }
+  // Implicit conversion to cudaStream_t
+  operator cudaStream_t() const { return stream(); }
   operator Stream() const { return unwrap(); }
 
   // Getters
   int64_t device_index() const { return stream_.device_index(); }
   Device device() const { return Device(DeviceType::CUDA, device_index()); }
-  hipStream_t stream() const { return detail::CUDAStream_stream(internals()); }
+  cudaStream_t stream() const { return detail::CUDAStream_stream(internals()); }
   CUDAStreamInternals* internals() const;
 
   Stream unwrap() const { return stream_; }

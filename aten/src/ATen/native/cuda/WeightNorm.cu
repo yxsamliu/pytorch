@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/AccumulateType.h"
 #include "ATen/TensorUtils.h"
@@ -31,7 +30,7 @@ namespace {
 #define TILE_H 64
 
 template<typename T, typename ReduceOp>
-__device__ inline void reduce_block_into_lanes
+__device__ __forceinline__ void reduce_block_into_lanes
   (T *x, 
    T val, 
    int lanes, // lanes is intended to be <= 32.
@@ -96,8 +95,8 @@ __global__ void weight_norm_fwd_first_dim_kernel
 
   // Hack to get around nvcc complaining when an smem array is declared with the same name
   // but different types in different kernels (in this case different instantiations)
-  // HIP_DYNAMIC_SHARED( accscalar_t, s) // error: declaration is incompatible with previous "s"
-  HIP_DYNAMIC_SHARED( char, buf)
+  // extern __shared__ accscalar_t s[]; // error: declaration is incompatible with previous "s"
+  extern __shared__ char buf[];
   accscalar_t* s = (accscalar_t*)buf;
   
   accscalar_t thread_sum = 0.f;
@@ -143,7 +142,7 @@ __global__ void weight_norm_fwd_last_dim_kernel
 {
   const int fast_dim_location = threadIdx.x + blockIdx.x*blockDim.x;
 
-  HIP_DYNAMIC_SHARED( char, buf)
+  extern __shared__ char buf[];
   accscalar_t* alloc = (accscalar_t*)buf;
   accscalar_t* s = &alloc[0];
   accscalar_t* rnorms_this_block = &alloc[blockDim.x*blockDim.y];
@@ -211,8 +210,8 @@ __global__ void weight_norm_bwd_first_dim_kernel
 
   // Hack to get around nvcc complaining when an smem array is declared with the same name
   // but different types in different kernels (in this case different instantiations)
-  // HIP_DYNAMIC_SHARED( accscalar_t, s) // error: declaration is incompatible with previous "s"
-  HIP_DYNAMIC_SHARED( char, buf)
+  // extern __shared__ accscalar_t s[]; // error: declaration is incompatible with previous "s"
+  extern __shared__ char buf[];
   accscalar_t* s = (accscalar_t*)buf;
   
   accscalar_t thread_sum = 0.f;
@@ -265,7 +264,7 @@ __global__ void weight_norm_bwd_last_dim_kernel
 {
   const int fast_dim_location = threadIdx.x + blockIdx.x*blockDim.x;
 
-  HIP_DYNAMIC_SHARED( char, buf)
+  extern __shared__ char buf[];
   accscalar_t* s = (accscalar_t*)buf;
 
   accscalar_t thread_sum = 0.f;
@@ -341,7 +340,7 @@ std::tuple<Tensor,Tensor> weight_norm_cuda
     for(int i = ndims - 1; i > 0; i--)
       rowSize *= v.size(i);
 
-    hipStream_t stream = at::cuda::getCurrentCUDAStream();
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF
       (v.type(), 
@@ -350,12 +349,12 @@ std::tuple<Tensor,Tensor> weight_norm_cuda
        {
          using accscalar_t = acc_type<scalar_t, true>;
 
-        hipLaunchKernelGGL( weight_norm_fwd_first_dim_kernel<scalar_t, accscalar_t>
-           , dim3(v.size(0)), 
-              dim3(BLOCK), 
+         weight_norm_fwd_first_dim_kernel<scalar_t, accscalar_t>
+           <<<v.size(0), 
+              BLOCK, 
               BLOCK*sizeof(accscalar_t),
-              stream, 
-           w.data<scalar_t>(), 
+              stream>>>
+           (w.data<scalar_t>(), 
             norms.data<accscalar_t>(),
             v.data<scalar_t>(),  
             g.data<scalar_t>(),  
@@ -371,7 +370,7 @@ std::tuple<Tensor,Tensor> weight_norm_cuda
 
     int fast_dim_size = v.size(ndims-1);
  
-    hipStream_t stream = at::cuda::getCurrentCUDAStream();
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF
       (v.type(), 
@@ -380,12 +379,12 @@ std::tuple<Tensor,Tensor> weight_norm_cuda
        {
          using accscalar_t = acc_type<scalar_t, true>;
         
-        hipLaunchKernelGGL( weight_norm_fwd_last_dim_kernel<scalar_t, accscalar_t>
-           , dim3((fast_dim_size+TILE_W-1)/TILE_W),
-              dim3(dim3(TILE_W,TILE_H)),
+         weight_norm_fwd_last_dim_kernel<scalar_t, accscalar_t>
+           <<<(fast_dim_size+TILE_W-1)/TILE_W,
+              dim3(TILE_W,TILE_H),
               (TILE_W*TILE_H + TILE_W)*sizeof(accscalar_t),
-              stream, 
-           w.data<scalar_t>(),
+              stream>>>
+           (w.data<scalar_t>(),
             norms.data<accscalar_t>(),
             v.data<scalar_t>(),
             g.data<scalar_t>(),
@@ -398,7 +397,7 @@ std::tuple<Tensor,Tensor> weight_norm_cuda
   // not the kernel's execution.  Errors in kernel execution aren't guaranteed to be caught
   // until a later error check on a synchronizing CUDA call.  Unfortunately, without manually 
   // synchronizing here, this is the best we can do.
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 
   return std::tuple<Tensor, Tensor>{w, norms};
 }
@@ -429,7 +428,7 @@ std::tuple<Tensor, Tensor> weight_norm_cuda_backward
     for(int i = ndims - 1; i > 0; i--)
       rowSize *= saved_v.size(i);
 
-    hipStream_t stream = at::cuda::getCurrentCUDAStream();
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF
       (saved_v.type(), 
@@ -438,12 +437,12 @@ std::tuple<Tensor, Tensor> weight_norm_cuda_backward
        {
          using accscalar_t = acc_type<scalar_t, true>;
 
-	hipLaunchKernelGGL( weight_norm_bwd_first_dim_kernel<scalar_t, accscalar_t>
-	   , dim3(grad_w.size(0)), 
-dim3(	      BLOCK), 
+	 weight_norm_bwd_first_dim_kernel<scalar_t, accscalar_t>
+	   <<<grad_w.size(0), 
+	      BLOCK, 
 	      BLOCK*sizeof(accscalar_t),
-              stream, 
-	   grad_v.data<scalar_t>(),
+              stream>>>
+	   (grad_v.data<scalar_t>(),
 	    grad_g.data<scalar_t>(),
 	    grad_w.data<scalar_t>(),
 	    saved_v.data<scalar_t>(),
@@ -461,7 +460,7 @@ dim3(	      BLOCK),
 
     int fast_dim_size = saved_v.size(ndims-1);
 
-    hipStream_t stream = at::cuda::getCurrentCUDAStream();
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF
       (saved_v.type(), 
@@ -470,12 +469,12 @@ dim3(	      BLOCK),
        {
          using accscalar_t = acc_type<scalar_t, true>;
 
-        hipLaunchKernelGGL( weight_norm_bwd_last_dim_kernel<scalar_t, accscalar_t>
-           , dim3((fast_dim_size+TILE_W-1)/TILE_W),
-              dim3(dim3(TILE_W,TILE_H)), 
+         weight_norm_bwd_last_dim_kernel<scalar_t, accscalar_t>
+           <<<(fast_dim_size+TILE_W-1)/TILE_W,
+              dim3(TILE_W,TILE_H), 
               (TILE_W*TILE_H + TILE_W)*sizeof(accscalar_t),
-              stream, 
-           grad_v.data<scalar_t>(),
+              stream>>>
+           (grad_v.data<scalar_t>(),
             grad_g.data<scalar_t>(),
             grad_w.data<scalar_t>(),
             saved_v.data<scalar_t>(),
@@ -490,7 +489,7 @@ dim3(	      BLOCK),
   // not the kernel's execution.  Errors in kernel execution aren't guaranteed to be caught
   // until a later error check on a synchronizing CUDA call.  Unfortunately, without manually 
   // synchronizing here, this is the best we can do.
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 
   return std::tuple<Tensor, Tensor>{grad_v, grad_g};
 }

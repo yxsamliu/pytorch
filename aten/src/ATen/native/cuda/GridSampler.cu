@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/native/GridSampler.h"
 #include "ATen/cuda/CUDAContext.h"
@@ -15,7 +14,7 @@ using at::native::detail::GridSamplerInterpolation;
 using at::native::detail::GridSamplerPadding;
 
 namespace {
-  static inline __device__
+  static __forceinline__ __device__
   float clip_coordinates(float in, int clip_limit) {
     return ::min(static_cast<float>(clip_limit - 1), ::max(in, 0.f));
   }
@@ -24,7 +23,7 @@ namespace {
   // it also returns the `d output / d input` via pointer argument `grad_in`.
   // This is useful in the backward pass of grid_sampler.
   template <typename scalar_t>
-  static inline __device__
+  static __forceinline__ __device__
   float clip_coordinates_set_grad(float in, int clip_limit, scalar_t *grad_in) {
     if (in < 0.f) {
       *grad_in = static_cast<scalar_t>(0);
@@ -41,7 +40,7 @@ namespace {
     }
   }
 
-  static inline __device__
+  static __forceinline__ __device__
   float reflect_coordinates(float in, int clip_limit) {
     if (clip_limit == static_cast<int>(1)) {
       return 0.f;
@@ -63,7 +62,7 @@ namespace {
   // `grad_in`.
   // This is useful in the backward pass of grid_sampler.
   template <typename scalar_t>
-  static inline __device__
+  static __forceinline__ __device__
   float reflect_coordinates_set_grad(float in, int clip_limit, scalar_t *grad_in) {
     if (clip_limit == static_cast<int>(1)) {
       *grad_in = static_cast<scalar_t>(0);
@@ -89,18 +88,18 @@ namespace {
     }
   }
 
-  static inline __device__
+  static __forceinline__ __device__
   bool within_bounds_2d(int h, int w, int H, int W) {
     return h >= 0 && h < H && w >= 0 && w < W;
   }
 
-  static inline __device__
+  static __forceinline__ __device__
   bool within_bounds_3d(int d, int h, int w, int D, int H, int W) {
     return d >= 0 && d < D && h >= 0 && h < H && w >= 0 && w < W;
   }
 
   template<typename scalar_t>
-  static inline __device__
+  static __forceinline__ __device__
   void safe_add_2d(scalar_t *data, int h, int w,
                    int sH, int sW, int H, int W,
                    scalar_t delta) {
@@ -110,7 +109,7 @@ namespace {
   }
 
   template<typename scalar_t>
-  static inline __device__
+  static __forceinline__ __device__
   void safe_add_3d(scalar_t *data, int d, int h, int w,
                    int sD, int sH, int sW, int D, int H, int W,
                    scalar_t delta) {
@@ -792,9 +791,9 @@ Tensor grid_sampler_2d_cuda(const Tensor& input, const Tensor& grid,
   int count = static_cast<int>(N * H * W);
   if (count > 0) {
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "grid_sampler_2d_cuda", [&] {
-     hipLaunchKernelGGL( grid_sampler_2d_kernel<scalar_t>
-        , dim3(GET_BLOCKS(count)), dim3(CUDA_NUM_THREADS), 0, at::cuda::getCurrentCUDAStream(), 
-          static_cast<const int>(count),
+      grid_sampler_2d_kernel<scalar_t>
+        <<<GET_BLOCKS(count), CUDA_NUM_THREADS, 0, at::cuda::getCurrentCUDAStream()>>>(
+          count,
           getTensorInfo<scalar_t, int>(input),
           getTensorInfo<scalar_t, int>(grid),
           getTensorInfo<scalar_t, int>(output),
@@ -816,9 +815,9 @@ Tensor grid_sampler_3d_cuda(const Tensor& input, const Tensor& grid,
   int count = static_cast<int>(N * D * H * W);
   if (count > 0) {
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "grid_sampler_2d_cuda", [&] {
-     hipLaunchKernelGGL( grid_sampler_3d_kernel<scalar_t>
-        , dim3(GET_BLOCKS(count)), dim3(CUDA_NUM_THREADS), 0, at::cuda::getCurrentCUDAStream(), 
-          static_cast<const int>(count),
+      grid_sampler_3d_kernel<scalar_t>
+        <<<GET_BLOCKS(count), CUDA_NUM_THREADS, 0, at::cuda::getCurrentCUDAStream()>>>(
+          count,
           getTensorInfo<scalar_t, int>(input),
           getTensorInfo<scalar_t, int>(grid),
           getTensorInfo<scalar_t, int>(output),
@@ -841,9 +840,9 @@ grid_sampler_2d_backward_cuda(const Tensor& grad_output, const Tensor& input, co
   int count = static_cast<int>(N * H * W);
   if (count > 0) {
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "grid_sampler_2d_backward_cuda", [&] {
-     hipLaunchKernelGGL( grid_sampler_2d_backward_kernel<scalar_t>
-        , dim3(GET_BLOCKS(count)), dim3(CUDA_NUM_THREADS), 0, at::cuda::getCurrentCUDAStream(), 
-          static_cast<const int>(count),
+      grid_sampler_2d_backward_kernel<scalar_t>
+        <<<GET_BLOCKS(count), CUDA_NUM_THREADS, 0, at::cuda::getCurrentCUDAStream()>>>(
+          count,
           getTensorInfo<scalar_t, int>(grad_output),
           getTensorInfo<scalar_t, int>(input),
           getTensorInfo<scalar_t, int>(grid),
@@ -869,9 +868,9 @@ grid_sampler_3d_backward_cuda(const Tensor& grad_output, const Tensor& input, co
   int count = static_cast<int>(N * D * H * W);
   if (count > 0) {
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "grid_sampler_3d_backward_cuda", [&] {
-     hipLaunchKernelGGL( grid_sampler_3d_backward_kernel<scalar_t>
-        , dim3(GET_BLOCKS(count)), dim3(CUDA_NUM_THREADS), 0, at::cuda::getCurrentCUDAStream(), 
-          static_cast<const int>(count),
+      grid_sampler_3d_backward_kernel<scalar_t>
+        <<<GET_BLOCKS(count), CUDA_NUM_THREADS, 0, at::cuda::getCurrentCUDAStream()>>>(
+          count,
           getTensorInfo<scalar_t, int>(grad_output),
           getTensorInfo<scalar_t, int>(input),
           getTensorInfo<scalar_t, int>(grid),

@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 // updateOutput, updateGradInput Kernels ported from Sergey Zagoruyko's pyinn, which itself was a
 // port from Caffe
 
@@ -22,7 +21,7 @@ const int MAX_BLOCK_SIZE = 256;
 
 static int getGradParamsNumThreads(int batchSize){
 //warp per item in a batch, up to a maximum
-   return ::min(batchSize * WARP_SIZE, MAX_BLOCK_SIZE);
+   return std::min(batchSize * WARP_SIZE, MAX_BLOCK_SIZE);
 
 }
 

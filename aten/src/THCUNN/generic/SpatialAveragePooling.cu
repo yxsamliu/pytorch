@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/SpatialAveragePooling.cu"
 #else
@@ -130,18 +129,18 @@ void THNN_(SpatialAveragePooling_updateOutput)(
   int count = THCTensor_(nElement)(state, output);
 
   if(count_include_pad)
-   hipLaunchKernelGGL( AvePoolForward<scalar_t, accreal, true>
-      , dim3(GET_BLOCKS(count)), dim3(CUDA_NUM_THREADS), 0, THCState_getCurrentStream(state) , 
-        static_cast<const int>(count), input_data,
-        static_cast<const int>(batchSize), static_cast<const int>(nInputPlane), static_cast<const int>(nInputRows), static_cast<const int>(nInputCols), static_cast<const int>(nOutputRows), static_cast<const int>(nOutputCols),
-        static_cast<const int>(kH), static_cast<const int>(kW), static_cast<const int>(dH), static_cast<const int>(dW), static_cast<const int>(padH), static_cast<const int>(padW), output_data);
+    AvePoolForward<scalar_t, accreal, true>
+      <<<GET_BLOCKS(count), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state) >>>(
+        count, input_data,
+        batchSize, nInputPlane, nInputRows, nInputCols, nOutputRows, nOutputCols,
+        kH, kW, dH, dW, padH, padW, output_data);
   else
-   hipLaunchKernelGGL( AvePoolForward<scalar_t, accreal, false>
-      , dim3(GET_BLOCKS(count)), dim3(CUDA_NUM_THREADS), 0, THCState_getCurrentStream(state) , 
-        static_cast<const int>(count), input_data,
-        static_cast<const int>(batchSize), static_cast<const int>(nInputPlane), static_cast<const int>(nInputRows), static_cast<const int>(nInputCols), static_cast<const int>(nOutputRows), static_cast<const int>(nOutputCols),
-        static_cast<const int>(kH), static_cast<const int>(kW), static_cast<const int>(dH), static_cast<const int>(dW), static_cast<const int>(padH), static_cast<const int>(padW), output_data);
-  THCudaCheck(hipGetLastError());
+    AvePoolForward<scalar_t, accreal, false>
+      <<<GET_BLOCKS(count), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state) >>>(
+        count, input_data,
+        batchSize, nInputPlane, nInputRows, nInputCols, nOutputRows, nOutputCols,
+        kH, kW, dH, dW, padH, padW, output_data);
+  THCudaCheck(cudaGetLastError());
 
   if(input->dim() == 3)
     THCTensor_(resize3d)(state, output, nInputPlane, nOutputRows, nOutputCols);
@@ -213,22 +212,22 @@ void THNN_(SpatialAveragePooling_updateGradInput)(
   int count = THCTensor_(nElement)(state, input);
 
   if(count_include_pad)
-   hipLaunchKernelGGL( AvePoolBackward<scalar_t, accreal, true>
-      ,  dim3(GET_BLOCKS(count)), dim3(CUDA_NUM_THREADS), 0, THCState_getCurrentStream(state) , 
-        static_cast<const int>(count),
+    AvePoolBackward<scalar_t, accreal, true>
+      <<< GET_BLOCKS(count), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state) >>>
+        (count,
         THCTensor_(data)(state, gradOutput),
-        static_cast<const int>(batchSize), static_cast<const int>(nInputPlane), static_cast<const int>(nInputRows), static_cast<const int>(nInputCols), static_cast<const int>(nOutputRows), static_cast<const int>(nOutputCols),
-        static_cast<const int>(kH), static_cast<const int>(kW), static_cast<const int>(dH), static_cast<const int>(dW), static_cast<const int>(padH), static_cast<const int>(padW),
+        batchSize, nInputPlane, nInputRows, nInputCols, nOutputRows, nOutputCols,
+        kH, kW, dH, dW, padH, padW,
         THCTensor_(data)(state, gradInput));
   else
-   hipLaunchKernelGGL( AvePoolBackward<scalar_t, accreal, false>
-      ,  dim3(GET_BLOCKS(count)), dim3(CUDA_NUM_THREADS), 0, THCState_getCurrentStream(state) , 
-        static_cast<const int>(count),
+    AvePoolBackward<scalar_t, accreal, false>
+      <<< GET_BLOCKS(count), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state) >>>
+        (count,
         THCTensor_(data)(state, gradOutput),
-        static_cast<const int>(batchSize), static_cast<const int>(nInputPlane), static_cast<const int>(nInputRows), static_cast<const int>(nInputCols), static_cast<const int>(nOutputRows), static_cast<const int>(nOutputCols),
-        static_cast<const int>(kH), static_cast<const int>(kW), static_cast<const int>(dH), static_cast<const int>(dW), static_cast<const int>(padH), static_cast<const int>(padW),
+        batchSize, nInputPlane, nInputRows, nInputCols, nOutputRows, nOutputCols,
+        kH, kW, dH, dW, padH, padW,
         THCTensor_(data)(state, gradInput));
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 
   // clean
   THCTensor_(free)(state, input);

@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "THCUNN.h"
 #include "THCTensor.hpp"
 #include "common.h"
@@ -123,9 +122,9 @@ __global__ void cuda_VolumetricAveragePooling_updateOutput_fixedKW(
 }
 
 #define LAUNCH_UPDATE_OUTPUT_KERNEL_WIDTH(KW) case KW: \
- hipLaunchKernelGGL( cuda_VolumetricAveragePooling_updateOutput_fixedKW<KW, scalar_t, accreal> \
-    , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state),  \
-      cudaInput, cudaOutput, static_cast<int>(kT), static_cast<int>(kH), static_cast<int>(dT), static_cast<int>(dH), static_cast<int>(dW), static_cast<int>(padT), static_cast<int>(padH), static_cast<int>(padW), count_include_pad, static_cast<int>(offsetZ)); \
+  cuda_VolumetricAveragePooling_updateOutput_fixedKW<KW, scalar_t, accreal> \
+    <<<grid, block, 0, THCState_getCurrentStream(state)>>>( \
+      cudaInput, cudaOutput, kT, kH, dT, dH, dW, padT, padH, padW, count_include_pad, offsetZ); \
   break
 
 template <typename Dtype, typename Acctype>

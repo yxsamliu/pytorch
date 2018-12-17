@@ -51,7 +51,7 @@ struct NcclCommList {
     if (comms) {
       for (int i = 0; i < ndevices; i++) {
         int dummy_var;
-        if (hipGetDevice(&dummy_var) != hipSuccess) {
+        if (cudaGetDevice(&dummy_var) != cudaSuccess) {
           /* there are cases when this destructor is called after the
            CUDA driver is already unloaded from the process.
            In these cases, skip ncclCommDestroy */

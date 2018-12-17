@@ -8,8 +8,8 @@
 #include "ATen/ExpandUtils.h"
 #include <unordered_map>
 
-#ifdef USE_ROCM
-  #include "hip/hip_runtime.h" // for 0
+#ifdef USE_CUDA
+  #include "cuda.h" // for CUDA_VERSION
 #endif
 
 namespace torch { namespace jit {

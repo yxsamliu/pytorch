@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/SpatialSubSampling.cu"
 #else
@@ -70,10 +69,10 @@ void THNN_(SpatialSubSampling_updateOutput)(
     dim3 threads(32,8);
 
     // run subsample kernel
-   hipLaunchKernelGGL( subsample<scalar_t, accreal> , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  
+    subsample<scalar_t, accreal> <<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (
       input_data, output_data, weight_data, bias_data,
-      static_cast<int>(nInputPlane), static_cast<int>(nInputRows), static_cast<int>(nInputCols), static_cast<int>(kH), static_cast<int>(kW), static_cast<int>(dH), static_cast<int>(dW));
-    THCudaCheck(hipGetLastError());
+      nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
+    THCudaCheck(cudaGetLastError());
   } else {
     int64_t nInputCols = input->size(3);
     int64_t nInputRows = input->size(2);
@@ -94,10 +93,10 @@ void THNN_(SpatialSubSampling_updateOutput)(
     dim3 threads(32,8);
 
     // run subsample kernel
-   hipLaunchKernelGGL( subsample<scalar_t, accreal> , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  
+    subsample<scalar_t, accreal> <<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (
       input_data, output_data, weight_data, bias_data,
-      static_cast<int>(nInputPlane), static_cast<int>(nInputRows), static_cast<int>(nInputCols), static_cast<int>(kH), static_cast<int>(kW), static_cast<int>(dH), static_cast<int>(dW));
-    THCudaCheck(hipGetLastError());
+      nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
+    THCudaCheck(cudaGetLastError());
   }
 
   // clean
@@ -140,15 +139,15 @@ void THNN_(SpatialSubSampling_updateGradInput)(
 
     // run updateGradInput kernel
     if (kH <= dH && kW <= dW) {
-     hipLaunchKernelGGL( subgradinput<scalar_t> , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  
+      subgradinput <<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (
         gradInput_data, gradOutput_data, weight_data,
-        static_cast<int>(nInputPlane), static_cast<int>(nInputRows), static_cast<int>(nInputCols), static_cast<int>(kH), static_cast<int>(kW), static_cast<int>(dH), static_cast<int>(dW));
+        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
     } else {
-     hipLaunchKernelGGL( subgradinputAtomic<scalar_t> , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  
+      subgradinputAtomic <<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (
         gradInput_data, gradOutput_data, weight_data,
-        static_cast<int>(nInputPlane), static_cast<int>(nInputRows), static_cast<int>(nInputCols), static_cast<int>(kH), static_cast<int>(kW), static_cast<int>(dH), static_cast<int>(dW));
+        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
     }
-    THCudaCheck(hipGetLastError());
+    THCudaCheck(cudaGetLastError());
   } else {
     int64_t nInputCols = input->size(3);
     int64_t nInputRows = input->size(2);
@@ -171,15 +170,15 @@ void THNN_(SpatialSubSampling_updateGradInput)(
 
     // run updateGradInput kernel
     if (kH <= dH && kW <= dW) {
-     hipLaunchKernelGGL( subgradinput<scalar_t> , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  
+      subgradinput <<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (
         gradInput_data, gradOutput_data, weight_data,
-        static_cast<int>(nInputPlane), static_cast<int>(nInputRows), static_cast<int>(nInputCols), static_cast<int>(kH), static_cast<int>(kW), static_cast<int>(dH), static_cast<int>(dW));
+        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
     } else {
-     hipLaunchKernelGGL( subgradinputAtomic<scalar_t> , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  
+      subgradinputAtomic <<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (
         gradInput_data, gradOutput_data, weight_data,
-        static_cast<int>(nInputPlane), static_cast<int>(nInputRows), static_cast<int>(nInputCols), static_cast<int>(kH), static_cast<int>(kW), static_cast<int>(dH), static_cast<int>(dW));
+        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
     }
-    THCudaCheck(hipGetLastError());
+    THCudaCheck(cudaGetLastError());
   }
   THCTensor_(free)(state, gradOutput);
 }
@@ -217,10 +216,10 @@ void THNN_(SpatialSubSampling_accGradParameters)(
     dim3 threads(32,8);
 
     // run gradweight kernel
-   hipLaunchKernelGGL( subgradweight<scalar_t, accreal> , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  
+    subgradweight<scalar_t, accreal> <<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (
       input_data, gradOutput_data, gradWeight_data, gradBias_data,
-      static_cast<int>(nInputPlane), static_cast<int>(nInputRows), static_cast<int>(nInputCols), static_cast<int>(kH), static_cast<int>(kW), static_cast<int>(dH), static_cast<int>(dW), scale);
-    THCudaCheck(hipGetLastError());
+      nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW, scale);
+    THCudaCheck(cudaGetLastError());
   } else {
     int64_t nInputCols = input->size(3);
     int64_t nInputRows = input->size(2);
@@ -242,13 +241,13 @@ void THNN_(SpatialSubSampling_accGradParameters)(
     // run gradweight kernel
     int64_t sl;
     for (sl=0; sl<nbatch; sl++) {
-     hipLaunchKernelGGL( subgradweight<scalar_t, accreal> , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  
+      subgradweight<scalar_t, accreal> <<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (
         input_data + sl*input->stride(0),
         gradOutput_data + sl*gradOutput->stride(0),
         gradWeight_data, gradBias_data,
-        static_cast<int>(nInputPlane), static_cast<int>(nInputRows), static_cast<int>(nInputCols), static_cast<int>(kH), static_cast<int>(kW), static_cast<int>(dH), static_cast<int>(dW), scale);
+        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW, scale);
     }
-    THCudaCheck(hipGetLastError());
+    THCudaCheck(cudaGetLastError());
   }
 
   // clean

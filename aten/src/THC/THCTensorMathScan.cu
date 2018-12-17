@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "THCTensorMath.h"
 #include "THCGeneral.h"
 #include "THCBlas.h"

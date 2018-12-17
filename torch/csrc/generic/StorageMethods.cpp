@@ -1,5 +1,5 @@
-#ifdef USE_ROCM
-#include <hip/hip_runtime.h>
+#ifdef USE_CUDA
+#include <cuda_runtime.h>
 #endif
 
 static PyObject * THPStorage_(size)(THPStorage *self)
@@ -29,14 +29,14 @@ static PyObject * THPStorage_(copy_)(PyObject *self, PyObject *args, PyObject *k
 static PyObject * THPStorage_(isPinned)(THPStorage *self)
 {
   HANDLE_TH_ERRORS
-#if defined(USE_ROCM)
-  hipPointerAttribute_t attr;
-  hipError_t err = hipPointerGetAttributes(&attr, THWStorage_(data)(LIBRARY_STATE self->cdata));
-  if (err != hipSuccess) {
-    hipGetLastError();
+#if defined(USE_CUDA)
+  cudaPointerAttributes attr;
+  cudaError_t err = cudaPointerGetAttributes(&attr, THWStorage_(data)(LIBRARY_STATE self->cdata));
+  if (err != cudaSuccess) {
+    cudaGetLastError();
     Py_RETURN_FALSE;
   }
-  return PyBool_FromLong(attr.memoryType == hipMemoryTypeHost);
+  return PyBool_FromLong(attr.memoryType == cudaMemoryTypeHost);
 #else
   Py_RETURN_FALSE;
 #endif

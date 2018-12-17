@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "gtest/gtest.h"
 
 #include "ATen/ATen.h"
@@ -38,9 +37,9 @@ TEST(PackedtensoraccessorTest, PackedtensoraccessorTestCUDA) {
 
   auto stream = at::cuda::getCurrentCUDAStream();
 
- hipLaunchKernelGGL( test_tensor_packed_accessor_kernel, dim3(1), dim3(1), 0, stream, resa, t1a, t2a);
-  hipError_t err = hipDeviceSynchronize();
-  bool isEQ = err == hipSuccess;
+  test_tensor_packed_accessor_kernel<<<1, 1, 0, stream>>>(resa, t1a, t2a);
+  cudaError_t err = cudaDeviceSynchronize();
+  bool isEQ = err == cudaSuccess;
   ASSERT_TRUE(isEQ);
 
   auto expected = mv(t1, t2);

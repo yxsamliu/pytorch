@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/VolumetricMaxUnpooling.cu"
 #else
@@ -155,13 +154,13 @@ void THNN_(VolumetricMaxUnpooling_updateOutput)(
               THCCeilDiv(inputHeight, static_cast<int>(block.y)),
               totalZ > 65535 ? 65535 : totalZ);
 
-   hipLaunchKernelGGL( cuda_VolumetricMaxUnpooling_updateOutput<scalar_t>, dim3(grid), dim3(block),
-          0, THCState_getCurrentStream(state), 
+    cuda_VolumetricMaxUnpooling_updateOutput<<<grid, block,
+          0, THCState_getCurrentStream(state)>>>(
                              cudaInput, cudaIndices, outputData,
-                             static_cast<int>(outputTime), static_cast<int>(outputHeight), static_cast<int>(outputWidth),
-                             static_cast<int>(dT), static_cast<int>(dH), static_cast<int>(dW),
-                             static_cast<int>(padT), static_cast<int>(padH), static_cast<int>(padW), static_cast<int>(offsetZ));
-    THCudaCheck(hipGetLastError());
+                             outputTime, outputHeight, outputWidth,
+                             dT, dH, dW,
+                             padT, padH, padW, offsetZ);
+    THCudaCheck(cudaGetLastError());
     totalZ -= 65535;
     offsetZ += 65535;
   }
@@ -249,15 +248,15 @@ void THNN_(VolumetricMaxUnpooling_updateGradInput)(
               THCCeilDiv(inputHeight, static_cast<int>(block.y)),
               totalZ > 65535 ? 65535 : totalZ);
 
-   hipLaunchKernelGGL( cuda_VolumetricMaxUnpooling_updateGradInput<scalar_t>, dim3(grid), dim3(block),
-      0, THCState_getCurrentStream(state), 
+    cuda_VolumetricMaxUnpooling_updateGradInput<<<grid, block,
+      0, THCState_getCurrentStream(state)>>>(
                                              gradOutputData,
-                                             static_cast<int>(outputTime), static_cast<int>(outputHeight), static_cast<int>(outputWidth),
+                                             outputTime, outputHeight, outputWidth,
                                              cudaIndices,
                                              cudaGradInput,
-                                             static_cast<int>(dT), static_cast<int>(dH), static_cast<int>(dW),
-                                             static_cast<int>(padT), static_cast<int>(padH), static_cast<int>(padW), static_cast<int>(offsetZ));
-    THCudaCheck(hipGetLastError());
+                                             dT, dH, dW,
+                                             padT, padH, padW, offsetZ);
+    THCudaCheck(cudaGetLastError());
     totalZ -= 65535;
     offsetZ += 65535;
   }

@@ -143,7 +143,7 @@ struct RegisterDispatch {
 #define REGISTER_CUDA_DISPATCH(name, fn) \
   static RegisterDispatch<decltype(fn), struct name> name ## __register(name, fn);
 
-#if defined(__HIPCC__)
+#if defined(__CUDACC__)
 #define REGISTER_DISPATCH(name, fn) REGISTER_CUDA_DISPATCH(name, fn)
 #elif defined(CPU_CAPABILITY)
 #define REGISTER_DISPATCH(name, fn) REGISTER_ARCH_DISPATCH(name, CPU_CAPABILITY, fn)

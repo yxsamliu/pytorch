@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/VolumetricReplicationPadding.cu"
 #else
@@ -117,8 +116,8 @@ void THNN_(VolumetricReplicationPadding_updateOutput)(
             devOutput.getSize(0));
   dim3 blockSize(outputPlaneSize > 256 ? 256 : outputPlaneSize);
 
- hipLaunchKernelGGL( VolumetricReplicationPadding_updateOutput<scalar_t>, dim3(gridSize), dim3(blockSize), 0, THCState_getCurrentStream(state), 
-    devInput, devOutput, static_cast<int>(pfront), static_cast<int>(pback), static_cast<int>(ptop), static_cast<int>(pbottom), static_cast<int>(pleft), static_cast<int>(pright));
+  VolumetricReplicationPadding_updateOutput<scalar_t><<<gridSize, blockSize, 0, THCState_getCurrentStream(state)>>>(
+    devInput, devOutput, pfront, pback, ptop, pbottom, pleft, pright);
 }
 
 void THNN_(VolumetricReplicationPadding_updateGradInput)(
@@ -168,8 +167,8 @@ void THNN_(VolumetricReplicationPadding_updateGradInput)(
             devGradOutput.getSize(0));
   dim3 blockSize(outputPlaneSize > 256 ? 256 : outputPlaneSize);
 
- hipLaunchKernelGGL( VolumetricReplicationPadding_updateGradInput<scalar_t>, dim3(gridSize), dim3(blockSize), 0, THCState_getCurrentStream(state), 
-    devGradInput, devGradOutput, static_cast<int>(pfront), static_cast<int>(pback), static_cast<int>(ptop), static_cast<int>(pbottom), static_cast<int>(pleft), static_cast<int>(pright));
+  VolumetricReplicationPadding_updateGradInput<<<gridSize, blockSize, 0, THCState_getCurrentStream(state)>>>(
+    devGradInput, devGradOutput, pfront, pback, ptop, pbottom, pleft, pright);
 }
 
 #endif

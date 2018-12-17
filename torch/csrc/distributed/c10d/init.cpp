@@ -402,7 +402,7 @@ They are used in specifying strategies for reduction collectives, e.g.,
           &::c10d::ProcessGroup::Work::wait,
           py::call_guard<py::gil_scoped_release>());
 
-#ifdef USE_ROCM
+#ifdef USE_CUDA
   module.def(
       "_dist_bucket_tensors",
       &::c10d::bucketTensors,

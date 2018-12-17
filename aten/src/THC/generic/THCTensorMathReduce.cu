@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorMathReduce.cu"
 #else
@@ -15,7 +14,7 @@ void THCTensor_(sum)(THCState* state, THCTensor *self, THCTensor *src, int dimen
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 void THCTensor_(prod)(THCState* state, THCTensor *self, THCTensor *src, int dimension, int keepdim) {
@@ -30,7 +29,7 @@ void THCTensor_(prod)(THCState* state, THCTensor *self, THCTensor *src, int dime
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 void THCTensor_(mean)(THCState *state, THCTensor *self, THCTensor *src, int dim, int keepdim)
@@ -47,7 +46,7 @@ void THCTensor_(mean)(THCState *state, THCTensor *self, THCTensor *src, int dim,
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 #if defined(THC_REAL_IS_FLOAT) || defined(THC_REAL_IS_DOUBLE) || defined(THC_REAL_IS_HALF)
@@ -70,13 +69,13 @@ void THCTensor_(renorm)(THCState *state, THCTensor* self, THCTensor* src, scalar
     // NOTE: only with this specific number of threads can this work on GPUs with a warp size != 32 (such as AMD). Do not alter w/o changing buffer size in kernel.
     dim3 threads(32);
 
-   hipLaunchKernelGGL( THCTensor_kernel_renorm<scalar_t, accreal>
-      , dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
-      THCTensor_(data)(state, data), scalar_cast<accreal>(value), size, scalar_cast<accreal>(maxnorm));
+    THCTensor_kernel_renorm<scalar_t, accreal>
+      <<<grid, threads, 0, THCState_getCurrentStream(state)>>>
+      (THCTensor_(data)(state, data), scalar_cast<accreal>(value), size, scalar_cast<accreal>(maxnorm));
 
-    hipError_t errcode = hipGetLastError();
-    if(errcode != hipSuccess)
-      THError(hipGetErrorString(errcode));
+    cudaError_t errcode = cudaGetLastError();
+    if(errcode != cudaSuccess)
+      THError(cudaGetErrorString(errcode));
   }
 
   THCTensor_(free)(state, src_);
@@ -102,7 +101,7 @@ void THCTensor_(std)(THCState *state, THCTensor *self_, THCTensor *src, int dime
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 void THCTensor_(var)(THCState *state, THCTensor *self_, THCTensor *src, int dimension, int biased, int keepdim)
@@ -121,7 +120,7 @@ void THCTensor_(var)(THCState *state, THCTensor *self_, THCTensor *src, int dime
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 accreal THCTensor_(stdall)(THCState *state, THCTensor *self, int biased)
@@ -149,7 +148,7 @@ accreal THCTensor_(varall)(THCState *state, THCTensor *self, int biased)
     scalar_cast<accreal>(std::max<int64_t>(0, THCTensor_(nElement)(state, self) - (biased ? 0 : 1)))
   );
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
   return val;
 }
 
@@ -201,7 +200,7 @@ void THCTensor_(norm)(THCState *state, THCTensor* self, THCTensor* src, scalar_t
                         dimension, keepdim);
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 accreal THCTensor_(normall)(THCState *state, THCTensor *self, scalar_t _value)
@@ -251,7 +250,7 @@ accreal THCTensor_(normall)(THCState *state, THCTensor *self, scalar_t _value)
                                        THCNumerics<accreal>::cinv(value));
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
   return result;
 }
 
@@ -323,7 +322,7 @@ accreal THCTensor_(sumall)(THCState *state, THCTensor *self) {
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
   return val;
 }
 
@@ -338,7 +337,7 @@ accreal THCTensor_(prodall)(THCState *state, THCTensor *self) {
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
   return val;
 }
 
@@ -358,7 +357,7 @@ scalar_t THCTensor_(minall)(THCState *state, THCTensor *self) {
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
   return scalar_cast<scalar_t>(val);
 }
 
@@ -372,7 +371,7 @@ scalar_t THCTensor_(maxall)(THCState *state, THCTensor *self) {
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
   return scalar_cast<scalar_t>(val);
 }
 
@@ -398,7 +397,7 @@ scalar_t THCTensor_(medianall)(THCState *state, THCTensor *self) {
   THCTensor_(free)(state, sorted);
   THCudaLongTensor_free(state, indices);
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 
   return val;
 }
@@ -441,7 +440,7 @@ void THCTensor_(median)(THCState *state,
   THCTensor_(free)(state, newValues);
   THCudaLongTensor_free(state, newIndices);
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 void THCTensor_(max)(THCState *state,

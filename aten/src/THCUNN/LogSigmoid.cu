@@ -47,7 +47,7 @@ struct logSigmoid_updateGradInput_functor
 
 template <>
 struct logSigmoid_updateOutput_functor<half> {
-  __device__ inline void operator()(half* output, const half *input) const {
+  __device__ __forceinline__ void operator()(half* output, const half *input) const {
     float in = __half2float(*input);
     float max = fmaxType(0.f, -in);
     float z = THCNumerics<float>::exp(-max) + THCNumerics<float>::exp(-in - max);
@@ -57,7 +57,7 @@ struct logSigmoid_updateOutput_functor<half> {
 
 template <>
 struct logSigmoid_updateGradInput_functor<half> {
-  __device__ inline void operator()(half* gradInput, const half *input, const half *gradOutput) const {
+  __device__ __forceinline__ void operator()(half* gradInput, const half *input, const half *gradOutput) const {
     const float in = __half2float(*input);
     const float max = fmaxType(0.f, -in);
     const float z = THCNumerics<float>::exp(-max) + THCNumerics<float>::exp(-in - max);

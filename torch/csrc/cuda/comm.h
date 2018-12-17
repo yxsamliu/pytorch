@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef USE_ROCM
+#ifdef USE_CUDA
 
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>

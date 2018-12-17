@@ -18,12 +18,12 @@ struct CUDAStreamInternals {
   CUDAStreamInternals() = default;
 
   ~CUDAStreamInternals() {
-    if (stream) hipStreamDestroy(stream);
+    if (stream) cudaStreamDestroy(stream);
   }
 
   int64_t device = -1;
   int32_t stream_id = -1;
-  hipStream_t stream = nullptr;
+  cudaStream_t stream = nullptr;
 };
 
 namespace at {
@@ -35,7 +35,7 @@ namespace detail {
 static int64_t num_gpus = -1;
 static constexpr int kStreamsPerPoolBits = 5;
 static constexpr int kStreamsPerPool = 1 << kStreamsPerPoolBits;
-static constexpr unsigned int kDefaultFlags = hipStreamNonBlocking;
+static constexpr unsigned int kDefaultFlags = cudaStreamNonBlocking;
 
 // Note: stream priority is not supported by HIP
 // Note: lower numbers are higher priorities, zero is default priority
@@ -195,19 +195,19 @@ static void initDeviceStreamState(const int64_t device) {
     hipri_stream.device = device;
 
     #ifndef __HIP_PLATFORM_HCC__
-      AT_CUDA_CHECK(hipStreamCreateWithPriority(
+      AT_CUDA_CHECK(cudaStreamCreateWithPriority(
         &lowpri_stream.stream
       , kDefaultFlags
       , kLowPriority));
-      AT_CUDA_CHECK(hipStreamCreateWithPriority(
+      AT_CUDA_CHECK(cudaStreamCreateWithPriority(
         &hipri_stream.stream
       , kDefaultFlags
       , kHighPriority));
     #else
-      AT_CUDA_CHECK(hipStreamCreateWithFlags(
+      AT_CUDA_CHECK(cudaStreamCreateWithFlags(
         &lowpri_stream.stream
       , kDefaultFlags));
-      AT_CUDA_CHECK(hipStreamCreateWithFlags(
+      AT_CUDA_CHECK(cudaStreamCreateWithFlags(
         &hipri_stream.stream
       , kDefaultFlags));
     #endif // __HIP_PLATFORM_HCC__
@@ -290,7 +290,7 @@ void CUDAStream_uncheckedSetStream(CUDAStreamInternals* ptr) {
 }
 
 // Getters
-hipStream_t CUDAStream_stream(const CUDAStreamInternals* ptr) {
+cudaStream_t CUDAStream_stream(const CUDAStreamInternals* ptr) {
   AT_ASSERT(ptr);
   return ptr->stream;
 }
@@ -302,7 +302,7 @@ int64_t CUDAStream_device(const CUDAStreamInternals* ptr) {
 
 void CUDAStream_synchronize_with(const CUDAStreamInternals* ptr, const CUDAEvent& event) {
     if (event.isCreated())
-      AT_CUDA_CHECK(hipStreamWaitEvent(ptr->stream, event, 0));
+      AT_CUDA_CHECK(cudaStreamWaitEvent(ptr->stream, event, 0));
 }
 
 } // namespace detail

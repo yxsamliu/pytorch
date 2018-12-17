@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "ATen/native/TensorTransformations.h"
 
 #include "ATen/cuda/detail/IndexUtils.cuh"
@@ -92,9 +91,9 @@ Tensor flip_cuda(const Tensor& self, IntList dims) {
       auto out_tensor_info = cuda::detail::getTensorInfo<scalar_t, int64_t>(out_tensor);
       int flip_dim = in_tensor_info.collapseDims(flip_dims[0]);
       out_tensor_info.collapseDims(flip_dims[0]);
-     hipLaunchKernelGGL( kernel_pointwise_flip_apply2<scalar_t, int64_t>
-        , dim3(dim_grid), dim3(dim_block), 0, at::cuda::getCurrentCUDAStream(), 
-          in_tensor_info, out_tensor_info, N, static_cast<int>(flip_dim), total_dims);
+      kernel_pointwise_flip_apply2<scalar_t, int64_t>
+        <<<dim_grid, dim_block, 0, at::cuda::getCurrentCUDAStream()>>>(
+          in_tensor_info, out_tensor_info, N, flip_dim, total_dims);
     });
     return out_tensor;
   }
@@ -120,7 +119,7 @@ Tensor flip_cuda(const Tensor& self, IntList dims) {
   }
 
   AT_DISPATCH_ALL_TYPES_AND_HALF(in_tensor.type(), "flip_cuda", [&] {
-   hipLaunchKernelGGL( flip_cuda_kernel, dim3(dim_grid), dim3(dim_block), 0, at::cuda::getCurrentCUDAStream(), 
+    flip_cuda_kernel<<<dim_grid, dim_block, 0, at::cuda::getCurrentCUDAStream()>>>(
       in_tensor.data<scalar_t>(), out_tensor.data<scalar_t>(), N, flip_dims_t.toType(CUDA(kLong)).data<int64_t>(), flip_dims_size,
       strides_t.toType(CUDA(kLong)).data<int64_t>(), stride_contiguous.toType(CUDA(kLong)).data<int64_t>(), shape_t.toType(CUDA(kLong)).data<int64_t>(), total_dims);
   });
@@ -182,7 +181,7 @@ Tensor roll_cuda(const Tensor& self, IntList shifts, IntList dims) {
   auto total_dims = in_tensor.dim();
 
   AT_DISPATCH_ALL_TYPES_AND_HALF(in_tensor.type(), "roll_cuda", [&] {
-   hipLaunchKernelGGL( roll_cuda_kernel, dim3(dim_grid), dim3(dim_block), 0, at::cuda::getCurrentCUDAStream(), 
+    roll_cuda_kernel<<<dim_grid, dim_block, 0, at::cuda::getCurrentCUDAStream()>>>(
       in_tensor.data<scalar_t>(), out_tensor.data<scalar_t>(), N,
       dim, shifts[0], start,
       size,

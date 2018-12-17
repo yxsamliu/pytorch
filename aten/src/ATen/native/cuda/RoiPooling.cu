@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/NativeFunctions.h"
 #include "ATen/cuda/CUDAContext.h"
@@ -10,11 +9,11 @@
 namespace at {
 namespace native {
 
-__host__ __device__ inline float fmin(float a, float b) {
+__host__ __device__ __forceinline__ float fmin(float a, float b) {
   return a > b ? b : a;
 }
 
-__host__ __device__ inline float fmax(float a, float b) {
+__host__ __device__ __forceinline__ float fmax(float a, float b) {
   return a > b ? a : b;
 }
 
@@ -136,10 +135,10 @@ std::tuple<Tensor, Tensor> RoiPooling2d_forward_cuda(
 
   dim3 block(512);
   dim3 grid((output.numel() + 512 - 1) / 512);
- hipLaunchKernelGGL( RoiPooling2d_forward_kernel<float>, dim3(grid), dim3(block), 0, at::cuda::getCurrentCUDAStream(), 
-    static_cast<const int>(output.numel()), input.data<float>(), rois.data<float>(), static_cast<float>(spatialScale), static_cast<const int>(inputChannels),
-    static_cast<const int>(inputHeight), static_cast<const int>(inputWidth), static_cast<const int>(pooledHeight), static_cast<const int>(pooledWidth), output.data<float>(), argmaxes.data<int>());
-  AT_CHECK(hipGetLastError() == hipSuccess, "RoiPooling2d_forward_kernel failed with error code ", hipGetLastError());
+  RoiPooling2d_forward_kernel<<<grid, block, 0, at::cuda::getCurrentCUDAStream()>>>(
+    output.numel(), input.data<float>(), rois.data<float>(), static_cast<float>(spatialScale), inputChannels,
+    inputHeight, inputWidth, pooledHeight, pooledWidth, output.data<float>(), argmaxes.data<int>());
+  AT_CHECK(cudaGetLastError() == cudaSuccess, "RoiPooling2d_forward_kernel failed with error code ", cudaGetLastError());
 
   return std::make_tuple(output, argmaxes);
 }
@@ -203,11 +202,11 @@ Tensor RoiPooling2d_backward_cuda(
 
   dim3 block(512);
   dim3 grid((gradInput.numel() + 512 - 1) / 512);
- hipLaunchKernelGGL( RoiPooling2d_backward_kernel<float>, dim3(grid), dim3(block), 0, at::cuda::getCurrentCUDAStream(), 
-    static_cast<const int>(gradOutput.numel()), gradOutput.data<float>(), static_cast<const int *>(argmaxes.data<int>()), static_cast<const int>(proposals),
-    static_cast<float>(spatialScale), static_cast<const int>(inputChannels), static_cast<const int>(inputHeight), static_cast<const int>(inputWidth),
-    static_cast<const int>(pooledHeight), static_cast<const int>(pooledWidth), gradInput.data<float>(), rois.data<float>());
-  AT_CHECK(hipGetLastError() == hipSuccess, "RoiPooling2d_backward_kernel failed with error code ", hipGetLastError());
+  RoiPooling2d_backward_kernel<<<grid, block, 0, at::cuda::getCurrentCUDAStream()>>>(
+    gradOutput.numel(), gradOutput.data<float>(), argmaxes.data<int>(), proposals,
+    static_cast<float>(spatialScale), inputChannels, inputHeight, inputWidth,
+    pooledHeight, pooledWidth, gradInput.data<float>(), rois.data<float>());
+  AT_CHECK(cudaGetLastError() == cudaSuccess, "RoiPooling2d_backward_kernel failed with error code ", cudaGetLastError());
 
   return gradInput;
 }

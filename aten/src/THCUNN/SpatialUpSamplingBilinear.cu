@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 // Adapted from interp.cpp from Caffe util by Pauline Luc
 // Originally developed by George Papandreou
 #include "THCUNN.h"

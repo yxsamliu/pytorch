@@ -3,14 +3,14 @@
 #include "THCHalfAutoNumerics.cuh"
 #include "THCTensor.hpp"
 
-#include <hipsparse.h>
+#include <cusparse.h>
 
-static hipsparseHandle_t cusparse_handle = 0;
+static cusparseHandle_t cusparse_handle = 0;
 
 static void init_cusparse() {
   if (cusparse_handle == 0) {
-    hipsparseStatus_t status = hipsparseCreate(&cusparse_handle);
-    if (status != HIPSPARSE_STATUS_SUCCESS) {
+    cusparseStatus_t status = cusparseCreate(&cusparse_handle);
+    if (status != CUSPARSE_STATUS_SUCCESS) {
       THError("CUSPARSE Library initialization failed");
     }
   }

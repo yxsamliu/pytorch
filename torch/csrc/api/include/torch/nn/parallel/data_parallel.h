@@ -155,7 +155,7 @@ Tensor data_parallel(
     return module->forward(std::move(input)).to(*output_device);
   }
 
-#ifdef USE_ROCM
+#ifdef USE_CUDA
   autograd::Scatter scatter(*devices, /*chunk_sizes=*/nullopt, dim);
   auto scattered_inputs = fmap<Tensor>(scatter.apply({std::move(input)}));
 

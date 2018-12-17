@@ -579,7 +579,7 @@ namespace {
 #if CUDNN_VERSION < 7200 || CUDA_VERSION < 9010
       return CUDNN_RNN_ALGO_STANDARD;
 #else
-      hipDeviceProp_t* prop = at::cuda::getCurrentDeviceProperties();
+      cudaDeviceProp* prop = at::cuda::getCurrentDeviceProperties();
       const int64_t bsize = tensors.mini_batch;
       //excluding Turing from using persistent rnn.
       if (prop->major == 7 && prop->minor != 5 && rnn.datatype == CUDNN_DATA_HALF && !tensors.is_input_packed()) {

@@ -1,14 +1,14 @@
 #pragma once
 #include "torch/csrc/jit/fuser/config.h"
-#if USE_ROCM_FUSER
+#if USE_CUDA_FUSER
 
 #include "ATen/ATen.h"
 #include "torch/csrc/WindowsTorchApiMacro.h"
 #include "torch/csrc/jit/fuser/fused_kernel.h"
 
 #include "nvrtc.h"
-#include "hip/hip_runtime.h"
-#include "hip/hip_runtime.h"
+#include "cuda.h"
+#include "cuda_runtime.h"
 
 #include <cstdint>
 #include <vector>
@@ -30,7 +30,7 @@ struct TORCH_API FusedKernelCUDA : public ::torch::jit::fuser::FusedKernel {
       bool has_random);
 
   ~FusedKernelCUDA() override {
-    hipModuleUnload(module_);
+    cuModuleUnload(module_);
   }
 
   void launch_raw(const uint32_t numel, std::vector<void*>& arguments)
@@ -47,10 +47,10 @@ private:
   //  Acquiring these values at launch time would be too slow
   int16_t device_;
   int maxBlocks_;
-  hipDeviceProp_t* prop_;
+  cudaDeviceProp* prop_;
   std::vector<char> ptx_;
-  hipModule_t module_;
-  hipFunction_t function_;
+  CUmodule module_;
+  CUfunction function_;
 };
 
 } // namespace cuda
@@ -58,4 +58,4 @@ private:
 } // namespace jit
 } // namespace torch
 
-#endif // USE_ROCM_FUSER
+#endif // USE_CUDA_FUSER

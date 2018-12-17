@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include <THC/THCTensorMathReduce.cuh>
 #include <math.h>
@@ -13,67 +12,67 @@ namespace {
 static const int forward_threads = 256;
 
 template <typename scalar_t>
-static inline __device__ scalar_t device_sqrt(scalar_t val);
+static __forceinline__ __device__ scalar_t device_sqrt(scalar_t val);
 
 template <>
-inline __device__ float device_sqrt(float val) {
+__forceinline__ __device__ float device_sqrt(float val) {
   return ::sqrtf(val);
 }
 
 template <>
-inline __device__ double device_sqrt(double val) {
+__forceinline__ __device__ double device_sqrt(double val) {
   return ::sqrt(val);
 }
 
 template <typename scalar_t>
 struct dists {
 
-  static inline __device__ scalar_t sign(scalar_t val) {
+  static __forceinline__ __device__ scalar_t sign(scalar_t val) {
     return (0 < val) - (val < 0);
   }
 
   // Zero norm
   struct zero {
-    static inline __device__ void inc(scalar_t& agg, const scalar_t diff, const scalar_t p) { agg += diff != 0.0; }
-    static inline __device__ scalar_t finish(const scalar_t agg, const scalar_t p) { return agg; }
-    static inline __device__ void agg(scalar_t& update, const scalar_t other) { update += other; }
+    static __forceinline__ __device__ void inc(scalar_t& agg, const scalar_t diff, const scalar_t p) { agg += diff != 0.0; }
+    static __forceinline__ __device__ scalar_t finish(const scalar_t agg, const scalar_t p) { return agg; }
+    static __forceinline__ __device__ void agg(scalar_t& update, const scalar_t other) { update += other; }
   };
 
   // One norm
   struct one {
-    static inline __device__ void inc(scalar_t& agg, const scalar_t diff, const scalar_t p) { agg += diff; }
-    static inline __device__ scalar_t finish(const scalar_t agg, const scalar_t p) { return agg; }
-    static inline __device__ void agg(scalar_t& update, const scalar_t other) { update += other; }
-    static inline __device__ scalar_t backward(const scalar_t diff, const scalar_t grad, const scalar_t dist, const scalar_t p) { return grad * sign(diff); }
+    static __forceinline__ __device__ void inc(scalar_t& agg, const scalar_t diff, const scalar_t p) { agg += diff; }
+    static __forceinline__ __device__ scalar_t finish(const scalar_t agg, const scalar_t p) { return agg; }
+    static __forceinline__ __device__ void agg(scalar_t& update, const scalar_t other) { update += other; }
+    static __forceinline__ __device__ scalar_t backward(const scalar_t diff, const scalar_t grad, const scalar_t dist, const scalar_t p) { return grad * sign(diff); }
   };
 
   // Special case backward when p is less than two
   struct lt_two {
-    static inline __device__ scalar_t backward(const scalar_t diff, const scalar_t grad, const scalar_t dist, const scalar_t p) { return dist == 0.0 ? 0 : sign(diff) * ::pow(std::abs(diff), p - 1) * grad / ::pow(dist, p - 1); }
+    static __forceinline__ __device__ scalar_t backward(const scalar_t diff, const scalar_t grad, const scalar_t dist, const scalar_t p) { return dist == 0.0 ? 0 : sign(diff) * std::pow(std::abs(diff), p - 1) * grad / std::pow(dist, p - 1); }
   };
 
   // Two norm
   struct two {
-    static inline __device__ void inc(scalar_t& agg, const scalar_t diff, const scalar_t p) { agg += diff * diff; }
-    static inline __device__ scalar_t finish(const scalar_t agg, const scalar_t p) { return device_sqrt<scalar_t>(agg); }
-    static inline __device__ void agg(scalar_t& update, const scalar_t other) { update += other; }
-    static inline __device__ scalar_t backward(const scalar_t diff, const scalar_t grad, const scalar_t dist, const scalar_t p) { return dist == 0.0 ? 0 : grad * diff / dist; }
+    static __forceinline__ __device__ void inc(scalar_t& agg, const scalar_t diff, const scalar_t p) { agg += diff * diff; }
+    static __forceinline__ __device__ scalar_t finish(const scalar_t agg, const scalar_t p) { return device_sqrt<scalar_t>(agg); }
+    static __forceinline__ __device__ void agg(scalar_t& update, const scalar_t other) { update += other; }
+    static __forceinline__ __device__ scalar_t backward(const scalar_t diff, const scalar_t grad, const scalar_t dist, const scalar_t p) { return dist == 0.0 ? 0 : grad * diff / dist; }
   };
 
   // General p norm
   struct p {
-    static inline __device__ void inc(scalar_t& agg, const scalar_t diff, const scalar_t p) { agg += ::pow(diff, p); }
-    static inline __device__ scalar_t finish(const scalar_t agg, const scalar_t p) { return ::pow(agg, static_cast<scalar_t>(1) / p); }
-    static inline __device__ void agg(scalar_t& update, const scalar_t other) { update += other; }
-    static inline __device__ scalar_t backward(const scalar_t diff, const scalar_t grad, const scalar_t dist, const scalar_t p) { return dist == 0.0 ? 0 : diff * ::pow(std::abs(diff), p - 2) * grad / ::pow(dist, p - 1); }
+    static __forceinline__ __device__ void inc(scalar_t& agg, const scalar_t diff, const scalar_t p) { agg += std::pow(diff, p); }
+    static __forceinline__ __device__ scalar_t finish(const scalar_t agg, const scalar_t p) { return std::pow(agg, static_cast<scalar_t>(1) / p); }
+    static __forceinline__ __device__ void agg(scalar_t& update, const scalar_t other) { update += other; }
+    static __forceinline__ __device__ scalar_t backward(const scalar_t diff, const scalar_t grad, const scalar_t dist, const scalar_t p) { return dist == 0.0 ? 0 : diff * std::pow(std::abs(diff), p - 2) * grad / std::pow(dist, p - 1); }
   };
 
   // Inf norm
   struct inf {
-    static inline __device__ void inc(scalar_t& agg, const scalar_t diff, const scalar_t p) { if (diff > agg) { agg = diff; } }
-    static inline __device__ scalar_t finish(const scalar_t agg, const scalar_t p) { return agg; }
-    static inline __device__ void agg(scalar_t& update, const scalar_t other) { if (other > update) { update = other; } }
-    static inline __device__ scalar_t backward(const scalar_t diff, const scalar_t grad, const scalar_t dist, const scalar_t p) { return grad * sign(diff) * (std::abs(diff) == dist); }
+    static __forceinline__ __device__ void inc(scalar_t& agg, const scalar_t diff, const scalar_t p) { if (diff > agg) { agg = diff; } }
+    static __forceinline__ __device__ scalar_t finish(const scalar_t agg, const scalar_t p) { return agg; }
+    static __forceinline__ __device__ void agg(scalar_t& update, const scalar_t other) { if (other > update) { update = other; } }
+    static __forceinline__ __device__ scalar_t backward(const scalar_t diff, const scalar_t grad, const scalar_t dist, const scalar_t p) { return grad * sign(diff) * (std::abs(diff) == dist); }
   };
 
 };
@@ -165,15 +164,15 @@ void pdist_forward_kernel_impl(Tensor& result, const Tensor& self, double p) {
 
   AT_DISPATCH_FLOATING_TYPES(self.type(), "pdist_cuda", [&] {
     if (p == 0.0) {
-     hipLaunchKernelGGL( pdist_kernel_cuda_impl<scalar_t, dists<scalar_t>::zero>, dim3(grid), dim3(block), 0, 0, result.data<scalar_t>(), self.data<scalar_t>(), n, m, p);
+      pdist_kernel_cuda_impl<scalar_t, dists<scalar_t>::zero><<<grid, block>>>(result.data<scalar_t>(), self.data<scalar_t>(), n, m, p);
     } else if (p == 1.0) {
-     hipLaunchKernelGGL( pdist_kernel_cuda_impl<scalar_t, dists<scalar_t>::one>, dim3(grid), dim3(block), 0, 0, result.data<scalar_t>(), self.data<scalar_t>(), n, m, p);
+      pdist_kernel_cuda_impl<scalar_t, dists<scalar_t>::one><<<grid, block>>>(result.data<scalar_t>(), self.data<scalar_t>(), n, m, p);
     } else if (p == 2.0) {
-     hipLaunchKernelGGL( pdist_kernel_cuda_impl<scalar_t, dists<scalar_t>::two>, dim3(grid), dim3(block), 0, 0, result.data<scalar_t>(), self.data<scalar_t>(), n, m, p);
+      pdist_kernel_cuda_impl<scalar_t, dists<scalar_t>::two><<<grid, block>>>(result.data<scalar_t>(), self.data<scalar_t>(), n, m, p);
     } else if (std::isinf(p)) {
-     hipLaunchKernelGGL( pdist_kernel_cuda_impl<scalar_t, dists<scalar_t>::inf>, dim3(grid), dim3(block), 0, 0, result.data<scalar_t>(), self.data<scalar_t>(), n, m, p);
+      pdist_kernel_cuda_impl<scalar_t, dists<scalar_t>::inf><<<grid, block>>>(result.data<scalar_t>(), self.data<scalar_t>(), n, m, p);
     } else {
-     hipLaunchKernelGGL( pdist_kernel_cuda_impl<scalar_t, dists<scalar_t>::p>, dim3(grid), dim3(block), 0, 0, result.data<scalar_t>(), self.data<scalar_t>(), n, m, p);
+      pdist_kernel_cuda_impl<scalar_t, dists<scalar_t>::p><<<grid, block>>>(result.data<scalar_t>(), self.data<scalar_t>(), n, m, p);
     }
   });
 }
@@ -196,15 +195,15 @@ void pdist_backward_kernel_impl(Tensor& result, const Tensor& grad, const Tensor
   Tensor buffer = at::empty({n - 1, result.size(0), result.size(1)}, result.options());
   AT_DISPATCH_FLOATING_TYPES(self.type(), "pdist_cuda_backward", [&] {
     if (p == 1.0) {
-     hipLaunchKernelGGL( pdist_backward_kernel_cuda_impl<scalar_t, dists<scalar_t>::one>, dim3(grid), dim3(block), 0, 0, buffer.data<scalar_t>(), grad.data<scalar_t>(), self.data<scalar_t>(), dist.data<scalar_t>(), grad.stride(0), n, m, dist.numel(), p);
+      pdist_backward_kernel_cuda_impl<scalar_t, dists<scalar_t>::one><<<grid, block>>>(buffer.data<scalar_t>(), grad.data<scalar_t>(), self.data<scalar_t>(), dist.data<scalar_t>(), grad.stride(0), n, m, dist.numel(), p);
     } else if (p < 2.0) {
-     hipLaunchKernelGGL( pdist_backward_kernel_cuda_impl<scalar_t, dists<scalar_t>::lt_two>, dim3(grid), dim3(block), 0, 0, buffer.data<scalar_t>(), grad.data<scalar_t>(), self.data<scalar_t>(), dist.data<scalar_t>(), grad.stride(0), n, m, dist.numel(), p);
+      pdist_backward_kernel_cuda_impl<scalar_t, dists<scalar_t>::lt_two><<<grid, block>>>(buffer.data<scalar_t>(), grad.data<scalar_t>(), self.data<scalar_t>(), dist.data<scalar_t>(), grad.stride(0), n, m, dist.numel(), p);
     } else if (p == 2.0) {
-     hipLaunchKernelGGL( pdist_backward_kernel_cuda_impl<scalar_t, dists<scalar_t>::two>, dim3(grid), dim3(block), 0, 0, buffer.data<scalar_t>(), grad.data<scalar_t>(), self.data<scalar_t>(), dist.data<scalar_t>(), grad.stride(0), n, m, dist.numel(), p);
+      pdist_backward_kernel_cuda_impl<scalar_t, dists<scalar_t>::two><<<grid, block>>>(buffer.data<scalar_t>(), grad.data<scalar_t>(), self.data<scalar_t>(), dist.data<scalar_t>(), grad.stride(0), n, m, dist.numel(), p);
     } else if (std::isinf(p)) {
-     hipLaunchKernelGGL( pdist_backward_kernel_cuda_impl<scalar_t, dists<scalar_t>::inf>, dim3(grid), dim3(block), 0, 0, buffer.data<scalar_t>(), grad.data<scalar_t>(), self.data<scalar_t>(), dist.data<scalar_t>(), grad.stride(0), n, m, dist.numel(), p);
+      pdist_backward_kernel_cuda_impl<scalar_t, dists<scalar_t>::inf><<<grid, block>>>(buffer.data<scalar_t>(), grad.data<scalar_t>(), self.data<scalar_t>(), dist.data<scalar_t>(), grad.stride(0), n, m, dist.numel(), p);
     } else {
-     hipLaunchKernelGGL( pdist_backward_kernel_cuda_impl<scalar_t, dists<scalar_t>::p>, dim3(grid), dim3(block), 0, 0, buffer.data<scalar_t>(), grad.data<scalar_t>(), self.data<scalar_t>(), dist.data<scalar_t>(), grad.stride(0), n, m, dist.numel(), p);
+      pdist_backward_kernel_cuda_impl<scalar_t, dists<scalar_t>::p><<<grid, block>>>(buffer.data<scalar_t>(), grad.data<scalar_t>(), self.data<scalar_t>(), dist.data<scalar_t>(), grad.stride(0), n, m, dist.numel(), p);
     }
   });
 

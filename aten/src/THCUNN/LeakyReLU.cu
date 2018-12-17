@@ -12,7 +12,7 @@ struct LeakyReLUUpdateOutput
     : negval_(negval)
   {}
 
-  __device__ inline void operator()(T *out, T *in)
+  __device__ __forceinline__ void operator()(T *out, T *in)
   {
     T x = *in;
     *out = (x > 0) ? x : x * negval_;
@@ -29,7 +29,7 @@ struct LeakyReLUUpdateOutputIP
     : negval_(negval)
   {}
 
-  __device__ inline void operator()(T *x)
+  __device__ __forceinline__ void operator()(T *x)
   {
     *x = (*x > 0) ? *x : negval_ * (*x);
   }
@@ -44,7 +44,7 @@ struct LeakyReLUUpdateGradInput
     : negval_(negval)
   {}
 
-  __device__ inline void operator()(
+  __device__ __forceinline__ void operator()(
     T* gradInput,
     T* input,
     T* gradOutput) const
@@ -62,7 +62,7 @@ struct LeakyReLUUpdateGradInputIP
     : negval_(negval)
   {}
 
-  __device__ inline void operator()(
+  __device__ __forceinline__ void operator()(
     T* gradOutput,
     T* input) const
   {

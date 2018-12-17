@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #pragma once
 
 #include <ATen/ATen.h>
@@ -59,7 +58,7 @@ static void launch_kernel(int64_t N, const func_t& f) {
   dim3 block(nt);
   dim3 grid((N + block.x * vt - 1) / (block.x * vt));
   auto stream = at::cuda::getCurrentCUDAStream();
- hipLaunchKernelGGL( elementwise_kernel<nt, vt, func_t>, dim3(grid), dim3(block), 0, stream, static_cast<int>(N), f);
+  elementwise_kernel<nt, vt, func_t><<<grid, block, 0, stream>>>(N, f);
 }
 
 template<typename func_t>

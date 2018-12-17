@@ -25,7 +25,7 @@
 template <typename T>
 struct TensorFillOp {
   TensorFillOp(T v) : val(v) {}
-  __device__ inline void operator()(T* v) { *v = val; }
+  __device__ __forceinline__ void operator()(T* v) { *v = val; }
 
   const T val;
 };
@@ -113,7 +113,7 @@ template<typename T, typename accT = T>
 struct LinspaceOp {
   __host__ __device__ LinspaceOp(accT start, accT step):
     start_(start), step_(step) { }
-  __device__ inline T operator()(ptrdiff_t index) {
+  __device__ __forceinline__ T operator()(ptrdiff_t index) {
     accT increment = THCNumerics<accT>::mul(step_, ScalarConvert<ptrdiff_t,accT>::to(index));
     accT value = THCNumerics<accT>::add(start_, increment);
     return ScalarConvert<accT,T>::to(value);
@@ -126,7 +126,7 @@ template<typename T, typename accT = T>
 struct LogspaceOp {
   __host__ __device__ LogspaceOp(accT start, accT step):
     start_(start), step_(step) { }
-  __device__ inline T operator()(ptrdiff_t index) {
+  __device__ __forceinline__ T operator()(ptrdiff_t index) {
     accT increment = THCNumerics<accT>::mul(step_, ScalarConvert<ptrdiff_t,accT>::to(index));
     accT value = THCNumerics<accT>::exp10(THCNumerics<accT>::add(start_, increment));
     return ScalarConvert<accT,T>::to(value);

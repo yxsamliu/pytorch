@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "THC.h"
 #include "THCTensorMath.h"
 #include "THCGeneral.h"
@@ -375,7 +374,7 @@ __global__ void indexSelectLargeIndex(TensorInfo<T, IndexType> dst,
 }
 
 template <int Dims, typename T, typename IndexType>
-__device__ inline IndexType indexToOffset(
+__device__ __forceinline__ IndexType indexToOffset(
     const TensorInfo<T, IndexType>& info,
     int64_t index,
     IndexType size)
@@ -391,7 +390,7 @@ __device__ inline IndexType indexToOffset(
 struct WrapIndexOp {
   WrapIndexOp(int64_t size) : size(size) {}
 
-  __device__ inline void operator()(int64_t* out, int64_t* in) {
+  __device__ __forceinline__ void operator()(int64_t* out, int64_t* in) {
     auto idx = *in;
     assert(idx < size && idx >= -size);
     *out = idx < 0 ? idx + size : idx;
@@ -405,7 +404,7 @@ struct TensorTakeOp {
   TensorTakeOp(TensorInfo<T, IndexType> info, IndexType numel, int64_t*, int64_t*)
     : info(info), numel(numel) {}
 
-  __device__ inline void operator()(T* out, int64_t* index) {
+  __device__ __forceinline__ void operator()(T* out, int64_t* index) {
     auto offset = indexToOffset<Dims>(info, *index, numel);
     *out = info.data[offset];
   }
@@ -419,7 +418,7 @@ struct TensorPutOp {
   TensorPutOp(TensorInfo<T, IndexType> info, IndexType numel, int64_t*, int64_t*)
     : info(info), numel(numel) {}
 
-  __device__ inline void operator()(T* value, int64_t* index) {
+  __device__ __forceinline__ void operator()(T* value, int64_t* index) {
     auto offset = indexToOffset<Dims>(info, *index, numel);
     info.data[offset] = *value;
   }
@@ -433,7 +432,7 @@ struct TensorPutAccumulateOp {
   TensorPutAccumulateOp(TensorInfo<T, IndexType> info, IndexType numel, int64_t* start, int64_t* end)
     : info(info), numel(numel), start(start), end(end) {}
 
-  __device__ inline void operator()(T* value, int64_t* index) {
+  __device__ __forceinline__ void operator()(T* value, int64_t* index) {
     if (index == start || *index != *(index - 1)) {
       int64_t linear_index = *index;
       auto offset = indexToOffset<Dims>(info, linear_index, numel);

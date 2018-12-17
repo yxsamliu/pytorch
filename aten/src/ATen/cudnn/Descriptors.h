@@ -7,11 +7,11 @@
 #include <ATen/ATen.h>
 #include <ATen/TensorUtils.h>
 #include "ATen/cuda/ATenCUDAGeneral.h"
-#include <hip/hip_runtime.h>
+#include <cuda.h>
 
 #if CUDNN_VERSION < 7000
 
-#include <hiprand_kernel.h>
+#include <curand_kernel.h>
 
 /*
 Note [cuDNN dropout descriptor initialization]
@@ -234,7 +234,7 @@ inline cudnnStatus_t cudnnRestoreDropoutDescriptor(
   if (ret != CUDNN_STATUS_SUCCESS) return ret;
   if (expectedStateSizeInBytes != stateSizeInBytes) return CUDNN_STATUS_INVALID_VALUE;
   dropoutDesc->dropout = dropout;
-  dropoutDesc->nstates = (int)stateSizeInBytes/sizeof(hiprandState_t);
+  dropoutDesc->nstates = (int)stateSizeInBytes/sizeof(curandState_t);
   dropoutDesc->states = states;
   return CUDNN_STATUS_SUCCESS;
 }
@@ -305,7 +305,7 @@ struct AT_CUDA_API RNNDescriptor
           algo,
           datatype));
 #if CUDNN_VERSION >= 7000 && CUDA_VERSION >= 9000
-    hipDeviceProp_t* prop = at::cuda::getCurrentDeviceProperties();
+    cudaDeviceProp* prop = at::cuda::getCurrentDeviceProperties();
     if (prop->major >= 7) {
       if (datatype == CUDNN_DATA_HALF) {
         cudnnSetRNNMatrixMathType(mut_desc(), CUDNN_TENSOR_OP_MATH);

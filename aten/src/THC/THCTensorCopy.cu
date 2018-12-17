@@ -6,14 +6,14 @@
 
 inline int curGPU() {
   int curDev;
-  THCudaCheck(hipGetDevice(&curDev));
+  THCudaCheck(cudaGetDevice(&curDev));
   return curDev;
 }
 
 // Copy operator for the pointwise apply kernel
 template <typename TypeDst, typename TypeSrc>
 struct CopyOp {
-  __device__ inline void operator()(TypeDst* dst, TypeSrc* src) {
+  __device__ __forceinline__ void operator()(TypeDst* dst, TypeSrc* src) {
 #if __CUDA_ARCH__ >= 350
     *dst = ScalarConvert<TypeSrc, TypeDst>::to(__ldg(src));
 #else
@@ -63,13 +63,13 @@ void THC_copyTensor(THCState* state, THCTensor* dst, THCTensor* src) {
   // If the copy is on the default stream, then we fully synchronize
   // both src and dst's default streams for completion of the
   // copy. We have to explicitly do this for non-contig copies.
-  // This mimics the behavior of cross-device hipMemcpyAsync on
+  // This mimics the behavior of cross-device cudaMemcpyAsync on
   // the default stream.
   // If the copy is not on the default stream, then it is up to the
   // user to add needed synchronization on the dst device, since the
   // stream on the dst device that wishes to synchronize may not be
   // the same index as the one on the src device.
-  hipStream_t copyStream = THCState_getCurrentStreamOnDevice(state, srcDev);
+  cudaStream_t copyStream = THCState_getCurrentStreamOnDevice(state, srcDev);
   if (srcDev != dstDev && copyStream == NULL) {
     // This is a cross-device copy on the default stream. We perform a
     // two-way barrier between both devices' default streams before
@@ -78,27 +78,27 @@ void THC_copyTensor(THCState* state, THCTensor* dst, THCTensor* src) {
     // handled, so that no one is operating on the dst memory when
     // we perform the copy.
     // src waits on dst barrier (src already waits on src)
-    hipEvent_t dstReady;
-    THCudaCheck(hipSetDevice(dstDev));
-    THCudaCheck(hipEventCreateWithFlags(&dstReady, hipEventDisableTiming));
-    THCudaCheck(hipEventRecord(dstReady, NULL));
+    cudaEvent_t dstReady;
+    THCudaCheck(cudaSetDevice(dstDev));
+    THCudaCheck(cudaEventCreateWithFlags(&dstReady, cudaEventDisableTiming));
+    THCudaCheck(cudaEventRecord(dstReady, NULL));
 
-    THCudaCheck(hipSetDevice(srcDev));
-    THCudaCheck(hipStreamWaitEvent(NULL, dstReady, 0));
-    THCudaCheck(hipEventDestroy(dstReady));
+    THCudaCheck(cudaSetDevice(srcDev));
+    THCudaCheck(cudaStreamWaitEvent(NULL, dstReady, 0));
+    THCudaCheck(cudaEventDestroy(dstReady));
   } else if (srcDev != oldDev) {
-    THCudaCheck(hipSetDevice(srcDev));
+    THCudaCheck(cudaSetDevice(srcDev));
   }
 
   // We are now on srcDev
   if (memcpyEligible) {
     // Perform the copy
-    THCudaCheck(hipMemcpyAsync(
+    THCudaCheck(cudaMemcpyAsync(
                   dst->template data<ScalarTypeDst>(),
                   src->template data<ScalarTypeSrc>(),
                   totalElements *
                   sizeof(ScalarTypeDst),
-                  hipMemcpyDeviceToDevice,
+                  cudaMemcpyDeviceToDevice,
                   copyStream));
   } else {
     // Non-contiguous copy or a type-conversion copy
@@ -127,7 +127,7 @@ void THC_copyTensor(THCState* state, THCTensor* dst, THCTensor* src) {
       // involved are non-contiguous and/or are different types.
 
       // Make sure the src is contiguous and in the same type as dst
-      THCudaCheck(hipSetDevice(srcDev));
+      THCudaCheck(cudaSetDevice(srcDev));
       THCTensor* srcContig = NULL;
 
       if (sameType) {
@@ -150,19 +150,19 @@ void THC_copyTensor(THCState* state, THCTensor* dst, THCTensor* src) {
       }
 
       // Make sure the dst is contiguous
-      THCudaCheck(hipSetDevice(dstDev));
+      THCudaCheck(cudaSetDevice(dstDev));
       THCTensor* dstContig = THCTensor_newContiguous<ScalarTypeDst>(state, dst);
 
       // Now, we are ready for a cross-device memcpy of contiguous
       // data, of the same layout and type
-      THCudaCheck(hipSetDevice(srcDev));
+      THCudaCheck(cudaSetDevice(srcDev));
 
-      THCudaCheck(hipMemcpyAsync(
+      THCudaCheck(cudaMemcpyAsync(
                     dstContig->template data<ScalarTypeDst>(),
                     srcContig->template data<ScalarTypeDst>(),
                     totalElements *
                     sizeof(ScalarTypeDst),
-                    hipMemcpyDeviceToDevice,
+                    cudaMemcpyDeviceToDevice,
                     copyStream));
 
       // We are done with the src
@@ -183,26 +183,26 @@ void THC_copyTensor(THCState* state, THCTensor* dst, THCTensor* src) {
     // operate on dst's copy until the copy is complete.
 
     // Still on srcDev, record default stream event
-    hipEvent_t srcReady;
-    THCudaCheck(hipEventCreateWithFlags(&srcReady, hipEventDisableTiming));
-    THCudaCheck(hipEventRecord(srcReady, NULL));
+    cudaEvent_t srcReady;
+    THCudaCheck(cudaEventCreateWithFlags(&srcReady, cudaEventDisableTiming));
+    THCudaCheck(cudaEventRecord(srcReady, NULL));
 
-    THCudaCheck(hipSetDevice(dstDev));
-    THCudaCheck(hipStreamWaitEvent(NULL, srcReady, 0));
-    THCudaCheck(hipEventDestroy(srcReady));
+    THCudaCheck(cudaSetDevice(dstDev));
+    THCudaCheck(cudaStreamWaitEvent(NULL, srcReady, 0));
+    THCudaCheck(cudaEventDestroy(srcReady));
 
     // We are now on dstDev (right above). Restore prior device from dst
     if (dstDev != oldDev) {
-      THCudaCheck(hipSetDevice(oldDev));
+      THCudaCheck(cudaSetDevice(oldDev));
     }
   } else {
     // We are still on srcDev. Restore prior device from src
     if (srcDev != oldDev) {
-      THCudaCheck(hipSetDevice(oldDev));
+      THCudaCheck(cudaSetDevice(oldDev));
     }
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 #include "generic/THCTensorCopy.cu"

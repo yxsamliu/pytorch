@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THCUNN_IM2COL_H
 #define THCUNN_IM2COL_H
 
@@ -40,7 +39,7 @@ __global__ void im2col_kernel(const int64_t n, const Dtype* data_im,
 }
 
 template <typename Dtype>
-void im2col(hipStream_t stream, const Dtype* data_im, const int64_t channels,
+void im2col(cudaStream_t stream, const Dtype* data_im, const int64_t channels,
             const int64_t height, const int64_t width,
             const int64_t height_col, const int64_t width_col,
             const int64_t ksize_h, const int64_t ksize_w, const int64_t pad_h,
@@ -50,13 +49,13 @@ void im2col(hipStream_t stream, const Dtype* data_im, const int64_t channels,
   // kernel responsible for copying a single-channel grid.
   int64_t num_kernels = channels * height_col * width_col;
   // Launch
- hipLaunchKernelGGL( im2col_kernel<Dtype> , dim3(GET_BLOCKS(num_kernels)), dim3(CUDA_NUM_THREADS), 0, stream,  
+  im2col_kernel <<<GET_BLOCKS(num_kernels), CUDA_NUM_THREADS, 0, stream>>> (
       num_kernels, data_im, height, width, ksize_h, ksize_w,
       pad_h, pad_w, stride_h, stride_w,
       dilation_h, dilation_w,
       height_col, width_col, data_col
   );
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 template <typename Dtype, typename Acctype>
@@ -103,7 +102,7 @@ __global__ void col2im_kernel(const int64_t n, const Dtype* data_col,
 
 
 template <typename Dtype, typename Acctype>
-void col2im(hipStream_t stream, const Dtype* data_col, const int64_t channels,
+void col2im(cudaStream_t stream, const Dtype* data_col, const int64_t channels,
             const int64_t height, const int64_t width,
             const int64_t output_height, const int64_t output_width,
             const int64_t patch_h, const int64_t patch_w, const int64_t pad_h,
@@ -112,13 +111,13 @@ void col2im(hipStream_t stream, const Dtype* data_col, const int64_t channels,
   int64_t num_kernels = channels * height * width;
   // To avoid involving atomic operations, we will launch one kernel per
   // bottom dimension, and then in the kernel add up the top dimensions.
- hipLaunchKernelGGL( col2im_kernel<Dtype, Acctype> , dim3(GET_BLOCKS(num_kernels)), dim3(CUDA_NUM_THREADS), 0, stream,  
+  col2im_kernel<Dtype, Acctype> <<<GET_BLOCKS(num_kernels), CUDA_NUM_THREADS, 0, stream>>> (
       num_kernels, data_col, height, width, channels,
       patch_h, patch_w, pad_h, pad_w, stride_h, stride_w,
       dilation_h, dilation_w,
       output_height, output_width, data_im
   );
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 #endif

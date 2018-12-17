@@ -42,7 +42,7 @@ THCudaByteTensor_logicalAnd(THCState* state, THCudaByteTensor *self, THCudaByteT
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 THC_API void
@@ -58,5 +58,5 @@ THCudaByteTensor_logicalAny(THCState* state, THCudaByteTensor *self, THCudaByteT
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }

@@ -9,7 +9,7 @@
 #include "torch/csrc/utils/python_numbers.h"
 #include "torch/csrc/utils/python_compat.h"
 
-#ifdef USE_ROCM
+#ifdef USE_CUDA
 #include <THC/THC.h>
 #include <ATen/cuda/CUDAStream.h>
 #endif
@@ -173,7 +173,7 @@ bool getBackCompatKeepdimWarn();
 bool maybeThrowBackCompatKeepdimWarn(char *func);
 
 // NB: This is in torch/csrc/cuda/utils.cpp, for whatever reason
-#ifdef USE_ROCM
+#ifdef USE_CUDA
 std::vector<c10::optional<at::cuda::CUDAStream>> THPUtils_PySequence_to_CUDAStreamList(PyObject *obj);
 #endif
 

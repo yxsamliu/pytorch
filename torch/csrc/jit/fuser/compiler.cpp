@@ -11,13 +11,13 @@
 #include "torch/csrc/jit/fuser/codegen.h"
 #include "torch/csrc/jit/fuser/tensor_desc.h"
 
-#if USE_ROCM_FUSER
+#if USE_CUDA_FUSER
   #include "torch/csrc/jit/fuser/cuda/fused_kernel.h"
-#endif // USE_ROCM_FUSER
+#endif // USE_CUDA_FUSER
 
 #if USE_CPU_FUSER
   #include "torch/csrc/jit/fuser/cpu/fused_kernel.h"
-#endif // USE_ROCM_FUSER
+#endif // USE_CUDA_FUSER
 
 #include <iostream>
 #include <memory>
@@ -175,7 +175,7 @@ std::shared_ptr<FusedKernel> compileKernel(
 
   std::shared_ptr<FusedKernel> fused_kernel;
   if (device != kCPUDevice) {
-    #if USE_ROCM_FUSER
+    #if USE_CUDA_FUSER
       fused_kernel = std::make_shared<cuda::FusedKernelCUDA>(
         device
       , name
@@ -187,7 +187,7 @@ std::shared_ptr<FusedKernel> compileKernel(
       , has_random);
     #else
       throw std::runtime_error("CUDA Fusion is not supported on this build.");
-    #endif // USE_ROCM_FUSER
+    #endif // USE_CUDA_FUSER
   } else {
     #if USE_CPU_FUSER
       fused_kernel = std::make_shared<cpu::FusedKernelCPU>(

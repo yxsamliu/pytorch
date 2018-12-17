@@ -12,8 +12,8 @@
 THCGenerator* THCRandom_getGenerator(THCState* state);
 
 #include "nvrtc.h"
-#include "hip/hip_runtime.h"
-#include "hip/hip_runtime.h"
+#include "cuda.h"
+#include "cuda_runtime.h"
 
 #include <stdexcept>
 #include <sstream>
@@ -25,18 +25,18 @@ THCGenerator* THCRandom_getGenerator(THCState* state);
 namespace torch { namespace jit { namespace fuser { namespace cuda {
 
 void checkCUDAVersion(
-  const hipDeviceProp_t& prop) {
-  if ((prop.major >= 6 && 0 < 8000) ||
-      (prop.major >= 7 && 0 < 9000)) {
+  const cudaDeviceProp& prop) {
+  if ((prop.major >= 6 && CUDA_VERSION < 8000) ||
+      (prop.major >= 7 && CUDA_VERSION < 9000)) {
     std::stringstream err_string;
     err_string << "In CUDAFusedKernel, PyTorch compiled with insufficient CUDA version: "
-         << 0 << " for the current GPU device " << prop.name
+         << CUDA_VERSION << " for the current GPU device " << prop.name
          << " with device capability " << prop.major << "." << prop.minor;
     throw std::runtime_error(err_string.str());
   }
 }
 
-static void getMajorMinor(const hipDeviceProp_t* const prop, int& major, int& minor) {
+static void getMajorMinor(const cudaDeviceProp* const prop, int& major, int& minor) {
   int nvrtc_major, nvrtc_minor;
   TORCH_NVRTC_CHECK(nvrtcVersion(&nvrtc_major, &nvrtc_minor));
 
@@ -85,12 +85,12 @@ FusedKernelCUDA::FusedKernelCUDA(
           has_random),
       device_(device) {
   // Initializes driver's API context (if necessary)
-  hipCtx_t pctx = 0;
-  TORCH_CU_CHECK(hipCtxGetCurrent(&pctx));
+  CUcontext pctx = 0;
+  TORCH_CU_CHECK(cuCtxGetCurrent(&pctx));
   if (!pctx) {
      std::unique_lock<std::mutex> cudaFreeMutexLock(
      *(THCCachingAllocator_getCudaFreeMutex()));
-     hipFree(0);
+     cudaFree(0);
   }
 
   // Note: hacked at::DeviceGuard since at::DeviceGuard was failing to work
@@ -134,11 +134,11 @@ FusedKernelCUDA::FusedKernelCUDA(
   ptx_.resize(ptx_size);
   TORCH_NVRTC_CHECK(nvrtcGetPTX(program, ptx_.data()));
 
-  TORCH_CU_CHECK(hipModuleLoadData(&module_, ptx_.data()));
-  TORCH_CU_CHECK(hipModuleGetFunction(&function_, module_, name_.c_str()));
+  TORCH_CU_CHECK(cuModuleLoadData(&module_, ptx_.data()));
+  TORCH_CU_CHECK(cuModuleGetFunction(&function_, module_, name_.c_str()));
 
   // Computes max blocks
-  TORCH_CU_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+  TORCH_CU_CHECK(cuOccupancyMaxActiveBlocksPerMultiprocessor(
     &maxBlocks_, function_, 128, 0));
   maxBlocks_ *= prop_->multiProcessorCount;
 
@@ -173,7 +173,7 @@ void FusedKernelCUDA::launch_raw(
 
   // Launches kernel on current stream (device was set by executor)
   auto stream = at::cuda::getCurrentCUDAStream();
-  TORCH_CU_CHECK(hipModuleLaunchKernel(
+  TORCH_CU_CHECK(cuLaunchKernel(
     function_,
     nBlocks, 1, 1,
     kBlockSize, 1, 1,

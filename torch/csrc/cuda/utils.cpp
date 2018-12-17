@@ -8,7 +8,7 @@
 #define THC_GENERIC_FILE "torch/csrc/generic/utils.cpp"
 #include <THC/THCGenerateAllTypes.h>
 
-#ifdef USE_ROCM
+#ifdef USE_CUDA
 // NB: It's a list of *optional* CUDAStream; when nullopt, that means to use
 // whatever the current stream of the device the input is associated with was.
 std::vector<c10::optional<at::cuda::CUDAStream>> THPUtils_PySequence_to_CUDAStreamList(PyObject *obj) {

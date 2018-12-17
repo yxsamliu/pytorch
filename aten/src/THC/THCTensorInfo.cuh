@@ -1,7 +1,7 @@
 #ifndef THC_TENSOR_INFO_INC
 #define THC_TENSOR_INFO_INC
 
-#include <hip/hip_runtime.h>
+#include <cuda.h>
 #include <assert.h>
 #include "THCGeneral.h"
 #include "THCIntegerDivider.cuh"

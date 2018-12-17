@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/cuda/CUDAContext.h"
 #include "ATen/cuda/CUDAApplyUtils.cuh"
@@ -36,7 +35,7 @@ __global__ void kernelHistogram1D(
     int binsize,
     IndexType totalElements,
     Op getOp) {
-  HIP_DYNAMIC_SHARED( unsigned char, my_smem)
+  extern __shared__ unsigned char my_smem[];
   output_t* smem = nullptr;
 
   if (MemoryType == CUDAHistogramMemoryType::SHARED) {
@@ -114,13 +113,13 @@ __global__ void kernelHistogram1D(
 }
 
 #define HANDLE_CASE(MEMORY_TYPE, WEIGHTS_OP)                               \
- hipLaunchKernelGGL( kernelHistogram1D<output_t, input_t, IndexType, 1, 2, 1, MEMORY_TYPE>    \
-      , dim3(grid),                                                             \
+  kernelHistogram1D<output_t, input_t, IndexType, 1, 2, 1, MEMORY_TYPE>    \
+      <<<grid,                                                             \
          block,                                                            \
          (MEMORY_TYPE == CUDAHistogramMemoryType::SHARED) ? sharedMem : 0, \
-         getCurrentCUDAStream(),                     \
+         getCurrentCUDAStream()>>>(                    \
           aInfo, pInfo, bInfo, binsize, totalElements, WEIGHTS_OP);        \
-  AT_ASSERTM(hipGetLastError() == hipSuccess, "kernelHistogram1D failed");
+  AT_ASSERTM(cudaGetLastError() == cudaSuccess, "kernelHistogram1D failed");
 
 #define HANDLE_SWITCH_CASE(mType, getOp)                        \
   switch (mType) {                                              \
@@ -135,11 +134,11 @@ __global__ void kernelHistogram1D(
   }
 
 inline int64_t getFreeGlobalMemory() {
-  // no need to use `hipSetDevice`
+  // no need to use `cudaSetDevice`
   size_t free_mem, total_mem;
-  hipMemGetInfo(&free_mem, &total_mem);
+  cudaMemGetInfo(&free_mem, &total_mem);
   AT_ASSERTM(
-      hipGetLastError() == hipSuccess,
+      cudaGetLastError() == cudaSuccess,
       "CUDA_tensor_histogram failed to get free global memory");
   return static_cast<int64_t>(free_mem);
 }
@@ -260,7 +259,7 @@ Tensor _bincount_cuda_template(
   }
 
   auto nbins = self.max().item<int64_t>() + 1L;
-  nbins = ::max(nbins, minlength);
+  nbins = std::max(nbins, minlength);
   // alloc output counter on GPU
   Tensor output;
   if (has_weights) {

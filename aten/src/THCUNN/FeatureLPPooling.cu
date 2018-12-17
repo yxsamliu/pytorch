@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "THCUNN.h"
 #include "THCAtomics.cuh"
 #include "THCDeviceTensor.cuh"
@@ -24,7 +23,7 @@ struct RegisterUtils {
   /// arr[i] = arr[i + Shift]
   /// The `Shift` elements at the end are left unchanged.
   template <int Shift>
-  __device__ inline static void shiftLeft(T arr[N]) {
+  __device__ __forceinline__ static void shiftLeft(T arr[N]) {
     // e.g., N = 5, Shift = 2:
     // 0 1 2 3 4 becomes =>
     // 2 3 4 3 4 (last are unchanged)
@@ -36,31 +35,31 @@ struct RegisterUtils {
 };
 
 template <typename T>
-__device__ inline
+__device__ __forceinline__
 int getDim1Point(const THCDeviceTensor<T, 4>& input) {
   int threadPoint = blockIdx.x * blockDim.x + threadIdx.x;
   return threadPoint / input.getSize(3);
 }
 
 template <typename T>
-__device__ inline
+__device__ __forceinline__
 int getDim2Point(const THCDeviceTensor<T, 4>& input) {
   int threadPoint = blockIdx.x * blockDim.x + threadIdx.x;
   return threadPoint % input.getSize(3);
 }
 
-__device__ inline
+__device__ __forceinline__
 int getStartOutputFeature() {
   return blockIdx.y * OUTPUT_FEATURES_PER_THREAD;
 }
 
 template <typename T>
-__device__ inline
+__device__ __forceinline__
 int getEndOutputFeature(const THCDeviceTensor<T, 4>& output) {
   return min((blockIdx.y + 1) * OUTPUT_FEATURES_PER_THREAD, output.getSize(1));
 }
 
-__device__ inline
+__device__ __forceinline__
 int getBatch() {
   return blockIdx.z;
 }
@@ -71,33 +70,33 @@ int getBatch() {
 // typedef T (*MathOp)(const T in, const T arg);
 
 template <typename T>
-__device__ inline T power2(const T in, const T power) {
+__device__ __forceinline__ T power2(const T in, const T power) {
   return THCNumerics<T>::mul(in, in);
 }
 
 template <typename T>
-__device__ inline T root2(const T in, const T power) {
+__device__ __forceinline__ T root2(const T in, const T power) {
   return THCNumerics<T>::sqrt(in);
 }
 
 template <typename T>
-__device__ inline T powerGrad2(const T in, const T power) {
+__device__ __forceinline__ T powerGrad2(const T in, const T power) {
   return in;
 }
 
 template <typename T>
-__device__ inline T powerN(const T in, const T power) {
+__device__ __forceinline__ T powerN(const T in, const T power) {
   return THCNumerics<T>::pow(in, power);
 }
 
 template <typename T>
-__device__ inline T rootN(const T in, const T power) {
+__device__ __forceinline__ T rootN(const T in, const T power) {
   const T invPower = THCNumerics<T>::cinv(power);
   return THCNumerics<T>::pow(in, invPower);
 }
 
 template <typename T>
-__device__ inline T powerGradN(const T in, const T power) {
+__device__ __forceinline__ T powerGradN(const T in, const T power) {
   return THCNumerics<T>::pow(in,
                              THCNumerics<T>::sub(power,
                                                  ScalarConvert<int, T>::to(1)));
@@ -395,9 +394,9 @@ runFeatureLPPoolingUpdateOutput(THCState* state,
                                 const THCDeviceTensor<T, 4>& input,
                                 THCDeviceTensor<T, 4>& output,
                                 float power, int width, int stride) {
-  hipStream_t stream =
+  cudaStream_t stream =
     THCState_getCurrentStream(state);
-  const hipDeviceProp_t* deviceProperties =
+  const cudaDeviceProp* deviceProperties =
     THCState_getCurrentDeviceProperties(state);
 
   int outputFeatures = ((input.getSize(1) - width) / stride) + 1;
@@ -431,10 +430,11 @@ runFeatureLPPoolingUpdateOutput(THCState* state,
 
 #define L2_STRIDE_CASE(STRIDE, WIDTH)                                   \
   case STRIDE:                                                          \
-   hipLaunchKernelGGL( detail::featureLPPoolingUpdateOutput<T, WIDTH,                              \
+    detail::                                                            \
+    featureLPPoolingUpdateOutput<T, WIDTH,                              \
                                  STRIDE,                                \
                                  detail::power2,                        \
-                                 detail::root2>, dim3(grid), dim3(block), 0, stream,  \
+                                 detail::root2><<<grid, block, 0, stream>>>( \
                                    input, output,                       \
                                    ScalarConvert<float, T>::to(power)); \
     return true;
@@ -450,10 +450,11 @@ runFeatureLPPoolingUpdateOutput(THCState* state,
 
 #define LP_STRIDE_CASE(STRIDE, WIDTH)                                   \
   case STRIDE:                                                          \
-   hipLaunchKernelGGL( detail::featureLPPoolingUpdateOutput<T, WIDTH,                              \
+    detail::                                                            \
+    featureLPPoolingUpdateOutput<T, WIDTH,                              \
                                  STRIDE,                                \
                                  detail::powerN,                        \
-                                 detail::rootN>, dim3(grid), dim3(block), 0, stream,  \
+                                 detail::rootN><<<grid, block, 0, stream>>>( \
                                    input, output,                       \
                                    ScalarConvert<float, T>::to(power)); \
     return true;
@@ -522,9 +523,9 @@ runFeatureLPPoolingUpdateGradInput(THCState* state,
                                    const THCDeviceTensor<T, 4>& output,
                                    THCDeviceTensor<T, 4>& gradInput,
                                    float power, int width, int stride) {
-  hipStream_t stream =
+  cudaStream_t stream =
     THCState_getCurrentStream(state);
-  const hipDeviceProp_t* deviceProperties =
+  const cudaDeviceProp* deviceProperties =
     THCState_getCurrentDeviceProperties(state);
 
   for (int i = 0; i < 4; ++i) {
@@ -567,8 +568,9 @@ runFeatureLPPoolingUpdateGradInput(THCState* state,
 
 #define L2_STRIDE_CASE(STRIDE, WIDTH)                                   \
   case STRIDE:                                                          \
-   hipLaunchKernelGGL( detail::featureLPPoolingUpdateGradInput<                                    \
-          T, WIDTH, STRIDE, detail::powerGrad2>, dim3(grid), dim3(block), 0, stream,  \
+    detail::                                                            \
+    featureLPPoolingUpdateGradInput<                                    \
+          T, WIDTH, STRIDE, detail::powerGrad2><<<grid, block, 0, stream>>>( \
             gradOutput, input, output, gradInput,                       \
             ScalarConvert<float, T>::to(power));                        \
     return true;
@@ -584,8 +586,9 @@ runFeatureLPPoolingUpdateGradInput(THCState* state,
 
 #define LP_STRIDE_CASE(STRIDE, WIDTH)                                   \
   case STRIDE:                                                          \
-   hipLaunchKernelGGL( detail::featureLPPoolingUpdateGradInput<                                    \
-          T, WIDTH, STRIDE, detail::powerGradN>, dim3(grid), dim3(block), 0, stream,  \
+    detail::                                                            \
+    featureLPPoolingUpdateGradInput<                                    \
+          T, WIDTH, STRIDE, detail::powerGradN><<<grid, block, 0, stream>>>( \
             gradOutput, input, output, gradInput,                       \
             ScalarConvert<float, T>::to(power));                        \
     return true;

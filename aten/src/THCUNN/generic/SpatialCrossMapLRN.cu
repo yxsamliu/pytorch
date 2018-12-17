@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/SpatialCrossMapLRN.cu"
 #else
@@ -35,14 +34,14 @@ void THNN_(LRNforward)(THCState* state, THCTensor* input, THCTensor* output,
   input = THCTensor_(newContiguous)(state, input);
 
   int n_threads = batchSize * imsize_h * imsize_w;
- hipLaunchKernelGGL( LRNFillScale<scalar_t, accreal> , dim3(GET_BLOCKS(n_threads)), dim3(CUDA_NUM_THREADS), 0, THCState_getCurrentStream(state), 
+  LRNFillScale<scalar_t, accreal> <<<GET_BLOCKS(n_threads), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state)>>>(
       n_threads, THCTensor_(data)(state, input), batchSize, nInputPlane, imsize_h, imsize_w, local_size,
       alpha / local_size, k, THCTensor_(data)(state, scale));
   n_threads *= nInputPlane;
-  THCudaCheck(hipGetLastError());
- hipLaunchKernelGGL( LRNComputeOutput<scalar_t>, dim3(GET_BLOCKS(n_threads)), dim3(CUDA_NUM_THREADS), 0, THCState_getCurrentStream(state), 
-    static_cast<const int>(n_threads), THCTensor_(data)(state, input), THCTensor_(data)(state, scale), -beta, THCTensor_(data)(state, output));
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
+  LRNComputeOutput<<<GET_BLOCKS(n_threads), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state)>>>(
+    n_threads, THCTensor_(data)(state, input), THCTensor_(data)(state, scale), -beta, THCTensor_(data)(state, output));
+  THCudaCheck(cudaGetLastError());
 
   THCTensor_(free)(state, input);
 }
@@ -81,12 +80,12 @@ void THNN_(LRNbackward)(THCState* state, THCTensor* input, THCTensor* output,
   gradOutput = THCTensor_(newContiguous)(state, gradOutput);
 
   int n_threads = batchSize * imsize_h * imsize_w;
- hipLaunchKernelGGL( LRNComputeDiff<scalar_t, accreal> , dim3(GET_BLOCKS(n_threads)), dim3(CUDA_NUM_THREADS), 0, THCState_getCurrentStream(state), 
-      static_cast<const int>(n_threads), THCTensor_(data)(state, input), THCTensor_(data)(state, output),
-      THCTensor_(data)(state, scale), THCTensor_(data)(state, gradOutput), static_cast<const int>(batchSize), static_cast<const int>(nInputPlane), static_cast<const int>(imsize_h), static_cast<const int>(imsize_w),
-      static_cast<const int>(local_size), -beta, ScalarConvert<int, scalar_t>::to(2) * alpha * beta / static_cast<const int>(local_size),
+  LRNComputeDiff<scalar_t, accreal> <<<GET_BLOCKS(n_threads), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state)>>>(
+      n_threads, THCTensor_(data)(state, input), THCTensor_(data)(state, output),
+      THCTensor_(data)(state, scale), THCTensor_(data)(state, gradOutput), batchSize, nInputPlane, imsize_h, imsize_w,
+      local_size, -beta, ScalarConvert<int, scalar_t>::to(2) * alpha * beta / local_size,
       THCTensor_(data)(state, gradInput));
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 
   THCTensor_(free)(state, input);
   THCTensor_(free)(state, gradOutput);

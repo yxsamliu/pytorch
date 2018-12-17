@@ -1,6 +1,6 @@
 #pragma once
 #include "torch/csrc/jit/fuser/config.h"
-#if USE_ROCM_FUSER || USE_CPU_FUSER
+#if USE_CUDA_FUSER || USE_CPU_FUSER
 
 #include "ATen/ATen.h"
 #include "torch/csrc/utils/disallow_copy.h"
@@ -38,7 +38,7 @@ struct FusedKernel {
   // arguments is a list of pointers to the arguments for the compiled CUDA/CPU
   // code.
   // The format of arguments is suitable for directly passing to a call to
-  // hipModuleLaunchKernel as the kernel arguments.
+  // cuLaunchKernel as the kernel arguments.
   // Currently the first argument is a pointer to numel (for passing to
   // CUDA code), and the remainder are pointers to the TensorInfo<T> structs
   // that compiled code uses to load Tensor data.
@@ -82,4 +82,4 @@ protected:
 } // namespace jit
 } // namespace torch
 
-#endif // USE_ROCM_FUSER || USE_CPU_FUSER
+#endif // USE_CUDA_FUSER || USE_CPU_FUSER

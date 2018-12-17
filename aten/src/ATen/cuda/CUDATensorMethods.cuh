@@ -3,9 +3,9 @@
 #include "ATen/Tensor.h"
 #include "ATen/core/Half.h"
 
-#include <hip/hip_runtime.h>
-#include <hip/hip_runtime.h>
-#include <hip/hip_fp16.h>
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cuda_fp16.h>
 
 namespace at {
 template <>

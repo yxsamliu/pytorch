@@ -33,7 +33,6 @@ that there exists an ordering of the tensor's dimensions
 that is nicely "nested," with each dimension contained
 within the next one.
 */
-#if !defined(__HIP_DEVICE_COMPILE__)
 bool maybeOverlappingIndices(const Tensor& t) {
   /* Extract size/stride arrays; only consider size >1 dims. */
   SizeAndStride *info = (SizeAndStride *)alloca(sizeof(SizeAndStride) * t.dim());
@@ -69,7 +68,6 @@ bool maybeOverlappingIndices(const Tensor& t) {
 
   return false;
 }
-#endif
 
 bool canUse32BitIndexMath(const Tensor& t, int64_t max_elem) {
   int64_t elements = t.numel();

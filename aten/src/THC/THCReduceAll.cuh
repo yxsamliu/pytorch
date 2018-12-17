@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_REDUCEALL_INC
 #define THC_REDUCEALL_INC
 
@@ -41,7 +40,7 @@ kernelReduceAll(TensorInfo<T, IndexType> in,
   }
 
   // Reduce within the block
-  HIP_DYNAMIC_SHARED( char, smemChar)
+  extern __shared__ char smemChar[];
   AccT* smem = (AccT*) smemChar;
   r = reduceBlock(smem, blockDim.x, r, reduceOp, init);
 
@@ -52,13 +51,13 @@ kernelReduceAll(TensorInfo<T, IndexType> in,
 }
 
 template <typename IndexType>
-__device__ inline IndexType getStartIndex(IndexType totalSize) {
+__device__ __forceinline__ IndexType getStartIndex(IndexType totalSize) {
   IndexType sizePerBlock = THCCeilDiv(totalSize, (IndexType) gridDim.x);
   return blockIdx.x * sizePerBlock;
 }
 
 template <typename IndexType>
-__device__ inline IndexType getEndIndex(IndexType totalSize) {
+__device__ __forceinline__ IndexType getEndIndex(IndexType totalSize) {
   IndexType sizePerBlock = THCCeilDiv(totalSize, (IndexType) gridDim.x);
   return min((IndexType) ((blockIdx.x + 1) * sizePerBlock), totalSize);
 }
@@ -89,7 +88,7 @@ kernelReduceAllPass1(TensorInfo<T, IndexType> in,
   }
 
   // Reduce within the block
-  HIP_DYNAMIC_SHARED( char, smemChar)
+  extern __shared__ char smemChar[];
   AccT* smem = (AccT*) smemChar;
   r = reduceBlock(smem, blockDim.x, r, reduceOp, init);
 
@@ -112,7 +111,7 @@ kernelReduceAllPass2(int numPass1Blocks,
   }
 
   // Reduce within the block
-  HIP_DYNAMIC_SHARED( char, smemChar)
+  extern __shared__ char smemChar[];
   T* smem = (T*) smemChar;
   r = reduceBlock(smem, numPass1Blocks, r, reduceOp, init);
 
@@ -192,8 +191,8 @@ void callReduceAll(THCState* state,
     getPass1ReduceBlockGrid<AccT>(state, totalElements, grid, block);
     size_t smemSize = block.x * sizeof(AccT);
 
-   hipLaunchKernelGGL( kernelReduceAllPass1<T, IndexType, AccT, ModifyOp, ReduceOp, ADims>
-      , dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
+    kernelReduceAllPass1<T, IndexType, AccT, ModifyOp, ReduceOp, ADims>
+      <<<grid, block, smemSize, THCState_getCurrentStream(state)>>>(
         in, (IndexType) totalElements, init, modifyOp, reduceOp,
         (AccT*) scratchSpace);
 
@@ -201,9 +200,9 @@ void callReduceAll(THCState* state,
     getPass2ReduceBlockGrid<AccT>(state, totalElements, grid, block);
     smemSize = block.x * sizeof(AccT);
 
-   hipLaunchKernelGGL( kernelReduceAllPass2<AccT, ReduceOp>
-      , dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
-        static_cast<int>(numPass1Blocks), init, reduceOp,
+    kernelReduceAllPass2<AccT, ReduceOp>
+      <<<grid, block, smemSize, THCState_getCurrentStream(state)>>>(
+        numPass1Blocks, init, reduceOp,
         (AccT*) scratchSpace, devOut);
 
     THCudaFree(state, scratchSpace);
@@ -211,8 +210,8 @@ void callReduceAll(THCState* state,
     getSinglePassReduceBlockGrid(totalElements, grid, block);
     size_t smemSize = block.x * sizeof(AccT);
 
-   hipLaunchKernelGGL( kernelReduceAll<T, IndexType, AccT, ModifyOp, ReduceOp, ADims>
-      , dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
+    kernelReduceAll<T, IndexType, AccT, ModifyOp, ReduceOp, ADims>
+      <<<grid, block, smemSize, THCState_getCurrentStream(state)>>>(
         in, (IndexType) totalElements, init, modifyOp, reduceOp, devOut);
   }
 }
@@ -310,13 +309,13 @@ bool THC_reduceAll(THCState* state,
   // If our destination is not on the device, copy the value back to
   // the host (synchronous!)
   if (!outOnDevice) {
-    hipStream_t stream = THCState_getCurrentStream(state);
-    THCudaCheck(hipMemcpyAsync(out,
+    cudaStream_t stream = THCState_getCurrentStream(state);
+    THCudaCheck(cudaMemcpyAsync(out,
                                 devOut,
                                 sizeof(AccT),
-                                hipMemcpyDeviceToHost,
+                                cudaMemcpyDeviceToHost,
                                 stream));
-    THCudaCheck(hipStreamSynchronize(stream));
+    THCudaCheck(cudaStreamSynchronize(stream));
   }
 
   if (freeDevOut) {

@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "CUDATest.hpp"
 #include <ATen/cuda/Exceptions.h>
 
@@ -17,12 +16,12 @@ __global__ void waitClocks(const uint64_t count) {
 } // namespace
 
 void cudaSleep(at::cuda::CUDAStream& stream, uint64_t clocks) {
- hipLaunchKernelGGL( waitClocks, dim3(1), dim3(1), 0, stream.stream(), clocks);
+  waitClocks<<<1, 1, 0, stream.stream()>>>(clocks);
 }
 
 int cudaNumDevices() {
   int n = 0;
-  AT_CUDA_CHECK(hipGetDeviceCount(&n));
+  AT_CUDA_CHECK(cudaGetDeviceCount(&n));
   return n;
 }
 

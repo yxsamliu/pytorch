@@ -1,11 +1,11 @@
 #include "torch/csrc/jit/fuser/interface.h"
 
 #include "torch/csrc/jit/fuser/config.h"
-#if USE_ROCM_FUSER || USE_CPU_FUSER
+#if USE_CUDA_FUSER || USE_CPU_FUSER
   #include "torch/csrc/jit/fuser/compiler.h"
   #include "torch/csrc/jit/fuser/executor.h"
   #include "torch/csrc/jit/fuser/fallback.h"
-#endif // USE_ROCM_FUSER || USE_CPU_FUSER
+#endif // USE_CUDA_FUSER || USE_CPU_FUSER
 
 #include <stdexcept>
 
@@ -19,20 +19,20 @@ bool cpu_fuser_enabled = false;
 } // namespace detail
 
 int64_t registerFusion(const Node* fusion_group) {
-  #if USE_ROCM_FUSER || USE_CPU_FUSER
+  #if USE_CUDA_FUSER || USE_CPU_FUSER
     return fuser::registerFusion(fusion_group);
   #else
     throw std::runtime_error("Fusion not supported for this build.");
-  #endif // USE_ROCM_FUSER || USE_CPU_FUSER
+  #endif // USE_CUDA_FUSER || USE_CPU_FUSER
 }
 
 void runFusion(const int64_t key, Stack& stack) {
-  #if USE_ROCM_FUSER || USE_CPU_FUSER
+  #if USE_CUDA_FUSER || USE_CPU_FUSER
     const auto result = fuser::runFusion(key, stack);
     if (!result) fuser::runFallback(key, stack);
   #else 
     throw std::runtime_error("Fusion not supported for this build.");
-  #endif // USE_ROCM_FUSER || USE_CPU_FUSER
+  #endif // USE_CUDA_FUSER || USE_CPU_FUSER
 }
 
 bool canFuseOnCPU() {
@@ -44,9 +44,9 @@ bool canFuseOnCPU() {
 }
 
 bool canFuseOnGPU() {
-  #if USE_ROCM_FUSER
+  #if USE_CUDA_FUSER
     return true;
-  #endif  // USE_ROCM_FUSER
+  #endif  // USE_CUDA_FUSER
 
   return false;
 }
@@ -60,7 +60,7 @@ void overrideCanFuseOnCPU(bool value) {
 std::vector<at::Tensor> debugLaunchGraph(
   Graph& graph
 , at::ArrayRef<at::Tensor> inputs) {
-  #if USE_ROCM_FUSER || USE_CPU_FUSER
+  #if USE_CUDA_FUSER || USE_CPU_FUSER
     // Creates a fusion group node
     auto wrapper_graph = std::make_shared<Graph>();
     Node* fusion_group = wrapper_graph->insertNode(wrapper_graph->createFusionGroup());
@@ -79,15 +79,15 @@ std::vector<at::Tensor> debugLaunchGraph(
     return fmap(stack, [](const IValue& iv) { return iv.toTensor(); });
   #else 
     throw std::runtime_error("Fusion not supported for this build.");
-  #endif // USE_ROCM_FUSER || USE_CPU_FUSER
+  #endif // USE_CUDA_FUSER || USE_CPU_FUSER
 }
 
 size_t nCompiledKernels() { 
-  #if USE_ROCM_FUSER || USE_CPU_FUSER
+  #if USE_CUDA_FUSER || USE_CPU_FUSER
     return fuser::nCompiledKernels(); 
   #else
     return 0;
-  #endif // USE_ROCM_FUSER || USE_CPU_FUSER
+  #endif // USE_CUDA_FUSER || USE_CPU_FUSER
 }
 
 } // namespace jit

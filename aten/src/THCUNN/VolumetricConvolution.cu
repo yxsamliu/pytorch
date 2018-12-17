@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "THCUNN.h"
 #include "THCTensor.hpp"
 #include "common.h"
@@ -62,7 +61,7 @@ __global__ void im3d2col_kernel(const int64_t n, const Dtype* data_im,
 }
 
 template <typename Dtype>
-void im3d2col(hipStream_t stream, const Dtype* data_im, const int64_t channels,
+void im3d2col(cudaStream_t stream, const Dtype* data_im, const int64_t channels,
               const int64_t height, const int64_t width, const int64_t depth,
               const int64_t kernel_h, const int64_t kernel_w, const int64_t kernel_d,
               const int64_t pad_h, const int64_t pad_w, const int64_t pad_d,
@@ -75,15 +74,15 @@ void im3d2col(hipStream_t stream, const Dtype* data_im, const int64_t channels,
   int64_t width_col = (width + 2 * pad_w - kernel_w) / stride_w + 1;
   int64_t depth_col = (depth + 2 * pad_d - kernel_d) / stride_d + 1;
   int64_t num_kernels = channels * height_col * width_col * depth_col;
- hipLaunchKernelGGL( im3d2col_kernel<Dtype>, dim3(GET_BLOCKS(num_kernels)),
-    dim3(CUDA_NUM_THREADS), 0, stream, num_kernels, data_im,
+  im3d2col_kernel<<<GET_BLOCKS(num_kernels),
+    CUDA_NUM_THREADS, 0, stream>>>(num_kernels, data_im,
                                    height, width, depth,
                                    kernel_h, kernel_w, kernel_d,
                                    pad_h, pad_w, pad_d,
                                    stride_h, stride_w, stride_d,
                                    height_col, width_col, depth_col,
                                    data_col);
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 template <typename Dtype, typename Acctype>
@@ -131,7 +130,7 @@ __global__ void col2im3d_kernel(const int64_t n, const Dtype* data_col,
 }
 
 template <typename Dtype, typename Acctype>
-void col2im3d(hipStream_t stream, const Dtype* data_col, const int64_t channels,
+void col2im3d(cudaStream_t stream, const Dtype* data_col, const int64_t channels,
               const int64_t height, const int64_t width, const int64_t depth,
               const int64_t patch_h, const int64_t patch_w, const int64_t patch_d,
               const int64_t pad_h, const int64_t pad_w, const int64_t pad_d,
@@ -145,15 +144,15 @@ void col2im3d(hipStream_t stream, const Dtype* data_col, const int64_t channels,
 
   // To avoid involving atomic operations, we will launch one kernel per
   // bottom dimension, and then in the kernel add up the top dimensions.
- hipLaunchKernelGGL( col2im3d_kernel<Dtype, Acctype>, dim3(GET_BLOCKS(num_kernels)),
-    dim3(CUDA_NUM_THREADS), 0, stream, num_kernels, data_col,
+  col2im3d_kernel<Dtype, Acctype><<<GET_BLOCKS(num_kernels),
+    CUDA_NUM_THREADS, 0, stream>>>(num_kernels, data_col,
                                    height, width, depth, channels,
                                    patch_h, patch_w, patch_d,
                                    pad_h, pad_w, pad_d,
                                    stride_h, stride_w, stride_d,
                                    height_col, width_col, depth_col,
                                    data_im);
-  THCudaCheck(hipGetLastError());
+  THCudaCheck(cudaGetLastError());
 }
 
 #include "generic/VolumetricConvolution.cu"

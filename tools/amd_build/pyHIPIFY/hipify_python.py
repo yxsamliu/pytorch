@@ -417,28 +417,28 @@ def processKernelLaunches(string, stats):
     output_string = string
 
     # Replace each CUDA kernel with a HIP kernel.
-    for kernel in get_kernel_positions:
+#    for kernel in get_kernel_positions:
         # Get kernel components
-        params = grab_method_and_template(kernel)
+#        params = grab_method_and_template(kernel)
 
         # Find parenthesis after kernel launch
-        parenthesis = string.find("(", kernel["end"])
+#        parenthesis = string.find("(", kernel["end"])
 
         # Extract cuda kernel
-        cuda_kernel = string[params[0]["start"]:parenthesis + 1]
-        kernel_string = string[kernel['start']:kernel['end']]
-        cuda_kernel_dim3 = add_dim3(kernel_string, cuda_kernel)
+#        cuda_kernel = string[params[0]["start"]:parenthesis + 1]
+#        kernel_string = string[kernel['start']:kernel['end']]
+#        cuda_kernel_dim3 = add_dim3(kernel_string, cuda_kernel)
         # Keep number of kernel launch params consistent (grid dims, group dims, stream, dynamic shared size)
-        num_klp = len(extract_arguments(0, kernel["group"].replace("<<<", "(").replace(">>>", ")")))
+#        num_klp = len(extract_arguments(0, kernel["group"].replace("<<<", "(").replace(">>>", ")")))
 
-        hip_kernel = "hipLaunchKernelGGL(" + cuda_kernel_dim3[0:-1].replace(
-            ">>>", ", 0" * (4 - num_klp) + ">>>").replace("<<<", ", ").replace(">>>", ", ")
+#        hip_kernel = "hipLaunchKernelGGL(" + cuda_kernel_dim3[0:-1].replace(
+#            ">>>", ", 0" * (4 - num_klp) + ">>>").replace("<<<", ", ").replace(">>>", ", ")
 
         # Replace cuda kernel with hip kernel
-        output_string = output_string.replace(cuda_kernel, hip_kernel)
+#        output_string = output_string.replace(cuda_kernel, hip_kernel)
 
         # Update the statistics
-        stats["kernel_launches"].append(hip_kernel)
+#        stats["kernel_launches"].append(hip_kernel)
 
     return output_string
 
@@ -1361,14 +1361,14 @@ def hipify(
                     CAFFE2_TEMPLATE_MAP if hipify_caffe2 else PYTORCH_TEMPLATE_MAP)
 
         # Execute the Clang Tool to Automatically add static casts
-        for filepath in all_files:
-            add_static_casts(
-                get_hip_file_path(
-                    filepath,
-                    hipify_caffe2=hipify_caffe2,
-                    hip_suffix=hip_suffix,
-                    extensions_to_hip_suffix=extensions_to_hip_suffix),
-                KernelTemplateParams)
+#        for filepath in all_files:
+#            add_static_casts(
+#                get_hip_file_path(
+#                    filepath,
+#                    hipify_caffe2=hipify_caffe2,
+#                    hip_suffix=hip_suffix,
+#                    extensions_to_hip_suffix=extensions_to_hip_suffix),
+#                KernelTemplateParams)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/MultiLabelMarginCriterion.cu"
 #else
@@ -26,16 +27,16 @@ void THNN_(MultiLabelMarginCriterion_updateOutput)(
     dim3 blocks(1);
     dim3 threads(MULTILABELMARGIN_THREADS);
 
-    cunn_MultiLabelMarginCriterion_updateOutput_kernel<scalar_t, accreal>
-      <<<blocks, threads, 0, THCState_getCurrentStream(state)>>>(
+   hipLaunchKernelGGL( cunn_MultiLabelMarginCriterion_updateOutput_kernel<scalar_t, accreal>
+      , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
         THCTensor_(data)(state, output),
         THCTensor_(data)(state, input),
-        THCIndexTensor_(data)(state, target),
+        static_cast<THCIndex_t *>(THCIndexTensor_(data)(state, target)),
         THCTensor_(data)(state, istarget),
-        1, dim,
-        reduction == Reduction::Mean
+        static_cast<int>(1), static_cast<int>(dim),
+        static_cast<int>(reduction == Reduction::Mean)
         );
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
   }
   else if(input->dim() == 2)
   {
@@ -52,16 +53,16 @@ void THNN_(MultiLabelMarginCriterion_updateOutput)(
       THCTensor *output_tmp = THCTensor_(newWithSize1d)(state, input->size(0));
       THCTensor_(resize1d)(state, output, 1);
 
-      cunn_MultiLabelMarginCriterion_updateOutput_kernel<scalar_t, accreal>
-        <<<blocks, threads, 0, THCState_getCurrentStream(state)>>>(
+     hipLaunchKernelGGL( cunn_MultiLabelMarginCriterion_updateOutput_kernel<scalar_t, accreal>
+        , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
           THCTensor_(data)(state, output_tmp),
           THCTensor_(data)(state, input),
-          THCIndexTensor_(data)(state, target),
+          static_cast<THCIndex_t *>(THCIndexTensor_(data)(state, target)),
           THCTensor_(data)(state, istarget),
-          nframe, dim,
-          reduction == Reduction::Mean
+          static_cast<int>(nframe), static_cast<int>(dim),
+          static_cast<int>(reduction == Reduction::Mean)
           );
-      THCudaCheck(cudaGetLastError());
+      THCudaCheck(hipGetLastError());
       THCTensor_(set1d)(state, output, 0, ScalarConvert<accreal, scalar_t>::to(THCTensor_(sumall)(state, output_tmp)));
       THCTensor_(free)(state, output_tmp);
     }
@@ -69,16 +70,16 @@ void THNN_(MultiLabelMarginCriterion_updateOutput)(
     {
     THCTensor_(resize1d)(state, output, input->size(0));
 
-    cunn_MultiLabelMarginCriterion_updateOutput_kernel<scalar_t, accreal>
-      <<<blocks, threads, 0, THCState_getCurrentStream(state)>>>(
+   hipLaunchKernelGGL( cunn_MultiLabelMarginCriterion_updateOutput_kernel<scalar_t, accreal>
+      , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
         THCTensor_(data)(state, output),
         THCTensor_(data)(state, input),
-        THCIndexTensor_(data)(state, target),
+        static_cast<THCIndex_t *>(THCIndexTensor_(data)(state, target)),
         THCTensor_(data)(state, istarget),
-        nframe, dim,
-        false
+        static_cast<int>(nframe), static_cast<int>(dim),
+        static_cast<int>(false)
         );
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
     }
   }
   else
@@ -114,16 +115,16 @@ void THNN_(MultiLabelMarginCriterion_updateGradInput)(
     dim3 blocks(1);
     dim3 threads(MULTILABELMARGIN_THREADS);
 
-    cunn_MultiLabelMarginCriterion_updateGradInput_kernel<scalar_t, accreal>
-      <<<blocks, threads, 0, THCState_getCurrentStream(state)>>>(
+   hipLaunchKernelGGL( cunn_MultiLabelMarginCriterion_updateGradInput_kernel<scalar_t, accreal>
+      , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
         THCTensor_(data)(state, gradInput),
         THCTensor_(data)(state, gradOutput),
         THCTensor_(data)(state, input),
-        THCIndexTensor_(data)(state, target),
+        static_cast<THCIndex_t *>(THCIndexTensor_(data)(state, target)),
         THCTensor_(data)(state, istarget),
-        1, gradInput->size(0),
-        reduction == Reduction::Mean,
-        reduction != Reduction::None);
+        static_cast<int>(1), static_cast<int>(gradInput->size(0)),
+        static_cast<int>(reduction == Reduction::Mean),
+        static_cast<int>(reduction != Reduction::None));
 
   }
   else if(gradInput->dim() == 2)
@@ -137,21 +138,21 @@ void THNN_(MultiLabelMarginCriterion_updateGradInput)(
     dim3 blocks(gradInput->size(0));
     dim3 threads(MULTILABELMARGIN_THREADS);
 
-    cunn_MultiLabelMarginCriterion_updateGradInput_kernel<scalar_t, accreal>
-      <<<blocks, threads, 0, THCState_getCurrentStream(state)>>>(
+   hipLaunchKernelGGL( cunn_MultiLabelMarginCriterion_updateGradInput_kernel<scalar_t, accreal>
+      , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
         THCTensor_(data)(state, gradInput),
         THCTensor_(data)(state, gradOutput),
         THCTensor_(data)(state, input),
-        THCIndexTensor_(data)(state, target),
+        static_cast<THCIndex_t *>(THCIndexTensor_(data)(state, target)),
         THCTensor_(data)(state, istarget),
-        gradInput->size(0), gradInput->size(1),
-        reduction == Reduction::Mean,
-        reduction != Reduction::None);
+        static_cast<int>(gradInput->size(0)), static_cast<int>(gradInput->size(1)),
+        static_cast<int>(reduction == Reduction::Mean),
+        static_cast<int>(reduction != Reduction::None));
   }
   else
     AT_ERROR("non-empty vector or matrix expected, got size: ", gradInput->sizes());
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 
   THCTensor_(free)(state, input);
   THCIndexTensor_(free)(state, target);

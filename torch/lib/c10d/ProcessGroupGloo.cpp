@@ -11,7 +11,7 @@
 #include <gloo/reduce.h>
 #include <gloo/scatter.h>
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 #include <ATen/cuda/CUDAEvent.h>
 #include <ATen/cuda/CUDAGuard.h>
 #include <ATen/cuda/CUDAStream.h>
@@ -127,9 +127,9 @@ ReduceFunc toFunction(const ReduceOp& r) {
   throw std::runtime_error("Unhandled ReduceOp");
 }
 
-#ifdef USE_CUDA
-std::vector<cudaStream_t> getStreamVector(AlgorithmEntry& entry) {
-  std::vector<cudaStream_t> streams;
+#ifdef USE_ROCM
+std::vector<hipStream_t> getStreamVector(AlgorithmEntry& entry) {
+  std::vector<hipStream_t> streams;
   streams.reserve(entry.streams.size());
   for (auto s : entry.streams) {
     streams.push_back(s);
@@ -173,7 +173,7 @@ void setOutput(O& opts, at::Tensor& tensor) {
   opts.setOutput(getDataPointer<T>(tensor), tensor.numel());
 }
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 
 at::Tensor pinnedLike(at::Tensor& tensor) {
   auto& type = tensor.type().toBackend(at::Backend::CPU);
@@ -246,7 +246,7 @@ void ProcessGroupGloo::AsyncWork::finish(std::exception_ptr eptr) {
 
 ProcessGroupGloo::WorkGloo::WorkGloo()
     : completed_(false)
-#ifdef USE_CUDA
+#ifdef USE_ROCM
       ,
       cuda_(false)
 #endif
@@ -264,7 +264,7 @@ bool ProcessGroupGloo::WorkGloo::isSuccess() const {
 }
 
 void ProcessGroupGloo::WorkGloo::synchronize() {
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   if (cuda_) {
     for (size_t i = 0; i < devices_.size(); i++) {
       auto stream = at::cuda::getCurrentCUDAStream(devices_[i]);
@@ -295,7 +295,7 @@ void ProcessGroupGloo::WorkGloo::finish(const AlgorithmEntry& entry) {
     std::unique_lock<std::mutex> lock(m_);
     completed_ = true;
     if (entry.key.type != nullptr) {
-#ifdef USE_CUDA
+#ifdef USE_ROCM
       cuda_ = entry.key.type->is_cuda();
 
       // Populate devices and events so that we can later synchronize
@@ -542,7 +542,7 @@ void ProcessGroupGloo::createAllreduce(AlgorithmEntry& entry) {
     return;
   }
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   if (backend == at::Backend::CUDA) {
     if (getSize() < 16) {
       entry.algorithm = std::unique_ptr<::gloo::Algorithm>(
@@ -587,7 +587,7 @@ void ProcessGroupGloo::createBroadcast(AlgorithmEntry& entry) {
     return;
   }
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   if (backend == at::Backend::CUDA) {
     entry.algorithm =
         std::unique_ptr<::gloo::Algorithm>(new ::gloo::CudaBroadcastOneToAll<T>(
@@ -616,7 +616,7 @@ void ProcessGroupGloo::createBroadcast(AlgorithmEntry& entry) {
 // failure must be signaled through the Work future.
 //
 EntryType ProcessGroupGloo::construct(const AlgorithmKey& key) {
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   at::cuda::OptionalCUDAGuard deviceGuard;
 #endif
   auto entry = std::unique_ptr<AlgorithmEntry>(new AlgorithmEntry);
@@ -631,7 +631,7 @@ EntryType ProcessGroupGloo::construct(const AlgorithmKey& key) {
   auto& srcSizes = key.srcSizes;
   entry->src.resize(srcSizes.size());
   for (size_t i = 0; i < srcSizes.size(); i++) {
-#ifdef USE_CUDA
+#ifdef USE_ROCM
     deviceGuard.set_index(key.type->is_cuda() ? key.devices[i] : -1);
 #else
     if (key.type->is_cuda()) {
@@ -641,7 +641,7 @@ EntryType ProcessGroupGloo::construct(const AlgorithmKey& key) {
     entry->src[i] = at::empty(srcSizes[i], key.type->options());
   }
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   // If these are CUDA tensors, create streams and events
   if (key.type->is_cuda()) {
     entry->streams.reserve(key.devices.size());
@@ -745,7 +745,7 @@ class AsyncBroadcastWork : public ProcessGroupGloo::AsyncWork {
   }
 };
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 
 class AsyncBroadcastCUDAWork : public AsyncBroadcastWork {
  public:
@@ -773,7 +773,7 @@ class AsyncBroadcastCUDAWork : public AsyncBroadcastWork {
     // Synchronize with copy operation if applicable.
     if (context->rank == rootRank) {
       guard.reset_stream(streams[rootTensor]);
-      AT_CUDA_CHECK(cudaStreamSynchronize(streams[rootTensor]));
+      AT_CUDA_CHECK(hipStreamSynchronize(streams[rootTensor]));
     }
 
     // Run broadcast on host side tensors.
@@ -821,7 +821,7 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupGloo::broadcast(
   const auto& device = inputs[0].device();
   switch (device.type()) {
     case at::kCPU:
-#ifdef USE_CUDA
+#ifdef USE_ROCM
     case at::kCUDA:
 #endif
       break;
@@ -834,7 +834,7 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupGloo::broadcast(
   if (device.type() == at::kCPU) {
     work = std::make_shared<AsyncBroadcastWork>(
         context, inputs, opts.rootRank, opts.rootTensor, nextTag());
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   } else if (device.type() == at::kCUDA) {
     work = std::make_shared<AsyncBroadcastCUDAWork>(
         context, inputs, opts.rootRank, opts.rootTensor, nextTag());
@@ -890,7 +890,7 @@ class AsyncAllreduceWork : public ProcessGroupGloo::AsyncWork {
   }
 };
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 
 class AsyncAllreduceCUDAWork : public AsyncAllreduceWork {
  public:
@@ -916,7 +916,7 @@ class AsyncAllreduceCUDAWork : public AsyncAllreduceWork {
     at::cuda::OptionalCUDAGuard device_guard;
     for (size_t i = 0; i < inputs.size(); i++) {
       device_guard.set_index(inputs[i].get_device());
-      AT_CUDA_CHECK(cudaStreamSynchronize(streams[i]));
+      AT_CUDA_CHECK(hipStreamSynchronize(streams[i]));
     }
 
     // Run allreduce on host side tensors.
@@ -963,7 +963,7 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupGloo::allreduce(
   const auto& device = inputs[0].device();
   switch (device.type()) {
     case at::kCPU:
-#ifdef USE_CUDA
+#ifdef USE_ROCM
     case at::kCUDA:
 #endif
       break;
@@ -976,7 +976,7 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupGloo::allreduce(
   if (device.type() == at::kCPU) {
     work = std::make_shared<AsyncAllreduceWork>(
         context, inputs, opts.reduceOp, nextTag());
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   } else if (device.type() == at::kCUDA) {
     work = std::make_shared<AsyncAllreduceCUDAWork>(
         context, inputs, opts.reduceOp, nextTag());

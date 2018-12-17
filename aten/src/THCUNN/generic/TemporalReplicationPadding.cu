@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/TemporalReplicationPadding.cu"
 #else
@@ -54,8 +55,8 @@ void THNN_(TemporalReplicationPadding_updateOutput)(
             devOutput.getSize(0));
   dim3 blockSize(outputPlaneSize > 256 ? 256 : outputPlaneSize);
 
-  TemporalReplicationPadding_updateOutput<<<gridSize, blockSize, 0, THCState_getCurrentStream(state)>>>(
-    devInput, devOutput, padL, padR);
+ hipLaunchKernelGGL( TemporalReplicationPadding_updateOutput<scalar_t>, dim3(gridSize), dim3(blockSize), 0, THCState_getCurrentStream(state), 
+    devInput, devOutput, static_cast<int>(padL), static_cast<int>(padR));
 
 }
 
@@ -106,8 +107,8 @@ void THNN_(TemporalReplicationPadding_updateGradInput)(
             devGradOutput.getSize(0));
   dim3 blockSize(outputPlaneSize > 256 ? 256 : outputPlaneSize);
 
-  TemporalReplicationPadding_updateGradInput<<<gridSize, blockSize, 0, THCState_getCurrentStream(state)>>>(
-    devGradInput, devGradOutput, padL, padR);
+ hipLaunchKernelGGL( TemporalReplicationPadding_updateGradInput<scalar_t>, dim3(gridSize), dim3(blockSize), 0, THCState_getCurrentStream(state), 
+    devGradInput, devGradOutput, static_cast<int>(padL), static_cast<int>(padR));
 
 }
 

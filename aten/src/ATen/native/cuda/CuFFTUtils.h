@@ -6,8 +6,8 @@
 #include <string>
 #include <stdexcept>
 #include <sstream>
-#include <cufft.h>
-#include <cufftXt.h>
+#include <hipfft.h>
+#include <hipfft.h>
 
 namespace at { namespace native {
 
@@ -15,46 +15,46 @@ namespace at { namespace native {
 // complex dimension
 constexpr int max_rank = 3;
 
-static inline std::string _cudaGetErrorEnum(cufftResult error)
+static inline std::string _cudaGetErrorEnum(hipfftResult error)
 {
   switch (error)
   {
-    case CUFFT_SUCCESS:
-      return "CUFFT_SUCCESS";
-    case CUFFT_INVALID_PLAN:
-      return "CUFFT_INVALID_PLAN";
-    case CUFFT_ALLOC_FAILED:
-      return "CUFFT_ALLOC_FAILED";
-    case CUFFT_INVALID_TYPE:
-      return "CUFFT_INVALID_TYPE";
-    case CUFFT_INVALID_VALUE:
-      return "CUFFT_INVALID_VALUE";
-    case CUFFT_INTERNAL_ERROR:
-      return "CUFFT_INTERNAL_ERROR";
-    case CUFFT_EXEC_FAILED:
-      return "CUFFT_EXEC_FAILED";
-    case CUFFT_SETUP_FAILED:
-      return "CUFFT_SETUP_FAILED";
-    case CUFFT_INVALID_SIZE:
-      return "CUFFT_INVALID_SIZE";
-    case CUFFT_UNALIGNED_DATA:
-      return "CUFFT_UNALIGNED_DATA";
-    case CUFFT_INCOMPLETE_PARAMETER_LIST:
-      return "CUFFT_INCOMPLETE_PARAMETER_LIST";
-    case CUFFT_INVALID_DEVICE:
-      return "CUFFT_INVALID_DEVICE";
-    case CUFFT_PARSE_ERROR:
-      return "CUFFT_PARSE_ERROR";
-    case CUFFT_NO_WORKSPACE:
-      return "CUFFT_NO_WORKSPACE";
-    case CUFFT_NOT_IMPLEMENTED:
-      return "CUFFT_NOT_IMPLEMENTED";
+    case HIPFFT_SUCCESS:
+      return "HIPFFT_SUCCESS";
+    case HIPFFT_INVALID_PLAN:
+      return "HIPFFT_INVALID_PLAN";
+    case HIPFFT_ALLOC_FAILED:
+      return "HIPFFT_ALLOC_FAILED";
+    case HIPFFT_INVALID_TYPE:
+      return "HIPFFT_INVALID_TYPE";
+    case HIPFFT_INVALID_VALUE:
+      return "HIPFFT_INVALID_VALUE";
+    case HIPFFT_INTERNAL_ERROR:
+      return "HIPFFT_INTERNAL_ERROR";
+    case HIPFFT_EXEC_FAILED:
+      return "HIPFFT_EXEC_FAILED";
+    case HIPFFT_SETUP_FAILED:
+      return "HIPFFT_SETUP_FAILED";
+    case HIPFFT_INVALID_SIZE:
+      return "HIPFFT_INVALID_SIZE";
+    case HIPFFT_UNALIGNED_DATA:
+      return "HIPFFT_UNALIGNED_DATA";
+    case HIPFFT_INCOMPLETE_PARAMETER_LIST:
+      return "HIPFFT_INCOMPLETE_PARAMETER_LIST";
+    case HIPFFT_INVALID_DEVICE:
+      return "HIPFFT_INVALID_DEVICE";
+    case HIPFFT_PARSE_ERROR:
+      return "HIPFFT_PARSE_ERROR";
+    case HIPFFT_NO_WORKSPACE:
+      return "HIPFFT_NO_WORKSPACE";
+    case HIPFFT_NOT_IMPLEMENTED:
+      return "HIPFFT_NOT_IMPLEMENTED";
 #ifndef __HIP_PLATFORM_HCC__
-    case CUFFT_LICENSE_ERROR:
-      return "CUFFT_LICENSE_ERROR";
+    case HIPFFT_LICENSE_ERROR:
+      return "HIPFFT_LICENSE_ERROR";
 #endif
-    case CUFFT_NOT_SUPPORTED:
-      return "CUFFT_NOT_SUPPORTED";
+    case HIPFFT_NOT_SUPPORTED:
+      return "HIPFFT_NOT_SUPPORTED";
     default:
       std::ostringstream ss;
       ss << "unknown error " << error;
@@ -62,9 +62,9 @@ static inline std::string _cudaGetErrorEnum(cufftResult error)
   }
 }
 
-static inline void CUFFT_CHECK(cufftResult error)
+static inline void CUFFT_CHECK(hipfftResult error)
 {
-  if (error != CUFFT_SUCCESS) {
+  if (error != HIPFFT_SUCCESS) {
     std::ostringstream ss;
     ss << "cuFFT error: " << _cudaGetErrorEnum(error);
     AT_ERROR(ss.str());

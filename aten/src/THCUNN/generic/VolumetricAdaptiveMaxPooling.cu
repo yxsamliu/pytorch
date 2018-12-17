@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/VolumetricAdaptiveMaxPooling.cu"
 #else
@@ -73,15 +74,15 @@ void THNN_(VolumetricAdaptiveMaxPooling_updateOutput)(
   int blocksH = max((int)(16L / totalZ), 1);
   while (totalZ > 0) {
     dim3 blocks(totalZ > 65535 ? 65535 : totalZ, blocksH);
-    cunn_VolumetricAdaptiveMaxPooling_updateOutput_kernel
-      <<<blocks, threads, 0, THCState_getCurrentStream(state)>>>(
-        input_data, output_data, indices_data, isizeT, isizeH, isizeW,
-        osizeT, osizeH, osizeW, istrideD, istrideT, istrideH, istrideW, offsetZ
+   hipLaunchKernelGGL( cunn_VolumetricAdaptiveMaxPooling_updateOutput_kernel<scalar_t>
+      , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
+        input_data, output_data, static_cast<THCIndex_t *>(indices_data), static_cast<int>(isizeT), static_cast<int>(isizeH), static_cast<int>(isizeW),
+        static_cast<int>(osizeT), static_cast<int>(osizeH), static_cast<int>(osizeW), static_cast<int64_t>(istrideD), static_cast<int64_t>(istrideT), static_cast<int64_t>(istrideH), static_cast<int64_t>(istrideW), static_cast<int64_t>(offsetZ)
       );
 
     totalZ -= 65535;
     offsetZ += 65535;
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
   }
 
   if (input->dim() == 5) {
@@ -154,22 +155,22 @@ void THNN_(VolumetricAdaptiveMaxPooling_updateGradInput)(
 
     if (atomic)
     {
-      cunn_atomic_VolumetricAdaptiveMaxPooling_updateGradInput_kernel
-        <<<blocks, threads, 0, THCState_getCurrentStream(state)>>>(
-          gradInput_data, gradOutput_data, indices_data,
-          isizeT, isizeH, isizeW, osizeT, osizeH, osizeW, offsetZ
+     hipLaunchKernelGGL( cunn_atomic_VolumetricAdaptiveMaxPooling_updateGradInput_kernel<scalar_t>
+        , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
+          gradInput_data, gradOutput_data, static_cast<THCIndex_t *>(indices_data),
+          static_cast<int>(isizeT), static_cast<int>(isizeH), static_cast<int>(isizeW), static_cast<int>(osizeT), static_cast<int>(osizeH), static_cast<int>(osizeW), static_cast<int64_t>(offsetZ)
         );
     } else {
-      cunn_VolumetricAdaptiveMaxPooling_updateGradInput_kernel
-        <<<blocks, threads, 0, THCState_getCurrentStream(state)>>>(
-          gradInput_data, gradOutput_data, indices_data,
-          isizeT, isizeH, isizeW, osizeT, osizeH, osizeW, offsetZ
+     hipLaunchKernelGGL( cunn_VolumetricAdaptiveMaxPooling_updateGradInput_kernel<scalar_t>
+        , dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
+          gradInput_data, gradOutput_data, static_cast<THCIndex_t *>(indices_data),
+          static_cast<int>(isizeT), static_cast<int>(isizeH), static_cast<int>(isizeW), static_cast<int>(osizeT), static_cast<int>(osizeH), static_cast<int>(osizeW), static_cast<int64_t>(offsetZ)
         );
     }
 
     totalZ -= 65535;
     offsetZ += 65535;
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
   }
   // clean
   THCTensor_(free)(state, gradOutput);

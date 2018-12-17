@@ -8,7 +8,7 @@
 
 
 template<typename Acctype>
-__host__ __forceinline__
+__host__ inline
 static Acctype linear_upsampling_compute_scale(
                           int inputSize, int outputSize, bool align_corners) {
   if (outputSize > 1) {
@@ -20,7 +20,7 @@ static Acctype linear_upsampling_compute_scale(
 }
 
 template<typename Acctype>
-__device__ __forceinline__
+__device__ inline
 static Acctype linear_upsampling_compute_source_index(
                           Acctype scale, int dst_index, bool align_corners) {
   if (align_corners) {
@@ -31,7 +31,7 @@ static Acctype linear_upsampling_compute_source_index(
   }
 }
 
-__device__ __forceinline__
+__device__ inline
 static int nearest_neighbor_compute_source_index(
 		const float scale, int dst_index, int inputSize) {
   const int src_index = MIN(floor(dst_index * scale), inputSize - 1);

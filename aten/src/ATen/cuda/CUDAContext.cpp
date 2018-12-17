@@ -6,29 +6,29 @@ namespace at { namespace cuda {
 /* Device info */
 int64_t getNumGPUs() {
   int count;
-  AT_CUDA_CHECK(cudaGetDeviceCount(&count));
+  AT_CUDA_CHECK(hipGetDeviceCount(&count));
   return count;
 }
 
 int64_t current_device() {
   int cur_device;
-  AT_CUDA_CHECK(cudaGetDevice(&cur_device));
+  AT_CUDA_CHECK(hipGetDevice(&cur_device));
   return cur_device;
 }
 
 void set_device(int64_t device) {
-  AT_CUDA_CHECK(cudaSetDevice((int)device));
+  AT_CUDA_CHECK(hipSetDevice((int)device));
 }
 
 int warp_size() {
   return getCurrentDeviceProperties()->warpSize;
 }
 
-cudaDeviceProp* getCurrentDeviceProperties() {
+hipDeviceProp_t* getCurrentDeviceProperties() {
   return THCState_getCurrentDeviceProperties(at::globalContext().getTHCState());
 }
 
-cudaDeviceProp* getDeviceProperties(int64_t device) {
+hipDeviceProp_t* getDeviceProperties(int64_t device) {
   return THCState_getDeviceProperties(at::globalContext().getTHCState(), (int)device);
 }
 
@@ -54,15 +54,15 @@ void uncheckedSetCurrentCUDAStream(CUDAStream stream) {
 }
 
 Allocator* getCUDADeviceAllocator() {
-  return at::globalContext().getTHCState()->cudaDeviceAllocator;
+  return at::globalContext().getTHCState()->hipDeviceAllocator;
 }
 
 /* Handles */
-cusparseHandle_t getCurrentCUDASparseHandle() {
+hipsparseHandle_t getCurrentCUDASparseHandle() {
   return THCState_getCurrentSparseHandle(at::globalContext().getTHCState());
 }
 
-cublasHandle_t getCurrentCUDABlasHandle() {
+rocblas_handle getCurrentCUDABlasHandle() {
   return THCState_getCurrentBlasHandle(at::globalContext().getTHCState());
 }
 

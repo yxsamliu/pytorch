@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/NativeFunctions.h"
 #include "ATen/Dispatch.h"
@@ -87,22 +88,22 @@ Tensor prelu_cuda(const Tensor& self, const Tensor& weight_) {
 
     // config to run cuda kernel
     int64_t input_numel = input.numel();
-    const dim3 block = dim3(std::min(static_cast<int64_t>(cuda::getApplyBlock().x), input_numel));
+    const dim3 block = dim3(::min(static_cast<int64_t>(cuda::getApplyBlock().x), input_numel));
     dim3 grid;
     int curDevice = -1;
-    cudaGetDevice(&curDevice);
-    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+    hipGetDevice(&curDevice);
+    hipStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
     AT_CHECK(cuda::getApplyGrid(input_numel, grid, curDevice), "prelu: input too large or too many dimensions");
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "prelu_cuda", [&] {
-      prelu_cuda_kernel_multi_weights<scalar_t>
-      <<<grid, block, 0, stream>>>(
+     hipLaunchKernelGGL( prelu_cuda_kernel_multi_weights<scalar_t>
+      , dim3(grid), dim3(block), 0, stream, 
         result.data<scalar_t>(),
         input.data<scalar_t>(),
         weight.data<scalar_t>(),
-        input_stride0,
-        input_stride1,
-        input_numel);
+        static_cast<int64_t>(input_stride0),
+        static_cast<int64_t>(input_stride1),
+        static_cast<int64_t>(input_numel));
     });
   }
   return result;
@@ -203,24 +204,24 @@ std::tuple<Tensor, Tensor> prelu_backward_cuda(const Tensor& grad_out_, const Te
 
     // config to run cuda kernel
     int64_t input_numel = input.numel();
-    const dim3 block = dim3(std::min(static_cast<int64_t>(cuda::getApplyBlock().x), input_numel));
+    const dim3 block = dim3(::min(static_cast<int64_t>(cuda::getApplyBlock().x), input_numel));
     dim3 grid;
     int curDevice = -1;
-    cudaGetDevice(&curDevice);
-    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+    hipGetDevice(&curDevice);
+    hipStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
     AT_CHECK(cuda::getApplyGrid(input_numel, grid, curDevice), "prelu_backward_cuda: input too large or too many dimensions");
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "prelu_backward_cuda", [&] {
-      prelu_cuda_backward_kernel_multi_weights<scalar_t>
-      <<<grid, block, 0, stream>>>(
+     hipLaunchKernelGGL( prelu_cuda_backward_kernel_multi_weights<scalar_t>
+      , dim3(grid), dim3(block), 0, stream, 
         input.data<scalar_t>(),
         weight.data<scalar_t>(),
         grad_out.data<scalar_t>(),
         input_grad.data<scalar_t>(),
         weight_grad_collector.data<scalar_t>(),
-        input_stride0,
-        input_stride1,
-        input_numel);
+        static_cast<int64_t>(input_stride0),
+        static_cast<int64_t>(input_stride1),
+        static_cast<int64_t>(input_numel));
     });
     // update weight_grad
     std::vector<int64_t> reduce_dims;

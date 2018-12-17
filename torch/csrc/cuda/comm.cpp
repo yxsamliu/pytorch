@@ -1,6 +1,6 @@
 #include <torch/csrc/cuda/comm.h>
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 
 #include <torch/csrc/cuda/device_set.h>
 #include <torch/csrc/utils/tensor_flatten.h>

@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorMathScan.cu"
 #else
@@ -45,11 +46,11 @@ __host__ void THCTensor_(scanOuterDim)(THCState *state, THCTensor *tgt,
   unsigned maxGridDim = 1024;
   dim3 grid(min(maxGridDim, num_orows), min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
-  THCTensor_kernel_scanOuterDim<scalar_t><<<grid, threads, 0, THCState_getCurrentStream(state)>>>(
+ hipLaunchKernelGGL( THCTensor_kernel_scanOuterDim<scalar_t>, dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
     THCTensor_(data)(state, tgt), THCTensor_(data)(state, src),
     num_orows, num_irows, row_size, init, binary_op);
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 template<class BinaryFunction>
@@ -68,10 +69,10 @@ __host__ void THCTensor_(scanInnermostDim)(THCState *state, THCTensor *tgt,
   dim3 threads(16, 32);
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
-  THCTensor_kernel_scanInnermostDim<scalar_t, 16, 32><<<grid, threads, 0, THCState_getCurrentStream(state)>>>(
+ hipLaunchKernelGGL( THCTensor_kernel_scanInnermostDim<scalar_t, 16, 32>, dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
     THCTensor_(data)(state, tgt), THCTensor_(data)(state, src), num_rows, row_size, init, binary_op);
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 template<class BinaryFunction>

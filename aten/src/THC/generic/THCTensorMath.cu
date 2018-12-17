@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorMath.cu"
 #else
@@ -11,14 +12,14 @@ void THCTensor_(fill)(THCState* state, THCTensor *self_, scalar_t value)
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 void THCTensor_(zero)(THCState *state, THCTensor *self_)
 {
   THCAssertSameGPU(THCTensor_(checkGPU)(state, 1, self_));
   if (THCTensor_(isContiguous)(state, self_)) {
-    THCudaCheck(cudaMemsetAsync(THCTensor_(data)(state, self_),
+    THCudaCheck(hipMemsetAsync(THCTensor_(data)(state, self_),
                                 0,
                                 sizeof(scalar_t) * THCTensor_(nElement)(state, self_),
                                 THCState_getCurrentStream(state)));
@@ -30,7 +31,7 @@ void THCTensor_(zero)(THCState *state, THCTensor *self_)
     }
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 void THCTensor_(zerosLike)(THCState *state, THCTensor *r_, THCTensor *input)
@@ -178,7 +179,7 @@ void THCTensor_(catArray)(THCState *state, THCTensor *result,
 
     // Template Declarations for dim = 1, 2, 3, 4
 #define HANDLE_CASE(DIMS) \
-  CatArrayBatchedCopy<scalar_t, unsigned int, DIMS><<<catGrid, applyBlock, 0, THCStream_stream(stream)>>>(data, d_inputs, param, dimension, param.outputStride[dimension]);
+ hipLaunchKernelGGL( CatArrayBatchedCopy<scalar_t, unsigned int, DIMS>, dim3(catGrid), dim3(applyBlock), 0, THCStream_stream(stream), data, d_inputs, param, static_cast<const int>(dimension), param.outputStride[static_cast<const int>(dimension)]);
 
     // Now we loop
     offset = 0;
@@ -200,11 +201,11 @@ void THCTensor_(catArray)(THCState *state, THCTensor *result,
           // update offset
           offset += dimSize;
         }
-        THCudaCheck(cudaMemcpyAsync(
+        THCudaCheck(hipMemcpyAsync(
             d_inputs,
             stackInputs,
             j * sizeof(CatArrInputTensor<scalar_t, unsigned int>),
-            cudaMemcpyHostToDevice,
+            hipMemcpyHostToDevice,
             THCStream_stream(stream)));
         THCudaHostRecord(state, stackInputs);
       }
@@ -235,7 +236,7 @@ void THCTensor_(catArray)(THCState *state, THCTensor *result,
           HANDLE_CASE(4);
           break;
       }
-      THCudaCheck(cudaGetLastError());
+      THCudaCheck(hipGetLastError());
     }
     THCudaFree(state, d_inputs);
 #undef HANDLE_CASE
@@ -281,7 +282,7 @@ void THCTensor_(nonzero)(THCState* state, THCudaLongTensor *tensor,
                                      tensor_data+N*num_dim, num_dim);
 
 #if CUDA_VERSION >= 7000
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
 #endif
 
   strided_range<Iter>::iterator dend = thrust::copy_if(
@@ -318,7 +319,7 @@ void THCTensor_(nonzero)(THCState* state, THCudaLongTensor *tensor,
   THCTensor_(free)(state, self);
   THCudaLongTensor_free(state, tensor);
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 void THCTensor_(diag)(THCState *state, THCTensor *self_, THCTensor *src_, int64_t k){
@@ -337,8 +338,8 @@ void THCTensor_(diag)(THCState *state, THCTensor *self_, THCTensor *src_, int64_
       const dim3 threads(min((int64_t)THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock, (int64_t)size));
       dim3 grid(min((int64_t)1024, (int64_t)THCCeilDiv(size, (int64_t)threads.x)));
       int64_t start = (k >= 0 ? k * stride1 : -k * stride0);
-      THCTensor_copyFromDiagonal<scalar_t><<<grid, threads, 0, THCState_getCurrentStream(state)>>>
-      (THCTensor_(data)(state, self_), THCTensor_(data)(state, src_), start, size, stride0 + stride1, strideSelf);
+     hipLaunchKernelGGL( THCTensor_copyFromDiagonal<scalar_t>, dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+      THCTensor_(data)(state, self_), THCTensor_(data)(state, src_), static_cast<ptrdiff_t>(start), static_cast<ptrdiff_t>(size), static_cast<ptrdiff_t>(stride0 + stride1), static_cast<ptrdiff_t>(strideSelf));
     }
   } else {
     ptrdiff_t totalElements = THCTensor_(nElement)(state, src_);
@@ -352,11 +353,11 @@ void THCTensor_(diag)(THCState *state, THCTensor *self_, THCTensor *src_, int64_
       const dim3 threads(min((int64_t)THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock, (int64_t)size));
       dim3 grid(min((int64_t)1024, (int64_t)THCCeilDiv(size, (ptrdiff_t)threads.x)));
       ptrdiff_t start = (k >= 0 ? k * stride1 : -k * stride0);
-      THCTensor_copyToDiagonal<scalar_t><<<grid, threads, 0, THCState_getCurrentStream(state)>>>
-      (THCTensor_(data)(state, self_), THCTensor_(data)(state, src_), start, totalElements, stride0 + stride1, strideSrc);
+     hipLaunchKernelGGL( THCTensor_copyToDiagonal<scalar_t>, dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+      THCTensor_(data)(state, self_), THCTensor_(data)(state, src_), static_cast<ptrdiff_t>(start), static_cast<ptrdiff_t>(totalElements), static_cast<ptrdiff_t>(stride0 + stride1), static_cast<ptrdiff_t>(strideSrc));
     }
   }
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 void THCTensor_(eye)(THCState *state, THCTensor *self_, int64_t n, int64_t m)
@@ -414,7 +415,7 @@ void THCTensor_(linspace)(THCState *state, THCTensor *r_, scalar_t a, scalar_t b
       THCTensor_(freeCopyTo)(state, r, r_);
     }
   }
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 void THCTensor_(logspace)(THCState *state, THCTensor *r_, scalar_t a, scalar_t b, int64_t n) {
@@ -438,7 +439,7 @@ void THCTensor_(logspace)(THCState *state, THCTensor *r_, scalar_t a, scalar_t b
       THCTensor_(freeCopyTo)(state, r, r_);
     }
   }
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #endif
@@ -455,7 +456,7 @@ void THCTensor_(range)(THCState *state, THCTensor *r_, accreal xmin, accreal xma
   thrust::device_ptr<scalar_t> data_(THCTensor_(data)(state, r));
   thrust::tabulate(data_, data_ + size, linspace_method);
   THCTensor_(freeCopyTo)(state, r, r_);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 void THCTensor_(arange)(THCState* state, THCTensor *r_, accreal xmin, accreal xmax, accreal step) {
@@ -470,7 +471,7 @@ void THCTensor_(arange)(THCState* state, THCTensor *r_, accreal xmin, accreal xm
   thrust::device_ptr<scalar_t> data_(THCTensor_(data)(state, r));
   thrust::tabulate(data_, data_ + size, linspace_method);
   THCTensor_(freeCopyTo)(state, r, r_);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #endif

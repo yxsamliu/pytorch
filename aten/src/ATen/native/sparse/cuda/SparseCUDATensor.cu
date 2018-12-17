@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <ATen/NativeFunctions.h>
@@ -39,7 +40,7 @@ SparseTensor coalesce_sparse_cuda(const SparseTensor& self) {
     return dst;
   }
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
   auto allocator = THCThrustAllocator(globalContext().lazyInitCUDA());
   auto policy = thrust::cuda::par(allocator).on(stream);
   // Replace instances with
@@ -97,7 +98,7 @@ SparseTensor coalesce_sparse_cuda(const SparseTensor& self) {
     AT_DISPATCH_ALL_TYPES_AND_HALF(
         values.type(), "coalesce_sparse_cuda", [&] {
           using cuda_accscalar_t = acc_type<scalar_t, /* is_cuda */ true>;
-          apply::coalesceValuesKernel<scalar_t, cuda_accscalar_t><<<grid, block, 0, stream>>>(
+         hipLaunchKernelGGL( apply::coalesceValuesKernel<scalar_t, cuda_accscalar_t>, dim3(grid), dim3(block), 0, stream, 
             uniqueOffsets.data<int64_t>(),
             origIndices.data<int64_t>(),
             values.data<scalar_t>(),
@@ -114,7 +115,7 @@ SparseTensor coalesce_sparse_cuda(const SparseTensor& self) {
   // int64_t blockX = min(stride, (int64_t) 512);
   // dim3 block(blockX, 512 / blockX);
   // int64_t grid = min((int64_t) 1024, THCCeilDiv((int64_t) newNnz * stride, (int64_t) block.x * block.y));
-  // THCSTensor_coalesceValuesKernel_gridStrided<real, accreal><<<grid, block, 0, stream>>>(
+  //hipLaunchKernelGGL( THCSTensor_coalesceValuesKernel_gridStrided<real, accreal>, dim3(grid), dim3(block), 0, stream, 
   //   THCIndexTensor_(data)(state, uniqueOffsets),
   //   THCIndexTensor_(data)(state, origIndices),
   //   THCTensor_(data)(state, values),
@@ -152,7 +153,7 @@ SparseTensor coalesce_sparse_cuda(const SparseTensor& self) {
 
   SparseTensor dst = ::at::native::sparse_coo_tensor(newIndices, newValues, self.sizes())._coalesced_(true);
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return dst;
 }
 

@@ -286,7 +286,7 @@ int main(int argc, char** argv) {
     testAllreduce(file.path, at::Backend::CPU);
   }
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   {
     TemporaryFile file;
     testAllreduce(file.path, at::Backend::CUDA);
@@ -298,7 +298,7 @@ int main(int argc, char** argv) {
     testBroadcast(file.path, at::Backend::CPU);
   }
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   {
     TemporaryFile file;
     testBroadcast(file.path, at::Backend::CUDA);

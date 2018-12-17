@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/cuda/CUDAContext.h"
 #include <THC/THCGeneral.h>
@@ -35,7 +36,7 @@ template <typename scalar_t>
     const Tensor& self,
     const bool return_inverse) {
 
-    cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+    hipStream_t stream = at::cuda::getCurrentCUDAStream();
     auto allocator = THCThrustAllocator(globalContext().lazyInitCUDA());
     auto policy = thrust::cuda::par(allocator).on(stream);
 
@@ -59,11 +60,11 @@ template <typename scalar_t>
       int64_t* inverse_indices_data = inverse_indices.data<int64_t>();
       int block = 512;
       int grid = std::min<int64_t>((num_inp * num_out + block - 1) / block, 2048L);
-      inverse_indices_kernel<<<grid, block, 0, stream>>>(
-        input_data, output_data, inverse_indices_data, num_inp, num_out);
+     hipLaunchKernelGGL( inverse_indices_kernel<scalar_t>, dim3(grid), dim3(block), 0, stream, 
+        input_data, output_data, inverse_indices_data, static_cast<int64_t>(num_inp), static_cast<int64_t>(num_out));
     }
 
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
     return std::tuple<Tensor, Tensor>(output, inverse_indices);
 
   }
@@ -74,7 +75,7 @@ template <typename scalar_t>
     const int64_t dim,
     const bool return_inverse) {
 
-    cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+    hipStream_t stream = at::cuda::getCurrentCUDAStream();
     auto allocator = THCThrustAllocator(globalContext().lazyInitCUDA());
     auto policy = thrust::cuda::par(allocator).on(stream);
 
@@ -150,7 +151,7 @@ template <typename scalar_t>
       }
     }
 
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
     return std::tuple<Tensor, Tensor>(output, inverse_indices);
   }
 } // namespace

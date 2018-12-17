@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "THCTensorSort.cuh"
 
 void THCudaLongTensor_fillSliceWithIndex(THCState* state,
@@ -26,8 +27,8 @@ void THCudaLongTensor_fillSliceWithIndex(THCState* state,
     dim3 block(numThreads);
 
 #define FILL_INDEX(T, DIM)                                         \
-    fillSliceWithIndex<T, DIM>                                     \
-      <<<grid, block, 0, THCState_getCurrentStream(state)>>>(      \
+   hipLaunchKernelGGL( fillSliceWithIndex<T, DIM>                                     \
+      , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state),       \
         info, numSlices, sliceSize, info.strides[collapseDim])
 
     if (THCTensor_canUse32BitIndexMath(state, t)) {
@@ -58,6 +59,6 @@ void THCudaLongTensor_fillSliceWithIndex(THCState* state,
     }
 
 #undef FILL_INDEX
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
   }
 }

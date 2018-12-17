@@ -21,7 +21,7 @@
 
 #ifdef USE_CUDA
 #include <THC/THC.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 #endif
 #include <cstdint>
 #include <memory>
@@ -193,11 +193,11 @@ struct GlooCache {
 #ifdef USE_CUDA
     } else if (t_dev == DeviceType::CUDA) {
       auto stream = THCState_getCurrentStream(THDGetCudaState());
-      THCudaCheck(cudaMemcpyAsync(
+      THCudaCheck(hipMemcpyAsync(
           input_buffer,
           t.data_ptr(),
           tensor_bytes,
-          cudaMemcpyDeviceToDevice,
+          hipMemcpyDeviceToDevice,
           stream));
 #endif
     } else {
@@ -215,11 +215,11 @@ struct GlooCache {
 #ifdef USE_CUDA
     } else if (t_dev == DeviceType::CUDA) {
       auto stream = THCState_getCurrentStream(THDGetCudaState());
-      THCudaCheck(cudaMemcpyAsync(
+      THCudaCheck(hipMemcpyAsync(
           t.data_ptr(),
           output_buffer,
           tensor_bytes,
-          cudaMemcpyDeviceToDevice,
+          hipMemcpyDeviceToDevice,
           stream));
 #endif
     } else {
@@ -371,7 +371,7 @@ struct algorithm_spec<CollectiveType::ALL_REDUCE, T> {
             context,
             std::initializer_list<T*>{reinterpret_cast<T*>(input_buffer.get())},
             count,
-            std::vector<cudaStream_t>{stream});
+            std::vector<hipStream_t>{stream});
       } else
 #endif
       {
@@ -381,7 +381,7 @@ struct algorithm_spec<CollectiveType::ALL_REDUCE, T> {
             context,
             std::initializer_list<T*>{reinterpret_cast<T*>(input_buffer.get())},
             count,
-            std::vector<cudaStream_t>{stream});
+            std::vector<hipStream_t>{stream});
       }
 #endif
 
@@ -453,7 +453,7 @@ struct algorithm_spec<CollectiveType::BROADCAST, T> {
             count,
             src_rank,
             0,
-            std::vector<cudaStream_t>{stream});
+            std::vector<hipStream_t>{stream});
       } else
 #endif
       {
@@ -464,7 +464,7 @@ struct algorithm_spec<CollectiveType::BROADCAST, T> {
             count,
             src_rank,
             0,
-            std::vector<cudaStream_t>{stream});
+            std::vector<hipStream_t>{stream});
       }
 #endif
 

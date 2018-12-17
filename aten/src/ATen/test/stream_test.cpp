@@ -4,7 +4,7 @@
 #include "ATen/cuda/CUDAGuard.h"
 #include "ATen/cuda/CUDAEvent.h"
 
-#include "cuda_runtime.h"
+#include "hip/hip_runtime.h"
 
 #include <functional>
 #include <thread>
@@ -28,7 +28,7 @@
 // Verifies streams are live through copying and moving
 TEST(TestStream, CopyAndMoveTest) {
   int32_t device = -1;
-  cudaStream_t cuda_stream;
+  hipStream_t cuda_stream;
 
   // Tests that copying works as expected and preserves the stream
   at::cuda::CUDAStream copyStream = at::cuda::getStreamFromPool();
@@ -178,10 +178,10 @@ TEST(TestStream, StreamPoolTest) {
     streams.emplace_back(at::cuda::detail::CUDAStream_getStreamFromPool());
   }
 
-  std::unordered_set<cudaStream_t> stream_set{};
+  std::unordered_set<hipStream_t> stream_set{};
   bool hasDuplicates = false;
   for (auto i = decltype(streams.size()){0}; i < streams.size(); ++i) {
-    cudaStream_t cuda_stream = streams[i];
+    hipStream_t cuda_stream = streams[i];
     auto result_pair = stream_set.insert(cuda_stream);
     if (!result_pair.second)
       hasDuplicates = true;
@@ -222,7 +222,7 @@ TEST(TestStream, CUDAEventSyncTest) {
   wait_stream0.synchronize_with(event);
   wait_stream1.synchronize_with(event);
 
-  cudaStreamSynchronize(wait_stream0);
+  hipStreamSynchronize(wait_stream0);
   ASSERT_TRUE(event.happened());
 }
 
@@ -247,6 +247,6 @@ TEST(TestStream, CrossDeviceTest) {
 
   stream0.synchronize_with(event0);
 
-  cudaStreamSynchronize(stream0);
+  hipStreamSynchronize(stream0);
   ASSERT_TRUE(event0.happened());
 }

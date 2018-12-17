@@ -5,7 +5,7 @@
 #ifdef WITH_MPI
 #include "data_channels/DataChannelMPI.hpp"
 #endif // WITH_MPI
-#if defined(USE_CUDA) && defined(USE_DISTRIBUTED_NCCL)
+#if defined(USE_ROCM) && defined(USE_DISTRIBUTED_NCCL)
 #include "data_channels/DataChannelNccl.hpp"
 #endif // USE_DISTRIBUTED_NCCL
 #include "data_channels/DataChannelTCP.hpp"
@@ -44,7 +44,7 @@ DataChannel* DataChannel::newChannel(
           "try to recompile the THD package with Gloo support");
 
     case THDChannelNccl:
-#if defined(USE_CUDA) && defined(USE_DISTRIBUTED_NCCL)
+#if defined(USE_ROCM) && defined(USE_DISTRIBUTED_NCCL)
       return new DataChannelNccl(GET_CONFIG);
 #endif
       throw std::runtime_error(

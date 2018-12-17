@@ -27,8 +27,8 @@
 #include <queue>
 #include <TH/TH.h>
 
-#ifdef USE_CUDA
-#include <cuda.h>
+#ifdef USE_ROCM
+#include <hip/hip_runtime.h>
 #include <THC/THC.h>
 #include <ATen/cuda/CUDAGuard.h>
 #endif
@@ -206,12 +206,12 @@ Engine::~Engine() = default;
 // not CUDA.
 auto Engine::thread_init(int device) -> void {
   THInferNumThreads();
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   // NB: We MUST NOT construct the guard for device -1,
-  // as in some settings we compile with USE_CUDA, but
+  // as in some settings we compile with USE_ROCM, but
   // have lazy stubs for CUDA functionality (so actually
   // attempting to setup a guard(-1) will cause an
-  // error, because it will still query cudaGetDevice).
+  // error, because it will still query hipGetDevice).
   at::cuda::OptionalCUDAGuard guard;
   if (device != -1) {
     guard.set_index(device);
@@ -617,10 +617,10 @@ auto Engine::ready_queue(int device) -> ReadyQueue& {
 
 auto Engine::start_threads() -> void {
   int num_devices = 0;
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   // check for case of compiled with CUDA but no available devices
-  if (cudaGetDeviceCount(&num_devices) != cudaSuccess) {
-    cudaGetLastError();
+  if (hipGetDeviceCount(&num_devices) != hipSuccess) {
+    hipGetLastError();
     num_devices = 0;
   }
 #endif

@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "THCUNN.h"
 #include "common.h"
 #include "THCThrustAllocator.cuh"
@@ -25,7 +26,7 @@ __global__ void cunn_LookupTable_accGradParametersKernelByFeature
    int64_t stride,
    int padding_idx)
 {
-  extern __shared__ char buf[];
+  HIP_DYNAMIC_SHARED( char, buf)
   Acctype* smem = (Acctype*)buf;
   Acctype* my_s = smem + WARP_SIZE*threadIdx.y;
   int* indices_batch = (int*)(buf + sizeof(Acctype)*WARP_SIZE*blockDim.y);
@@ -170,7 +171,7 @@ struct FastPow
   __host__ __device__
   static inline AccType pow(DType x, AccType norm) {
     AccType xA = ScalarConvert<DType, AccType>::to(x);
-    return std::pow(std::abs(xA), norm);
+    return ::pow(std::abs(xA), norm);
   }
 };
 
@@ -204,7 +205,7 @@ void calculate_norms_and_renorm(DType *weights,
                                 IndexType dim)
 {
   // Some casting hacks since dynamic shared memory and templates don't work together:
-  extern __shared__ unsigned char smem[];
+  HIP_DYNAMIC_SHARED( unsigned char, smem)
   AccType *sdata = reinterpret_cast<AccType *>(smem);
 
   IndexType tid = threadIdx.x;
@@ -220,7 +221,7 @@ void calculate_norms_and_renorm(DType *weights,
         (sdata, blockDim.x, v, ReduceAdd<AccType>(), accZero);
 
   if (tid == 0) {
-    sdata[0] = std::pow(v,
+    sdata[0] = ::pow(v,
         THCNumerics<AccType>::div(ScalarConvert<int, AccType>::to(1), normType)
     );
   }

@@ -7,9 +7,9 @@
 
 #include <cstdint>
 
-#include "cuda_runtime_api.h"
-#include "cusparse.h"
-#include "cublas_v2.h"
+#include "hip/hip_runtime_api.h"
+#include "hipsparse.h"
+#include "rocblas.h"
 
 namespace at {
 namespace cuda {
@@ -42,11 +42,11 @@ CAFFE2_API int64_t current_device();
 
 CAFFE2_API void set_device(int64_t device);
 
-CAFFE2_API cudaDeviceProp* getCurrentDeviceProperties();
+CAFFE2_API hipDeviceProp_t* getCurrentDeviceProperties();
 
 CAFFE2_API int warp_size();
 
-CAFFE2_API cudaDeviceProp* getDeviceProperties(int64_t device);
+CAFFE2_API hipDeviceProp_t* getDeviceProperties(int64_t device);
 
 /* Streams */
 
@@ -72,8 +72,8 @@ CAFFE2_API void uncheckedSetCurrentCUDAStream(CUDAStream stream);
 CAFFE2_API Allocator* getCUDADeviceAllocator();
 
 /* Handles */
-CAFFE2_API cusparseHandle_t getCurrentCUDASparseHandle();
-CAFFE2_API cublasHandle_t getCurrentCUDABlasHandle();
+CAFFE2_API hipsparseHandle_t getCurrentCUDASparseHandle();
+CAFFE2_API rocblas_handle getCurrentCUDABlasHandle();
 
 
 } // namespace cuda

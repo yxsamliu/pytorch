@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_APPLY_INC
 #define THC_APPLY_INC
 
@@ -205,7 +206,7 @@ bool THC_pointwiseApply1(THCState* state,
   ptrdiff_t totalElements = THCTensor_nElement(state, a);
 
   int curDevice = -1;
-  cudaGetDevice(&curDevice);
+  hipGetDevice(&curDevice);
   if (!getApplyGrid(state, totalElements, grid, curDevice)) {
     return false;
   }
@@ -233,10 +234,10 @@ bool THC_pointwiseApply1(THCState* state,
   // dimension, and the loop to translate the linear index to the array
   // index can be similarly collapsed. That is what this unrolling is for.
 #define HANDLE_CASE(TYPE, A)                                            \
-  kernelPointwiseApply1<Op,                                             \
+ hipLaunchKernelGGL( kernelPointwiseApply1<Op,                                             \
                         ScalarTypeA,                                    \
                         TYPE, A>                                        \
-    <<<grid, block, 0, THCState_getCurrentStreamOnDevice(state, curDevice)>>>(             \
+    , dim3(grid), dim3(block), 0, THCState_getCurrentStreamOnDevice(state, curDevice),              \
       OffsetInfo<ScalarTypeA, TYPE, A>  \
           (aInfo),                                                      \
       (TYPE) totalElements, op);
@@ -283,10 +284,10 @@ bool THC_pointwiseApply1(THCState* state,
     if (aInfo.dims == 1) {
       OffsetInfo<ScalarTypeA, uint64_t, 1>
         aOffset(aInfo);
-      kernelPointwiseApply1<Op,
+     hipLaunchKernelGGL( kernelPointwiseApply1<Op,
                             ScalarTypeA,
                             uint64_t, 1>
-        <<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+        , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
           aOffset, (uint64_t) totalElements, op);
     } else {
 
@@ -295,10 +296,10 @@ bool THC_pointwiseApply1(THCState* state,
 #endif
       OffsetInfo<ScalarTypeA, uint64_t, -1>
         aOffset(aInfo);
-      kernelPointwiseApply1<Op,
+     hipLaunchKernelGGL( kernelPointwiseApply1<Op,
                             ScalarTypeA,
                             uint64_t, -1>
-        <<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+        , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
           aOffset, (uint64_t) totalElements, op);
     }
   }
@@ -347,7 +348,7 @@ bool THC_pointwiseApply2(THCState* state,
 
   dim3 grid;
   int curDevice = -1;
-  cudaGetDevice(&curDevice);
+  hipGetDevice(&curDevice);
   if (!getApplyGrid(state, totalElements, grid, curDevice)) {
     return false;
   }
@@ -382,11 +383,11 @@ bool THC_pointwiseApply2(THCState* state,
   // dimension, and the loop to translate the linear index to the array
   // index can be similarly collapsed. That is what this unrolling is for.
 #define HANDLE_CASE(TYPE, A, B)                                         \
-  kernelPointwiseApply2<Op,                                             \
+ hipLaunchKernelGGL( kernelPointwiseApply2<Op,                                             \
                         ScalarTypeA,                                    \
                         ScalarTypeB,                                    \
                         TYPE, A, B>                                     \
-    <<<grid, block, 0, THCState_getCurrentStreamOnDevice(state, curDevice)>>>(             \
+    , dim3(grid), dim3(block), 0, THCState_getCurrentStreamOnDevice(state, curDevice),              \
       OffsetInfo<ScalarTypeA, TYPE, A>  \
           (aInfo),                                                      \
       OffsetInfo<ScalarTypeB, TYPE, B>                                  \
@@ -458,11 +459,11 @@ bool THC_pointwiseApply2(THCState* state,
         aOffset(aInfo);
       OffsetInfo<ScalarTypeB, uint64_t, 1>
         bOffset(bInfo);
-      kernelPointwiseApply2<Op,
+     hipLaunchKernelGGL( kernelPointwiseApply2<Op,
                             ScalarTypeA,
                             ScalarTypeB,
                             uint64_t, 1, 1>
-        <<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+        , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
           aOffset, bOffset, (uint64_t) totalElements, op);
     } else {
 #if CUDA_VERSION < 9000
@@ -472,11 +473,11 @@ bool THC_pointwiseApply2(THCState* state,
         aOffset(aInfo);
       OffsetInfo<ScalarTypeB, uint64_t, -1>
         bOffset(bInfo);
-      kernelPointwiseApply2<Op,
+     hipLaunchKernelGGL( kernelPointwiseApply2<Op,
                             ScalarTypeA,
                             ScalarTypeB,
                             uint64_t, -1, -1>
-        <<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+        , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
           aOffset, bOffset, (uint64_t) totalElements, op);
     }
   }
@@ -542,7 +543,7 @@ bool THC_pointwiseApply3(THCState* state,
 
   dim3 grid;
   int curDevice = -1;
-  cudaGetDevice(&curDevice);
+  hipGetDevice(&curDevice);
   if (!getApplyGrid(state, totalElements, grid, curDevice)) {
     return false;
   }
@@ -576,12 +577,12 @@ bool THC_pointwiseApply3(THCState* state,
   }
 
 #define HANDLE_CASE(TYPE, A, B, C)                                      \
-  kernelPointwiseApply3<Op,                                             \
+ hipLaunchKernelGGL( kernelPointwiseApply3<Op,                                             \
                         ScalarTypeA,                                    \
                         ScalarTypeB,                                    \
                         ScalarTypeC,                                    \
                         TYPE, A, B, C>                                  \
-    <<<grid, block, 0, THCState_getCurrentStreamOnDevice(state, curDevice)>>>(             \
+    , dim3(grid), dim3(block), 0, THCState_getCurrentStreamOnDevice(state, curDevice),              \
       OffsetInfo<ScalarTypeA, TYPE, A>                                  \
           (aInfo),                                                      \
       OffsetInfo<ScalarTypeB, TYPE, B>                                  \
@@ -680,12 +681,12 @@ bool THC_pointwiseApply3(THCState* state,
         bOffset(bInfo);
       OffsetInfo<ScalarTypeC, uint64_t, 1>
         cOffset(cInfo);
-      kernelPointwiseApply3<Op,
+     hipLaunchKernelGGL( kernelPointwiseApply3<Op,
                             ScalarTypeA,
                             ScalarTypeB,
                             ScalarTypeC,
                             uint64_t, 1, 1, 1>
-        <<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+        , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
           aOffset, bOffset, cOffset, (uint64_t) totalElements, op);
     } else {
 #if CUDA_VERSION < 9000
@@ -698,12 +699,12 @@ bool THC_pointwiseApply3(THCState* state,
         bOffset(bInfo);
       OffsetInfo<ScalarTypeC, uint64_t, -1>
         cOffset(cInfo);
-      kernelPointwiseApply3<Op,
+     hipLaunchKernelGGL( kernelPointwiseApply3<Op,
                             ScalarTypeA,
                             ScalarTypeB,
                             ScalarTypeC,
                             uint64_t, -1, -1, -1>
-        <<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+        , dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
           aOffset, bOffset, cOffset, (uint64_t) totalElements, op);
     }
   }

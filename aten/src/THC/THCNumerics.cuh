@@ -3,7 +3,7 @@
 
 #include <cstdlib>
 #include <limits>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 #include <assert.h>
 #include "TH/THHalf.h"
 #include "ATen/ATen.h"
@@ -179,7 +179,7 @@ struct THCNumerics<at::Half> {
   static inline __host__ __device__ bool eq(at::Half a, at::Half b) { return a == b; }
   static inline __host__ __device__ bool ne(at::Half a, at::Half b) { return a != b; }
 
-  static inline __host__ __device__ at::Half exp(at::Half a) { return std::exp(a); }
+  static inline __host__ __device__ at::Half exp(at::Half a) { return ::exp(a); }
   static inline __host__ __device__ at::Half exp10(at::Half a) { return ::exp10(a); }
   static inline __host__ __device__ at::Half log(at::Half a) { return ::log(a); }
   static inline __host__ __device__ at::Half log10(at::Half a) { return ::log10(a); }

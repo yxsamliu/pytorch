@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/cuda/CUDAContext.h"
 #include "ATen/TensorUtils.h"
@@ -18,10 +19,10 @@ namespace {
 
 template<typename T, typename AccumT, typename OutT>
 struct LogSoftMaxForwardEpilogue {
-  __device__ __forceinline__ LogSoftMaxForwardEpilogue(AccumT max_input, AccumT sum)
-    : logsum(max_input + std::log(sum)) {}
+  __device__ inline LogSoftMaxForwardEpilogue(AccumT max_input, AccumT sum)
+    : logsum(max_input + ::log(sum)) {}
 
-  __device__ __forceinline__ OutT operator()(T input) const {
+  __device__ inline OutT operator()(T input) const {
     return static_cast<OutT>(input - logsum);
 }
 
@@ -30,11 +31,11 @@ struct LogSoftMaxForwardEpilogue {
 
 template<typename T, typename AccumT, typename OutT>
 struct LogSoftMaxBackwardEpilogue {
-  __device__ __forceinline__ LogSoftMaxBackwardEpilogue(AccumT sum)
+  __device__ inline LogSoftMaxBackwardEpilogue(AccumT sum)
     : sum(sum) {}
 
-  __device__ __forceinline__ T operator()(OutT gradOutput, OutT output) const {
-    return static_cast<T>(gradOutput - std::exp(static_cast<AccumT>(output)) * sum);
+  __device__ inline T operator()(OutT gradOutput, OutT output) const {
+    return static_cast<T>(gradOutput - ::exp(static_cast<AccumT>(output)) * sum);
   }
 
   const AccumT sum;
@@ -42,12 +43,12 @@ struct LogSoftMaxBackwardEpilogue {
 
 template<typename T, typename AccumT, typename OutT>
 struct SoftMaxForwardEpilogue {
-  __device__ __forceinline__ SoftMaxForwardEpilogue(AccumT max_input, AccumT sum)
+  __device__ inline SoftMaxForwardEpilogue(AccumT max_input, AccumT sum)
     : max_input(max_input)
     , sum(sum) {}
 
-  __device__ __forceinline__ OutT operator()(T input) const {
-    return static_cast<OutT>(std::exp(input - max_input) / sum);
+  __device__ inline OutT operator()(T input) const {
+    return static_cast<OutT>(::exp(input - max_input) / sum);
   }
 
   const AccumT max_input;
@@ -56,12 +57,12 @@ struct SoftMaxForwardEpilogue {
 
 template<typename T, typename AccumT, typename OutT>
 struct SoftMaxBackwardEpilogue {
-  __device__ __forceinline__ SoftMaxBackwardEpilogue(AccumT sum)
+  __device__ inline SoftMaxBackwardEpilogue(AccumT sum)
     : sum(sum) {}
 
   // XXX: gradOutput that we get here is really gradOutput * output
   // Look for cmul in SoftMax_updateGradInput
-  __device__ __forceinline__ T operator()(OutT gradOutput, OutT output) const {
+  __device__ inline T operator()(OutT gradOutput, OutT output) const {
     return static_cast<T>(gradOutput - output * sum);
   }
 
@@ -99,7 +100,7 @@ const int max_threads = 1024;
 inline dim3 SpatialSoftMax_getBlockSize(
   uint64_t outer_size, uint64_t dim_size, uint64_t inner_size) {
   uint32_t inner_threads = inner_size;
-  inner_threads = std::min(inner_threads, static_cast<uint32_t>(max_threads));
+  inner_threads = ::min(inner_threads, static_cast<uint32_t>(max_threads));
   uint32_t dim_threads = 1;
   if (inner_threads <= 64 && dim_size >= 64) {
     while (inner_threads * dim_threads <= max_threads && dim_threads <= dim_size)
@@ -122,7 +123,7 @@ void SpatialSoftMax_getLaunchSizes(
 #ifdef __HIP_PLATFORM_HCC__
   max_active_blocks = 16;
 #else
-  cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
+  hipOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks,
                                                 k, block_threads, smem_size);
 #endif
   max_active_blocks *= at::cuda::getCurrentDeviceProperties()->multiProcessorCount;
@@ -131,23 +132,23 @@ void SpatialSoftMax_getLaunchSizes(
 
 inline dim3 SoftMax_getBlockSize(int ILP, uint64_t dim_size) {
   uint64_t block_size = 1;
-  uint64_t max_block_size = std::min(dim_size / ILP, static_cast<uint64_t>(max_threads));
+  uint64_t max_block_size = ::min(dim_size / ILP, static_cast<uint64_t>(max_threads));
   while (block_size < max_block_size) block_size *= 2;
   // Launch at least a single warp - the kernel assumes that.
-  block_size = std::max(block_size, static_cast<uint64_t>(32));
+  block_size = ::max(block_size, static_cast<uint64_t>(32));
   return dim3(block_size);
 }
 
 template<typename T>
 struct Add {
-  __device__ __forceinline__ T operator()(T a, T b) const {
+  __device__ inline T operator()(T a, T b) const {
     return a + b;
   }
 };
 
 template<typename T>
 struct Max {
-  __device__ __forceinline__ T operator()(T a, T b) const {
+  __device__ inline T operator()(T a, T b) const {
     return a < b ? b : a;
   }
 };
@@ -155,7 +156,7 @@ struct Max {
 // Note that it's not a complete block-wide reduction.
 // Only threads that share threadIdx.y reduce values.
 template<typename T, template<typename> class ReduceOp>
-__forceinline__ __device__
+inline __device__
 T spatialBlockReduceX(T *shared, T val) {
   ReduceOp<T> r;
   shared += threadIdx.y * blockDim.x;
@@ -183,7 +184,7 @@ __global__ void cunn_SpatialSoftMaxForward(
     outscalar_t *output, scalar_t *input,
     uint32_t outer_size, uint32_t dim_size, uint32_t inner_size)
 {
-  extern __shared__ unsigned char smem[];
+  HIP_DYNAMIC_SHARED( unsigned char, smem)
   auto sdata = reinterpret_cast<accscalar_t*>(smem);
   const uint32_t outer_stride = inner_size * dim_size;
   const uint32_t dim_stride = inner_size;
@@ -209,7 +210,7 @@ __global__ void cunn_SpatialSoftMaxForward(
 
         accscalar_t sum = 0;
         for (uint32_t d = threadIdx.x; d < dim_size; d += blockDim.x)
-          sum += std::exp(static_cast<accscalar_t>(input[data_offset + d * dim_stride])
+          sum += ::exp(static_cast<accscalar_t>(input[data_offset + d * dim_stride])
                  - max_input);
         sum = spatialBlockReduceX<accscalar_t, Add>(sdata, sum);
 
@@ -224,7 +225,7 @@ __global__ void cunn_SpatialSoftMaxForward(
         }
         accscalar_t sum = 0;
         for (uint32_t d = threadIdx.x; d < dim_size; d += blockDim.x)
-          sum += std::exp(static_cast<accscalar_t>(input[data_offset + d * dim_stride])
+          sum += ::exp(static_cast<accscalar_t>(input[data_offset + d * dim_stride])
                  - max_input);
         Epilogue<scalar_t, accscalar_t, outscalar_t> epilogue(max_input, sum);
         for (uint32_t d = threadIdx.x; d < dim_size; d += blockDim.x)
@@ -241,7 +242,7 @@ __global__ void cunn_SpatialSoftMaxBackward(
     scalar_t *gradInput, outscalar_t *output, outscalar_t *gradOutput,
     uint32_t outer_size, uint32_t dim_size, uint32_t inner_size)
 {
-  extern __shared__ unsigned char smem[];
+  HIP_DYNAMIC_SHARED( unsigned char, smem)
   auto sdata = reinterpret_cast<accscalar_t*>(smem);
   const uint32_t outer_stride = inner_size * dim_size;
   const uint32_t dim_stride = inner_size;
@@ -288,7 +289,7 @@ __global__ void cunn_SpatialSoftMaxBackward(
 template <typename T, typename AccumT>
 struct MaxFloat
 {
-  __device__ __forceinline__ AccumT operator()(AccumT max, T v) const {
+  __device__ inline AccumT operator()(AccumT max, T v) const {
     return ::max(max, (AccumT)v);
   }
 };
@@ -296,7 +297,7 @@ struct MaxFloat
 template<typename T, typename AccumT>
 struct AddFloat
 {
-  __device__ __forceinline__ AccumT operator()(AccumT sum, T v) const {
+  __device__ inline AccumT operator()(AccumT sum, T v) const {
     return sum + v;
   }
 };
@@ -304,18 +305,18 @@ struct AddFloat
 template<typename T, typename AccumT>
 struct SumExpFloat
 {
-  __device__ __forceinline__ SumExpFloat(AccumT v)
+  __device__ inline SumExpFloat(AccumT v)
     : max_k(v) {}
 
-  __device__ __forceinline__ AccumT operator()(AccumT sum, T v) const {
-    return sum + std::exp(v - max_k);
+  __device__ inline AccumT operator()(AccumT sum, T v) const {
+    return sum + ::exp(v - max_k);
   }
 
   const AccumT max_k;
 };
 
 template <template<typename> class Reduction, typename AccumT>
-__device__ __forceinline__ AccumT
+__device__ inline AccumT
 blockReduce(AccumT* smem, AccumT val,
             const Reduction<AccumT>& r,
             AccumT defaultVal)
@@ -359,7 +360,7 @@ blockReduce(AccumT* smem, AccumT val,
 }
 
 template <template<typename, typename> class Reduction, int ILP, typename T, typename AccumT>
-__device__ __forceinline__ AccumT
+__device__ inline AccumT
 ilpReduce(T* data,
           int size,
           const Reduction<T, AccumT>& r,
@@ -394,7 +395,7 @@ template <int ILP, typename scalar_t, typename accscalar_t, typename outscalar_t
 __global__ void
 cunn_SoftMaxForward(outscalar_t *output, scalar_t *input, int classes)
 {
-  extern __shared__ unsigned char smem[];
+  HIP_DYNAMIC_SHARED( unsigned char, smem)
   auto sdata = reinterpret_cast<accscalar_t*>(smem);
   // forward pointers to batch[blockIdx.x]
   // each block handles a sample in the mini-batch
@@ -436,7 +437,7 @@ template <int ILP, typename scalar_t, typename accscalar_t, typename outscalar_t
 __global__ void
 cunn_SoftMaxBackward(scalar_t *gradInput, outscalar_t *output, outscalar_t *gradOutput, int classes)
 {
-  extern __shared__ unsigned char smem[];
+  HIP_DYNAMIC_SHARED( unsigned char, smem)
   auto sdata = reinterpret_cast<accscalar_t*>(smem);
   gradInput += blockIdx.x * classes;
   output += blockIdx.x * classes;
@@ -488,7 +489,7 @@ Tensor host_softmax(const Tensor & input_, const int64_t dim_, const bool half_t
 
   if (input.numel() > 0) {
     int64_t inner_size = 1;
-    cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+    hipStream_t stream = at::cuda::getCurrentCUDAStream();
     for (int64_t i = 0; i < dim; ++i)
       outer_size *= input.size(i);
     for (int64_t i = dim + 1; i < input.dim(); ++i)
@@ -502,14 +503,14 @@ Tensor host_softmax(const Tensor & input_, const int64_t dim_, const bool half_t
       AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "host_softmax", [&] {
       using accscalar_t = acc_type<scalar_t, true>;
       if (!half_to_float) {
-          cunn_SoftMaxForward<ILP, scalar_t, accscalar_t, scalar_t, Epilogue>
-            <<<grid, block, block.x * sizeof(accscalar_t), stream>>>(
-              output.data<scalar_t>(), input.data<scalar_t>(), dim_size
+         hipLaunchKernelGGL( cunn_SoftMaxForward<ILP, scalar_t, accscalar_t, scalar_t, Epilogue>
+            , dim3(grid), dim3(block), block.x * sizeof(accscalar_t), stream, 
+              output.data<scalar_t>(), input.data<scalar_t>(), static_cast<int>(dim_size)
           );
       } else {
-          cunn_SoftMaxForward<ILP, scalar_t, accscalar_t, accscalar_t, Epilogue>
-            <<<grid, block, block.x * sizeof(accscalar_t), stream>>>(
-              output.data<accscalar_t>(), input.data<scalar_t>(), dim_size
+         hipLaunchKernelGGL( cunn_SoftMaxForward<ILP, scalar_t, accscalar_t, accscalar_t, Epilogue>
+            , dim3(grid), dim3(block), block.x * sizeof(accscalar_t), stream, 
+              output.data<accscalar_t>(), input.data<scalar_t>(), static_cast<int>(dim_size)
           );
       }
       });
@@ -526,8 +527,8 @@ Tensor host_softmax(const Tensor & input_, const int64_t dim_, const bool half_t
               &cunn_SpatialSoftMaxForward<scalar_t, accscalar_t, scalar_t, Epilogue>,
               outer_size, dim_size, inner_size,
               grid, block, smem_size);
-          cunn_SpatialSoftMaxForward<scalar_t, accscalar_t, scalar_t, Epilogue>
-            <<<grid, block, smem_size, stream>>>(
+         hipLaunchKernelGGL( cunn_SpatialSoftMaxForward<scalar_t, accscalar_t, scalar_t, Epilogue>
+            , dim3(grid), dim3(block), smem_size, stream, 
              output.data<scalar_t>(), input.data<scalar_t>(), outer_size, dim_size, inner_size
       );
       } else {
@@ -535,14 +536,14 @@ Tensor host_softmax(const Tensor & input_, const int64_t dim_, const bool half_t
               &cunn_SpatialSoftMaxForward<scalar_t, accscalar_t, accscalar_t, Epilogue>,
               outer_size, dim_size, inner_size,
               grid, block, smem_size);
-          cunn_SpatialSoftMaxForward<scalar_t, accscalar_t, accscalar_t, Epilogue>
-            <<<grid, block, smem_size, stream>>>(
+         hipLaunchKernelGGL( cunn_SpatialSoftMaxForward<scalar_t, accscalar_t, accscalar_t, Epilogue>
+            , dim3(grid), dim3(block), smem_size, stream, 
              output.data<accscalar_t>(), input.data<scalar_t>(), outer_size, dim_size, inner_size
       );
       }
       });
     }
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
   }
   return output;
 }
@@ -565,7 +566,7 @@ Tensor host_softmax_backward(const Tensor &grad_, const Tensor &output_, int64_t
   for (int64_t i = dim + 1; i < output.dim(); ++i)
     inner_size *= output.size(i);
 // See descriptions of kernels above.
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
   if (inner_size == 1) {
     const int ILP = 2;
     dim3 grid(outer_size);
@@ -573,14 +574,14 @@ Tensor host_softmax_backward(const Tensor &grad_, const Tensor &output_, int64_t
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(gI.type(), "host_softmax_backward", [&] {
     using accscalar_t = acc_type<scalar_t, true>;
     if (!half_to_float) {
-        cunn_SoftMaxBackward<ILP, scalar_t, accscalar_t, scalar_t, Epilogue>
-         <<<grid, block, block.x * sizeof(accscalar_t), stream>>>(
-            gI.data<scalar_t>(), output.data<scalar_t>(), grad.data<scalar_t>(), dim_size
+       hipLaunchKernelGGL( cunn_SoftMaxBackward<ILP, scalar_t, accscalar_t, scalar_t, Epilogue>
+         , dim3(grid), dim3(block), block.x * sizeof(accscalar_t), stream, 
+            gI.data<scalar_t>(), output.data<scalar_t>(), grad.data<scalar_t>(), static_cast<int>(dim_size)
     );
     } else {
-        cunn_SoftMaxBackward<ILP, scalar_t, accscalar_t, accscalar_t, Epilogue>
-         <<<grid, block, block.x * sizeof(accscalar_t), stream>>>(
-            gI.data<scalar_t>(), output.data<accscalar_t>(), grad.data<accscalar_t>(), dim_size
+       hipLaunchKernelGGL( cunn_SoftMaxBackward<ILP, scalar_t, accscalar_t, accscalar_t, Epilogue>
+         , dim3(grid), dim3(block), block.x * sizeof(accscalar_t), stream, 
+            gI.data<scalar_t>(), output.data<accscalar_t>(), grad.data<accscalar_t>(), static_cast<int>(dim_size)
     );
     }
     });
@@ -595,8 +596,8 @@ Tensor host_softmax_backward(const Tensor &grad_, const Tensor &output_, int64_t
             outer_size, dim_size, inner_size,
             grid, block, smem_size);
 
-        cunn_SpatialSoftMaxBackward<scalar_t, accscalar_t, scalar_t, Epilogue>
-          <<<grid, block, smem_size, stream>>>(
+       hipLaunchKernelGGL( cunn_SpatialSoftMaxBackward<scalar_t, accscalar_t, scalar_t, Epilogue>
+          , dim3(grid), dim3(block), smem_size, stream, 
             gI.data<scalar_t>(), output.data<scalar_t>(), grad.data<scalar_t>(),
             outer_size, dim_size, inner_size
         );
@@ -606,15 +607,15 @@ Tensor host_softmax_backward(const Tensor &grad_, const Tensor &output_, int64_t
             outer_size, dim_size, inner_size,
             grid, block, smem_size);
 
-        cunn_SpatialSoftMaxBackward<scalar_t, accscalar_t, accscalar_t, Epilogue>
-          <<<grid, block, smem_size, stream>>>(
+       hipLaunchKernelGGL( cunn_SpatialSoftMaxBackward<scalar_t, accscalar_t, accscalar_t, Epilogue>
+          , dim3(grid), dim3(block), smem_size, stream, 
             gI.data<scalar_t>(), output.data<accscalar_t>(), grad.data<accscalar_t>(),
             outer_size, dim_size, inner_size
         );
     }
     });
   }
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return gI;
 }
 }

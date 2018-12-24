@@ -247,7 +247,7 @@ void THNN_(VolumetricAveragePooling_updateOutput)(
       }
     totalZ -= 65535;
     offsetZ += 65535;
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
   }
 
   THCTensor_(free)(state, input);
@@ -343,7 +343,7 @@ void THNN_(VolumetricAveragePooling_updateGradInput)(
       cuda_VolumetricAveragePooling_updateGradInput_Stride1<scalar_t, accreal>
         <<<grid, block, 0, THCState_getCurrentStream(state)>>>(
           cudaGradOutput, cudaGradInput, kT, kH, kW, 1.0f/(kT * kH * kW), offsetZ);
-      THCudaCheck(cudaGetLastError());
+      THCudaCheck(hipGetLastError());
       totalZ -= 65535;
       offsetZ += 65535;
     }
@@ -370,7 +370,7 @@ void THNN_(VolumetricAveragePooling_updateGradInput)(
             cudaGradOutput, cudaGradInput, kT, kH, kW, dT, dH, dW,
             padT, padH, padW, count_include_pad, offsetZ);
       }
-      THCudaCheck(cudaGetLastError());
+      THCudaCheck(hipGetLastError());
       totalZ -= 65535;
       offsetZ += 65535;
     }

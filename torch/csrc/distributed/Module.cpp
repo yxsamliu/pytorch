@@ -9,7 +9,7 @@
 #include "torch/csrc/PythonTypes.h"
 #include "torch/csrc/autograd/python_variable.h"
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 #include "torch/csrc/cuda/Stream.h"
 #endif
 
@@ -24,7 +24,7 @@ static std::unordered_map<std::string, THDChannelType> name2channel_type = {
 static std::unordered_map<PyObject*, THDReduceOp> obj2reduceop;
 static std::unordered_map<PyObject*, THDGroup> obj2group;
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 extern THCState* state;
 #endif
 
@@ -51,7 +51,7 @@ PyObject* THDPModule_initProcessGroup(PyObject *_unused, PyObject *args)
     AutoNoGIL nogil;
     THDProcessGroupInit(channel_type, init_method, world_size, group_name, rank);
   }
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   THDSetCudaStatePtr(&state);
 #endif
   Py_RETURN_NONE;
@@ -68,7 +68,7 @@ PyObject* THDPModule_destroyProcessGroup(PyObject *_unused) {
   END_HANDLE_TH_ERRORS
 }
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 PyObject* THDPModule_registerStream(PyObject *_unused, PyObject *_stream)
 {
   HANDLE_TH_ERRORS
@@ -95,7 +95,7 @@ PyObject* THDPModule_getNumProcesses(PyObject *_unused)
   END_HANDLE_TH_ERRORS
 }
 
-#ifdef USE_CUDA
+#ifdef USE_ROCM
 extern PyObject* THCPDoubleTensorClass;
 extern PyObject* THCPFloatTensorClass;
 extern PyObject* THCPHalfTensorClass;
@@ -882,7 +882,7 @@ static struct PyMethodDef _THDPModule_methods[] = {
   {"_dist_init_process_group", (PyCFunction)THDPModule_initProcessGroup, METH_VARARGS, nullptr},
   {"_dist_destroy_process_group", (PyCFunction)THDPModule_destroyProcessGroup, METH_NOARGS, nullptr},
   {"_dist_clear_group_cache", (PyCFunction)THDPModule_clearGroupCache, METH_VARARGS, nullptr},
-#ifdef USE_CUDA
+#ifdef USE_ROCM
   {"_dist_register_stream", (PyCFunction)THDPModule_registerStream, METH_O, nullptr},
 #endif
   {"_dist_get_rank", (PyCFunction)THDPModule_getRank, METH_NOARGS, nullptr},

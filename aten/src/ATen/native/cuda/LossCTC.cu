@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 // Copyright (c) 2018 MathInf GmbH, Thomas Viehmann
 // Licensed under the BSD-3-Clause license
 // This is the GPU implementation of the Connectionist Temporal Loss.
@@ -128,7 +129,7 @@ __global__ void ctc_loss_log_alpha_gpu_kernel(scalar_t* __restrict__ log_alpha_d
         if (lamax == neginf) // when all are neginf. (then the whole thing is neginf, but we can pretend)
           lamax = 0;
 
-        log_alpha_data[la_batch_offset + la_input_stride * t + la_target_stride * s] = std::log(std::exp(la1-lamax)+std::exp(la2-lamax)+std::exp(la3-lamax))+lamax
+        log_alpha_data[la_batch_offset + la_input_stride * t + la_target_stride * s] = ::log(::exp(la1-lamax)+::exp(la2-lamax)+::exp(la3-lamax))+lamax
           + log_probs_data[lp_batch_offset + t * lp_input_stride + lp_char_stride * current_char];
       } else {
 	// otherwise we just set to neginf
@@ -145,7 +146,7 @@ __global__ void ctc_loss_log_alpha_gpu_kernel(scalar_t* __restrict__ log_alpha_d
     scalar_t l2 = log_alpha_data[la_batch_offset + la_input_stride * (input_length-1) + la_target_stride * (target_length*2-1)];
     scalar_t m = ((l1 > l2) ? l1 : l2);
     m = ((m == neginf) ? 0 : m);
-    scalar_t log_likelihood = std::log(std::exp(l1-m)+std::exp(l2-m))+m;
+    scalar_t log_likelihood = ::log(::exp(l1-m)+::exp(l2-m))+m;
     neg_log_likelihood_data[b] = -log_likelihood;
   }
 }
@@ -232,11 +233,11 @@ std::tuple<Tensor, Tensor> ctc_loss_gpu_template(const Tensor& log_probs, const 
   while (threads_target / 2 >= 2*max_target_length+1) {
     threads_target /= 2;
   }
-  int threads_batch = std::min(max_threads / threads_target, (int) batch_size);
+  int threads_batch = ::min(max_threads / threads_target, (int) batch_size);
 
   dim3 block(threads_target, threads_batch);
   dim3 grid((2*max_target_length+1 + threads_target-1)/threads_target, (batch_size+threads_batch-1)/threads_batch);
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
 
   ctc_loss_log_alpha_gpu_kernel<scalar_t, target_t><<<grid, block, 0, stream>>>(
 		      log_alpha.data<scalar_t>(),
@@ -247,7 +248,7 @@ std::tuple<Tensor, Tensor> ctc_loss_gpu_template(const Tensor& log_probs, const 
                       log_alpha.stride(0), log_alpha.stride(1), log_alpha.stride(2),
                       tg_batch_offsets.data<int64_t>(), tg_target_stride,
                       batch_size, BLANK);
-  THCudaCheck(cudaGetLastError()); // catch launch errors
+  THCudaCheck(hipGetLastError()); // catch launch errors
   return std::make_tuple(neg_log_likelihood, log_alpha);
 }
 
@@ -332,7 +333,7 @@ ctc_loss_backward_log_beta_gpu_kernel(scalar_t* __restrict__ log_beta_data,
         if (lbmax == neginf)
           lbmax = 0;
 
-        scalar_t lb = std::log(std::exp(lb1-lbmax)+std::exp(lb2-lbmax)+std::exp(lb3-lbmax))+lbmax
+        scalar_t lb = ::log(::exp(lb1-lbmax)+::exp(lb2-lbmax)+::exp(lb3-lbmax))+lbmax
           + log_probs_data[lp_batch_offset + t * lp_input_stride + lp_char_stride * current_target_prime];
 
         log_beta_data[lb_batch_offset + lb_input_stride * t + lb_target_stride * s] = lb;
@@ -395,7 +396,7 @@ __global__ void ctc_loss_backward_collect_nonblank_gpu_kernel(scalar_t* __restri
   for (int64_t t = 0; t < input_length; t++) {
     scalar_t lp = log_probs_data[lp_batch_offset + t * lp_input_stride + lp_char_stride * target];
     atomicAdd(&gradient_data[gr_batch_offset + t * gr_input_stride + gr_char_stride * target],
-	      -std::exp(log_alpha_data[la_batch_offset + la_input_stride * t + la_target_stride * (s*2+1)]
+	      -::exp(log_alpha_data[la_batch_offset + la_input_stride * t + la_target_stride * (s*2+1)]
 			+ log_beta_data[lb_batch_offset + lb_input_stride * t + lb_target_stride * (s*2+1)]
 			+ nll - lp) * gr);
   }
@@ -443,7 +444,7 @@ __global__ void ctc_loss_backward_collect_gpu_kernel(scalar_t* __restrict__ grad
         lcab = log_alpha_beta;
       } else {
         scalar_t max = ((lcab > log_alpha_beta) ? lcab : log_alpha_beta);
-        lcab = std::log(std::exp(lcab-max)+std::exp(log_alpha_beta-max))+max;
+        lcab = ::log(::exp(lcab-max)+::exp(log_alpha_beta-max))+max;
       }
     }
   }
@@ -455,7 +456,7 @@ __global__ void ctc_loss_backward_collect_gpu_kernel(scalar_t* __restrict__ grad
     scalar_t& res = gradient_data[gr_batch_offset + t * gr_input_stride + gr_char_stride * c];
     if (t < input_length) {
       scalar_t lp = log_probs_data[lp_batch_offset + t * lp_input_stride + lp_char_stride * c];
-      res = (std::exp(lp)-std::exp(res + nll - lp)) * gr;
+      res = (::exp(lp)-::exp(res + nll - lp)) * gr;
     }
     else {
       res = 0.;
@@ -513,9 +514,9 @@ Tensor ctc_loss_backward_gpu_template(const Tensor& grad_out, const Tensor& log_
   while (threads_target / 2 >= 2*max_target_length+1) {
     threads_target /= 2;
   }
-  int threads_batch = std::min(max_threads / threads_target, (int) batch_size);
+  int threads_batch = ::min(max_threads / threads_target, (int) batch_size);
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
 
   {
     dim3 block(threads_target, threads_batch);
@@ -529,7 +530,7 @@ Tensor ctc_loss_backward_gpu_template(const Tensor& grad_out, const Tensor& log_
        log_beta.stride(0), log_beta.stride(1), log_beta.stride(2),
        tg_batch_offsets.data<int64_t>(), tg_target_stride,
        batch_size, BLANK);
-    THCudaCheck(cudaGetLastError()); // catch launch errors
+    THCudaCheck(hipGetLastError()); // catch launch errors
   }
 
   // Very crude heuristic for what is a small problem., based on linearly regressing problem dimensions on
@@ -563,7 +564,7 @@ Tensor ctc_loss_backward_gpu_template(const Tensor& grad_out, const Tensor& log_
     while (threads_target / 2 >= max_target_length) {
       threads_target /= 2;
     }
-    int threads_batch = std::min(max_threads / threads_target, (int) batch_size);
+    int threads_batch = ::min(max_threads / threads_target, (int) batch_size);
     dim3 block(threads_target, threads_batch);
     dim3 grid((max_target_length + threads_target-1)/threads_target, (batch_size+threads_batch-1)/threads_batch);
     ctc_loss_backward_collect_nonblank_gpu_kernel<scalar_t, target_t><<<grid, block, 0, stream>>>
@@ -579,14 +580,14 @@ Tensor ctc_loss_backward_gpu_template(const Tensor& grad_out, const Tensor& log_
        log_beta.stride(0), log_beta.stride(1), log_beta.stride(2),
        tg_batch_offsets.data<int64_t>(), tg_target_stride,
        batch_size, num_labels, BLANK);
-    THCudaCheck(cudaGetLastError()); // catch launch errors
+    THCudaCheck(hipGetLastError()); // catch launch errors
   } else { // small problem, use naive algorithm
     // Still no block/grid configuration guru...
     int threads_input = max_threads;
     while (threads_input / 2 >= log_probs.size(0)) {
       threads_input /= 2;
     }
-    threads_batch = std::min(max_threads / threads_input, (int) batch_size);
+    threads_batch = ::min(max_threads / threads_input, (int) batch_size);
     dim3 block(threads_input, threads_batch);
     dim3 grid((log_probs.size(0) + threads_input-1)/threads_input, (batch_size+threads_batch-1)/threads_batch);
 
@@ -603,7 +604,7 @@ Tensor ctc_loss_backward_gpu_template(const Tensor& grad_out, const Tensor& log_
        log_beta.stride(0), log_beta.stride(1), log_beta.stride(2),
        tg_batch_offsets.data<int64_t>(), tg_target_stride,
        batch_size, num_labels, BLANK);
-    THCudaCheck(cudaGetLastError()); // catch launch errors
+    THCudaCheck(hipGetLastError()); // catch launch errors
   }
   return grad;
 }

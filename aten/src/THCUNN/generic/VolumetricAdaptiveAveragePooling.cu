@@ -77,7 +77,7 @@ void THNN_(VolumetricAdaptiveAveragePooling_updateOutput)(
 
     totalZ -= 65535;
     offsetZ += 65535;
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
   }
 
   if (input->dim() == 5) {
@@ -163,7 +163,7 @@ void THNN_(VolumetricAdaptiveAveragePooling_updateGradInput)(
 
     totalZ -= 65535;
     offsetZ += 65535;
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
   }
   // clean
   THCTensor_(free)(state, gradOutput);

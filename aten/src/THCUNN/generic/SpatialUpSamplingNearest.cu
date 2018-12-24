@@ -59,10 +59,10 @@ void THNN_(SpatialUpSamplingNearest_updateOutput)(
 
   const int num_kernels = outputHeight * outputWidth;
   const int num_threads = THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock;
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
   nearest_neighbor_4d_kernel<scalar_t, accreal> <<<THCCeilDiv(num_kernels, num_threads), num_threads,
 	 0, stream>>>(num_kernels, idata, odata);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 
@@ -90,11 +90,11 @@ void THNN_(SpatialUpSamplingNearest_updateGradInput)(
 
   const int num_kernels = outputHeight * outputWidth;
   const int num_threads = THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock;
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
 
   nearest_neighbor_4d_kernel_backward<scalar_t, accreal> <<<THCCeilDiv(num_kernels, num_threads),
 	  num_threads, 0, stream>>>(num_kernels, data1, data2);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   THCTensor_(free)(state, gradOutput);
 }
 

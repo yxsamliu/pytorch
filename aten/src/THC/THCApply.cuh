@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_APPLY_INC
 #define THC_APPLY_INC
 
@@ -205,7 +206,7 @@ bool THC_pointwiseApply1(THCState* state,
   ptrdiff_t totalElements = THCTensor_nElement(state, a);
 
   int curDevice = -1;
-  cudaGetDevice(&curDevice);
+  hipGetDevice(&curDevice);
   if (!getApplyGrid(state, totalElements, grid, curDevice)) {
     return false;
   }
@@ -347,7 +348,7 @@ bool THC_pointwiseApply2(THCState* state,
 
   dim3 grid;
   int curDevice = -1;
-  cudaGetDevice(&curDevice);
+  hipGetDevice(&curDevice);
   if (!getApplyGrid(state, totalElements, grid, curDevice)) {
     return false;
   }
@@ -542,7 +543,7 @@ bool THC_pointwiseApply3(THCState* state,
 
   dim3 grid;
   int curDevice = -1;
-  cudaGetDevice(&curDevice);
+  hipGetDevice(&curDevice);
   if (!getApplyGrid(state, totalElements, grid, curDevice)) {
     return false;
   }

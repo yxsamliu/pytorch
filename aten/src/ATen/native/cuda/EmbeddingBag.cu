@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/cuda/CUDAContext.h"
 #include "ATen/TensorUtils.h"
@@ -183,7 +184,7 @@ Tensor embedding_bag_backward_cuda_sum_avg(
 
   auto grad_weight = at::zeros({num_weights, grad.size(1)}, grad.options());
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
 
   ptrdiff_t numel = indices.numel();
 
@@ -258,7 +259,7 @@ Tensor embedding_bag_backward_cuda_sum_avg(
             mode, bag_size.data<int64_t>());
       });
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return grad_weight;
 }
 
@@ -298,7 +299,7 @@ Tensor embedding_bag_backward_cuda_max(const Tensor &grad,
 
   int64_t numBags = grad.size(0);
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
 
   dim3 block = dim3(32, 8);
   int grid = 1024;
@@ -311,7 +312,7 @@ Tensor embedding_bag_backward_cuda_max(const Tensor &grad,
             grad_weight.data<scalar_t>(), stride, numBags);
       });
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return grad_weight;
 }
 }
@@ -338,7 +339,7 @@ _embedding_bag_cuda(const Tensor &weight, const Tensor &indices,
   auto offset2bag =
       at::zeros({indices.size(0)}, indices.options()); // offset2bag = [0 0 0 0 0]
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
 
   auto output = at::zeros({offsets.size(0), weight.size(1)}, weight.options());
 
@@ -362,7 +363,7 @@ _embedding_bag_cuda(const Tensor &weight, const Tensor &indices,
         mode == MODE_MAX ? max_indices.data<int64_t>() : NULL);
   });
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return std::tuple<Tensor, Tensor, Tensor, Tensor>(output, offset2bag, bag_size, max_indices);
 }
 

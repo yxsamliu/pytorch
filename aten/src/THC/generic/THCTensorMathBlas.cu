@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorMathBlas.cu"
 #else
@@ -119,8 +120,8 @@ void THCTensor_(addmv)(THCState *state, THCTensor *r_, scalar_t beta, THCTensor 
     THCTensor_(free)(state, cmat);
   }
 
-  // In cublasSgemv, cublasDgemv (x,0).mv(0) does not
-  // handle beta, whereas cublasSgemm, cublasDgemm do for case where (x,0).mm(0,y).
+  // In rocblas_sgemv, rocblas_dgemv (x,0).mv(0) does not
+  // handle beta, whereas rocblas_sgemm, rocblas_dgemm do for case where (x,0).mm(0,y).
   if (THTensor_sizeLegacyNoScalars(vec, 0) == 0 && mat->size(0) != 0) {
     if(THCNumerics<scalar_t>::eq(beta, ScalarConvert<int, scalar_t>::to(0))) {
       THCTensor_(zero)(state, r_);
@@ -688,7 +689,7 @@ void THCTensor_(baddbmm)(THCState *state, THCTensor *result, scalar_t beta, THCT
   }
 #else
 #ifndef __HIP_PLATFORM_HCC__
-  cudaDeviceProp* prop = THCState_getCurrentDeviceProperties(state);
+  hipDeviceProp_t* prop = THCState_getCurrentDeviceProperties(state);
   if (prop->major >= 5){
 #endif
 

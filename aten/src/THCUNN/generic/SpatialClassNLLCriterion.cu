@@ -125,12 +125,12 @@ void THNN_(SpatialClassNLLCriterion_updateOutput)(
       blocks_per_sample,
       ignore_index
   );
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   if (reduction == Reduction::Mean) {
     cunn_SpatialClassNLLCriterion_sizeAverage_kernel<<<1, 1, 0, THCState_getCurrentStream(state)>>>(
       output_data, total_weight_data
     );
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
   }
 
   if (weights)
@@ -222,7 +222,7 @@ void THNN_(SpatialClassNLLCriterion_updateGradInput)(
       blocks_per_sample,
       ignore_index
   );
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 
   if (weights)
     THCTensor_(free)(state, weights);

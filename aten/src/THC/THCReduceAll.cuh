@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_REDUCEALL_INC
 #define THC_REDUCEALL_INC
 
@@ -40,7 +41,7 @@ kernelReduceAll(TensorInfo<T, IndexType> in,
   }
 
   // Reduce within the block
-  extern __shared__ char smemChar[];
+  HIP_DYNAMIC_SHARED( char, smemChar)
   AccT* smem = (AccT*) smemChar;
   r = reduceBlock(smem, blockDim.x, r, reduceOp, init);
 
@@ -51,13 +52,13 @@ kernelReduceAll(TensorInfo<T, IndexType> in,
 }
 
 template <typename IndexType>
-__device__ __forceinline__ IndexType getStartIndex(IndexType totalSize) {
+__device__ inline IndexType getStartIndex(IndexType totalSize) {
   IndexType sizePerBlock = THCCeilDiv(totalSize, (IndexType) gridDim.x);
   return blockIdx.x * sizePerBlock;
 }
 
 template <typename IndexType>
-__device__ __forceinline__ IndexType getEndIndex(IndexType totalSize) {
+__device__ inline IndexType getEndIndex(IndexType totalSize) {
   IndexType sizePerBlock = THCCeilDiv(totalSize, (IndexType) gridDim.x);
   return min((IndexType) ((blockIdx.x + 1) * sizePerBlock), totalSize);
 }
@@ -88,7 +89,7 @@ kernelReduceAllPass1(TensorInfo<T, IndexType> in,
   }
 
   // Reduce within the block
-  extern __shared__ char smemChar[];
+  HIP_DYNAMIC_SHARED( char, smemChar)
   AccT* smem = (AccT*) smemChar;
   r = reduceBlock(smem, blockDim.x, r, reduceOp, init);
 
@@ -111,7 +112,7 @@ kernelReduceAllPass2(int numPass1Blocks,
   }
 
   // Reduce within the block
-  extern __shared__ char smemChar[];
+  HIP_DYNAMIC_SHARED( char, smemChar)
   T* smem = (T*) smemChar;
   r = reduceBlock(smem, numPass1Blocks, r, reduceOp, init);
 
@@ -309,13 +310,13 @@ bool THC_reduceAll(THCState* state,
   // If our destination is not on the device, copy the value back to
   // the host (synchronous!)
   if (!outOnDevice) {
-    cudaStream_t stream = THCState_getCurrentStream(state);
-    THCudaCheck(cudaMemcpyAsync(out,
+    hipStream_t stream = THCState_getCurrentStream(state);
+    THCudaCheck(hipMemcpyAsync(out,
                                 devOut,
                                 sizeof(AccT),
-                                cudaMemcpyDeviceToHost,
+                                hipMemcpyDeviceToHost,
                                 stream));
-    THCudaCheck(cudaStreamSynchronize(stream));
+    THCudaCheck(hipStreamSynchronize(stream));
   }
 
   if (freeDevOut) {

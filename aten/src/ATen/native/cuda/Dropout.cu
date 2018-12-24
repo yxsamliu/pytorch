@@ -1,9 +1,10 @@
+#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/AccumulateType.h"
 #include "ATen/cuda/CUDAApplyUtils.cuh"
 #include "ATen/cuda/detail/IndexUtils.cuh"
 #include "ATen/cuda/detail/TensorInfo.cuh"
-#include "curand_kernel.h"
+#include "hiprand_kernel.h"
 
 #include <THC/THCGeneral.h>
 #include <THC/THCTensorRandom.h>
@@ -45,8 +46,8 @@ fused_dropout_kernel(cuda::detail::TensorInfo<scalar_t, IndexType> a,
 
   accscalar_t pinv = accscalar_t(1)/p;
   IndexType idx = blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t state;
-    curand_init(
+  hiprandStatePhilox4_32_10_t state;
+    hiprand_init(
         seeds.first,
         idx,
         seeds.second,
@@ -56,8 +57,8 @@ fused_dropout_kernel(cuda::detail::TensorInfo<scalar_t, IndexType> a,
   for (IndexType linearIndex = idx;
        linearIndex < rounded_size;
        linearIndex += gridDim.x * blockDim.x*UNROLL) {
-//curand_uniform_double was pure evil anyway, not doing what it promises, and there's nothing for halfs, so generate float for everything
-       float4 rand = curand_uniform4(&state);
+//hiprand_uniform_double was pure evil anyway, not doing what it promises, and there's nothing for halfs, so generate float for everything
+       float4 rand = hiprand_uniform4(&state);
        scalar_t src[UNROLL];
        rand.x = rand.x < p;
        rand.y = rand.y < p;
@@ -103,7 +104,7 @@ fused_dropout_cuda(const Tensor& self, double p, Generator * gen){
   unsigned int blocks_per_sm = at::cuda::getCurrentDeviceProperties()->maxThreadsPerMultiProcessor/block_size;
   dim3 dim_block(block_size);
   dim3 grid((nelem + block_size -1)/block_size);
-  grid.x = std::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * blocks_per_sm, grid.x);
+  grid.x = ::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * blocks_per_sm, grid.x);
 //number of times random will be generated per thread, to offset philox counter in thc random state
   int64_t counter_offset = ((nelem - 1)/(block_size*grid.x*UNROLL)+1)*UNROLL;
   if (cuda::detail::canUse32BitIndexMath(self)){
@@ -143,7 +144,7 @@ fused_dropout_cuda(const Tensor& self, double p, Generator * gen){
       }
    });
   }
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return std::tuple<Tensor,Tensor>(ret, mask);
 }
 

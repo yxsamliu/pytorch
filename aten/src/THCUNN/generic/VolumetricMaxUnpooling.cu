@@ -160,7 +160,7 @@ void THNN_(VolumetricMaxUnpooling_updateOutput)(
                              outputTime, outputHeight, outputWidth,
                              dT, dH, dW,
                              padT, padH, padW, offsetZ);
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
     totalZ -= 65535;
     offsetZ += 65535;
   }
@@ -256,7 +256,7 @@ void THNN_(VolumetricMaxUnpooling_updateGradInput)(
                                              cudaGradInput,
                                              dT, dH, dW,
                                              padT, padH, padW, offsetZ);
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
     totalZ -= 65535;
     offsetZ += 65535;
   }

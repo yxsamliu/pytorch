@@ -2,9 +2,9 @@
 
 #include "ATen/ATen.h"
 #include "ATen/cuda/NumericLimits.cuh"
-#include "cuda.h"
-#include "cuda_fp16.h"
-#include "cuda_runtime.h"
+#include "hip/hip_runtime.h"
+#include "hip/hip_fp16.h"
+#include "hip/hip_runtime.h"
 
 #include <assert.h>
 
@@ -84,7 +84,7 @@ void launch_function(){
 // half common math functions tests in device
 TEST(HalfCuda, HalfCuda) {
   launch_function();
-  cudaError_t err = cudaDeviceSynchronize();
-  bool isEQ = err == cudaSuccess;
+  hipError_t err = hipDeviceSynchronize();
+  bool isEQ = err == hipSuccess;
   ASSERT_TRUE(isEQ);
 }

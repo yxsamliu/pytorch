@@ -91,7 +91,7 @@ void THNN_(SpatialFractionalMaxPooling_updateOutput)(
       // dynamic pool width
       SFMP_UPDATE_OUTPUT_CASE(-1);
   }
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 void THNN_(SpatialFractionalMaxPooling_updateGradInput)(
@@ -151,7 +151,7 @@ void THNN_(SpatialFractionalMaxPooling_updateGradInput)(
   SpatialFractionalMaxPooling_updateGradInput
     <<<grid, block, 0, THCState_getCurrentStream(state)>>>(
       devGradInput, devGradOutput, devIndices);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #endif

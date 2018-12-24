@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/cuda/CUDAContext.h"
 #include "ATen/cuda/CUDAApplyUtils.cuh"
@@ -35,7 +36,7 @@ __global__ void kernelHistogram1D(
     int binsize,
     IndexType totalElements,
     Op getOp) {
-  extern __shared__ unsigned char my_smem[];
+  HIP_DYNAMIC_SHARED( unsigned char, my_smem)
   output_t* smem = nullptr;
 
   if (MemoryType == CUDAHistogramMemoryType::SHARED) {
@@ -119,7 +120,7 @@ __global__ void kernelHistogram1D(
          (MEMORY_TYPE == CUDAHistogramMemoryType::SHARED) ? sharedMem : 0, \
          getCurrentCUDAStream()>>>(                    \
           aInfo, pInfo, bInfo, binsize, totalElements, WEIGHTS_OP);        \
-  AT_ASSERTM(cudaGetLastError() == cudaSuccess, "kernelHistogram1D failed");
+  AT_ASSERTM(hipGetLastError() == hipSuccess, "kernelHistogram1D failed");
 
 #define HANDLE_SWITCH_CASE(mType, getOp)                        \
   switch (mType) {                                              \
@@ -134,11 +135,11 @@ __global__ void kernelHistogram1D(
   }
 
 inline int64_t getFreeGlobalMemory() {
-  // no need to use `cudaSetDevice`
+  // no need to use `hipSetDevice`
   size_t free_mem, total_mem;
-  cudaMemGetInfo(&free_mem, &total_mem);
+  hipMemGetInfo(&free_mem, &total_mem);
   AT_ASSERTM(
-      cudaGetLastError() == cudaSuccess,
+      hipGetLastError() == hipSuccess,
       "CUDA_tensor_histogram failed to get free global memory");
   return static_cast<int64_t>(free_mem);
 }
@@ -259,7 +260,7 @@ Tensor _bincount_cuda_template(
   }
 
   auto nbins = self.max().item<int64_t>() + 1L;
-  nbins = std::max(nbins, minlength);
+  nbins = ::max(nbins, minlength);
   // alloc output counter on GPU
   Tensor output;
   if (has_weights) {

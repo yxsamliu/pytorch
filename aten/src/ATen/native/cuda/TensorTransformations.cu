@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/native/TensorTransformations.h"
 
 #include "ATen/cuda/detail/IndexUtils.cuh"

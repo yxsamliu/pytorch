@@ -45,7 +45,7 @@ void THNN_(SpatialAdaptiveAveragePooling_updateOutput)(
     adaptiveaveragepool <<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (input_data, output_data,
                                    isizeH, isizeW, osizeH, osizeW,
                                    istrideD, istrideH, istrideW);
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
 
   } else {
     input = THCTensor_(newContiguous)(state, input);
@@ -73,7 +73,7 @@ void THNN_(SpatialAdaptiveAveragePooling_updateOutput)(
     adaptiveaveragepool <<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (input_data, output_data,
                                    isizeH, isizeW, osizeH, osizeW,
                                    istrideD, istrideH, istrideW);
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
     // clean
     THCTensor_(free)(state, input);
   }
@@ -127,7 +127,7 @@ void THNN_(SpatialAdaptiveAveragePooling_updateGradInput)(
       adaptiveaveragegradinput <<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (gradInput_data, gradOutput_data,
                                           isizeH, isizeW, osizeH, osizeW);
     }
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
   } else {
     int64_t sizeB  = input->size(0);
     int64_t sizeD  = input->size(1);
@@ -162,7 +162,7 @@ void THNN_(SpatialAdaptiveAveragePooling_updateGradInput)(
       adaptiveaveragegradinput <<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (gradInput_data, gradOutput_data,
                                           isizeH, isizeW, osizeH, osizeW);
     }
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
   }
 
   // clean

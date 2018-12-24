@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "CUDATest.hpp"
 #include <ATen/cuda/Exceptions.h>
 
@@ -21,7 +22,7 @@ void cudaSleep(at::cuda::CUDAStream& stream, uint64_t clocks) {
 
 int cudaNumDevices() {
   int n = 0;
-  AT_CUDA_CHECK(cudaGetDeviceCount(&n));
+  AT_CUDA_CHECK(hipGetDeviceCount(&n));
   return n;
 }
 

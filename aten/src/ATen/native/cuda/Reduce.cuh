@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #pragma once
 
 #include <ATen/ATen.h>
@@ -304,7 +305,7 @@ struct ReduceOp {
   }
 
   C10_DEVICE arg_t block_reduce(arg_t value) const {
-    extern __shared__ char shared_memory[];
+    HIP_DYNAMIC_SHARED( char, shared_memory)
     arg_t* shared = (arg_t*)shared_memory;
     shared[config.shared_memory_offset(0)] = value;
     int num_warps = (blockDim.x * blockDim.y) / warpSize;
@@ -320,7 +321,7 @@ struct ReduceOp {
   }
 
   C10_DEVICE bool mark_block_finished() const {
-    extern __shared__ int is_last_block_done_shared[];
+    HIP_DYNAMIC_SHARED( int, is_last_block_done_shared)
 
     __syncthreads();
     if (threadIdx.x == 0 && threadIdx.y == 0) {
@@ -390,7 +391,7 @@ static void launch_reduce_kernel(const ReduceConfig& config, const R& reduction)
   auto stream = at::cuda::getCurrentCUDAStream();
   int shared_memory = config.shared_memory_size();
   reduce_kernel<nt, R><<<grid, block, shared_memory, stream>>>(reduction);
-  AT_CUDA_CHECK(cudaGetLastError());
+  AT_CUDA_CHECK(hipGetLastError());
 }
 
 template <typename scalar_t, typename func_t, typename ident_t=double>
@@ -458,12 +459,12 @@ inline void gpu_reduce_kernel(TensorIterator& iter, const func_t& op, ident_t id
   at::DataPtr buffer;
   at::DataPtr semaphores;
   if (config.should_global_reduce()) {
-    auto& allocator = *at::globalContext().getTHCState()->cudaDeviceAllocator;
+    auto& allocator = *at::globalContext().getTHCState()->hipDeviceAllocator;
     buffer = allocator.allocate(config.global_memory_size());
     semaphores = allocator.allocate(config.semaphore_size());
 
     auto stream = at::cuda::getCurrentCUDAStream();
-    AT_CUDA_CHECK(cudaMemsetAsync(semaphores.get(), 0, config.semaphore_size(), stream));
+    AT_CUDA_CHECK(hipMemsetAsync(semaphores.get(), 0, config.semaphore_size(), stream));
   }
   auto reduce = ReduceOp<scalar_t, func_t>(
       op,

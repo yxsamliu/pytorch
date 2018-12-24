@@ -61,7 +61,7 @@ void THNN_(TemporalReflectionPadding_updateOutput)(THCState *state,
 
   TemporalReflectionPadding_updateOutput<<<gridSize, blockSize, 0, THCState_getCurrentStream(state)>>>(
     devInput, devOutput, padL, padR);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 void THNN_(TemporalReflectionPadding_updateGradInput)(
@@ -113,7 +113,7 @@ void THNN_(TemporalReflectionPadding_updateGradInput)(
 
   TemporalReflectionPadding_updateGradInput<<<gridSize, blockSize, 0, THCState_getCurrentStream(state)>>>(
     devGradInput, devGradOutput, padL, padR);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #endif

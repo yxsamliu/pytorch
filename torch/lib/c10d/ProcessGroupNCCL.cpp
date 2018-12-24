@@ -85,7 +85,7 @@ ProcessGroupNCCL::WorkNCCL::WorkNCCL(const std::vector<at::Device>& devices)
     : devices_(devices) {
   // Creates the CUDA event wrappers
   // Note: The actual events are lazily created when first recorded to with
-  // DEFAULT_FLAGS = cudaEventDisableTiming.
+  // DEFAULT_FLAGS = hipEventDisableTiming.
   cudaEvents_.resize(devices.size());
 }
 
@@ -100,11 +100,11 @@ bool ProcessGroupNCCL::WorkNCCL::isCompleted() {
 bool ProcessGroupNCCL::WorkNCCL::finishedGPUExecution() const {
   for (size_t i = 0; i < devices_.size(); ++i) {
     // Checking the work's corresponding CUDA events' status
-    auto ret = cudaEventQuery(cudaEvents_[i]);
-    if (ret != cudaSuccess && ret != cudaErrorNotReady) {
+    auto ret = hipEventQuery(cudaEvents_[i]);
+    if (ret != hipSuccess && ret != hipErrorNotReady) {
       AT_CUDA_CHECK(ret);
     }
-    if (ret == cudaErrorNotReady) {
+    if (ret == hipErrorNotReady) {
       return false;
     }
   }
@@ -247,9 +247,9 @@ std::vector<std::shared_ptr<NCCLComm>>& ProcessGroupNCCL::getNCCLComm(
   devNCCLCommMap_.emplace(devicesKey, std::move(ncclComms));
   ncclStreams_.emplace(devicesKey, std::move(streamVal));
 
-  // Note: these events are created with the (default) cudaEventDisableTiming
+  // Note: these events are created with the (default) hipEventDisableTiming
   // flag This flag provides the best performance when used with
-  // cudaStreamWaitEvent() and cudaEventQuery(). Since we here don't measure the
+  // hipStreamWaitEvent() and hipEventQuery(). Since we here don't measure the
   // performance using cudaEvent, this should be set.
   ncclEvents_.emplace(
       std::piecewise_construct,

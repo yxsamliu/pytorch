@@ -193,7 +193,7 @@ SparseTensor& hspmm_out_sparse_cuda(SparseTensor& r_, const SparseTensor& sparse
 
   get_sparse_impl(r_)->resize_and_clear_(1, 1, {m, n});
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
   auto allocator = THCThrustAllocator(globalContext().lazyInitCUDA());
   auto policy = thrust::cuda::par(allocator).on(stream);
 
@@ -281,8 +281,8 @@ Tensor& add_out_dense_sparse_cuda(Tensor& r_, const Tensor& dense, SparseTensorR
     const dim3 block = cuda::getApplyBlock();
     dim3 grid;
     int curDevice = -1;
-    cudaGetDevice(&curDevice);
-    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+    hipGetDevice(&curDevice);
+    hipStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
     if (sparse.dense_dim() == 0) {
       AT_CHECK(cuda::getApplyGrid(nnz, grid, curDevice), "add: Argument #0: tensor too large or too many dimensions");
 
@@ -334,7 +334,7 @@ Tensor& add_out_dense_sparse_cuda(Tensor& r_, const Tensor& dense, SparseTensorR
     values = values.reshape({nnz, view_columns});
     r_view.index_add_(0, indices1D, values);
   }
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 
   return r_;
 }
@@ -419,7 +419,7 @@ SparseTensor& mul_out_sparse_cuda(SparseTensor& r_, const SparseTensor& t_, cons
 
   // saving those because they can be overwritten when doing in-place operations
   int64_t t_nnz = t._nnz(), s_nnz = src._nnz();
-  int64_t max_nnz = std::min(t_nnz, s_nnz);  // multiply by zero is zero, and can be dropped
+  int64_t max_nnz = ::min(t_nnz, s_nnz);  // multiply by zero is zero, and can be dropped
   int64_t sparse_dim = src.sparse_dim();
   LongTensor t_indices_ = t._indices();
   Tensor t_values_ = t._values();
@@ -431,11 +431,11 @@ SparseTensor& mul_out_sparse_cuda(SparseTensor& r_, const SparseTensor& t_, cons
   get_sparse_impl(r_)->set_indices_and_values_unsafe(r_indices_, r_values_);
 
   int64_t valueSize = t_values_.stride(0);
-  const dim3 block = dim3(std::min(static_cast<int64_t>(cuda::getApplyBlock().x), valueSize));
+  const dim3 block = dim3(::min(static_cast<int64_t>(cuda::getApplyBlock().x), valueSize));
   dim3 grid;
   int curDevice = -1;
-  cudaGetDevice(&curDevice);
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+  hipGetDevice(&curDevice);
+  hipStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
   AT_CHECK(cuda::getApplyGrid(valueSize, grid, curDevice), "mul: Argument #0: tensor too large or too many dimensions");
 
   LongTensor resultNnz = at::empty({1}, CUDA(kLong));
@@ -447,7 +447,7 @@ SparseTensor& mul_out_sparse_cuda(SparseTensor& r_, const SparseTensor& t_, cons
             I_INFO(r_indices_), I_INFO(t_indices_), I_INFO(s_indices_),
             V_INFO(r_values_), V_INFO(t_values_), V_INFO(s_values_),
             static_cast<uint64_t>(t_nnz), static_cast<uint64_t>(s_nnz));
-        THCudaCheck(cudaGetLastError());
+        THCudaCheck(hipGetLastError());
 
         apply::indexSparseIntersectionKernel<uint64_t, scalar_t>
           <<<1, 1, 0, stream>>>(
@@ -455,7 +455,7 @@ SparseTensor& mul_out_sparse_cuda(SparseTensor& r_, const SparseTensor& t_, cons
             // reinterpret_cast shenanigans, because we don't actually have
             // unsigned tensors...
             static_cast<uint64_t>(t_nnz), static_cast<uint64_t>(s_nnz), reinterpret_cast<uint64_t*>(resultNnz.data_ptr()));
-        THCudaCheck(cudaGetLastError());
+        THCudaCheck(hipGetLastError());
       });
 
   // sync!  (surely there is a more idiomatic way to do this...)

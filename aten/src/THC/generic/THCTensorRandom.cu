@@ -113,7 +113,7 @@ void THCTensor_(renormRows)(struct THCState* state,
   int64_t rows = THCTensor_(size)(state, t, 0);
   int64_t cols = THCTensor_(size)(state, t, 1);
 
-  cudaDeviceProp* props = THCState_getCurrentDeviceProperties(state);
+  hipDeviceProp_t* props = THCState_getCurrentDeviceProperties(state);
   THAssert(props != NULL);
 
   int numSM = props->multiProcessorCount;
@@ -175,7 +175,7 @@ void THCTensor_(multinomial)(struct THCState *state,
   THCudaLongTensor_resize2d(state, self, numDist, n_sample);
 
   // get current device properties
-  cudaDeviceProp* props = THCState_getCurrentDeviceProperties(state);
+  hipDeviceProp_t* props = THCState_getCurrentDeviceProperties(state);
   THAssert(props != NULL);
   int numSM = props->multiProcessorCount;
   int maxThreads = props->maxThreadsPerBlock;
@@ -383,22 +383,22 @@ void THCTensor_(multinomialAliasDraw)(THCState *state, THCudaLongTensor *self, T
 #endif
 
 #if defined(THC_REAL_IS_DOUBLE)
-GENERATE_KERNEL1(generate_geometric, double, double p, double, curand_uniform_double, ceil(log(x) / log(1-p)))
+GENERATE_KERNEL1(generate_geometric, double, double p, double, hiprand_uniform_double, ceil(log(x) / log(1-p)))
 #else
-GENERATE_KERNEL1(generate_geometric, scalar_t, double p, float, curand_uniform, (ScalarConvert<float, scalar_t>::to(ceilf(logf(x) / log(1-p)))))
+GENERATE_KERNEL1(generate_geometric, scalar_t, double p, float, hiprand_uniform, (ScalarConvert<float, scalar_t>::to(ceilf(logf(x) / log(1-p)))))
 #endif
 
 #if defined(THC_REAL_IS_LONG) || defined(THC_REAL_IS_DOUBLE) || defined(THC_REAL_IS_FLOAT)
-#define CURAND64(STATE) (((uint64_t)curand(STATE)) << 32) | (uint64_t)curand(STATE)
-GENERATE_KERNEL2(generate_random, scalar_t, int32_t base, uint32_t range, uint32_t, curand, \
+#define CURAND64(STATE) (((uint64_t)hiprand(STATE)) << 32) | (uint64_t)hiprand(STATE)
+GENERATE_KERNEL2(generate_random, scalar_t, int32_t base, uint32_t range, uint32_t, hiprand, \
     static_cast<scalar_t>(static_cast<int32_t>((x % range) + base)))
 GENERATE_KERNEL2(generate_random_64, scalar_t, int64_t base, uint64_t range, uint64_t, CURAND64, \
     static_cast<scalar_t>(static_cast<int64_t>((x % range) + base)))
 #elif defined(THC_REAL_IS_HALF)
-GENERATE_KERNEL2(generate_random, scalar_t, int32_t base, uint32_t range, uint32_t, curand,
+GENERATE_KERNEL2(generate_random, scalar_t, int32_t base, uint32_t range, uint32_t, hiprand,
     (ScalarConvert<int32_t, scalar_t>::to(static_cast<int32_t>(x % range + base))))
 #else
-GENERATE_KERNEL2(generate_random, scalar_t, int32_t base, uint32_t range, uint32_t, curand,
+GENERATE_KERNEL2(generate_random, scalar_t, int32_t base, uint32_t range, uint32_t, hiprand,
     static_cast<scalar_t>(static_cast<int32_t>(x % range + base)))
 #endif
 

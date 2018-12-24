@@ -40,7 +40,7 @@ void THNN_(SpatialMaxUnpooling_updateOutput)(
   MaxUnpoolForward <<< GET_BLOCKS(count), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state) >>>
       (count, THCTensor_(data)(state, input), THCIndexTensor_(data)(state, indices),
       batchSize, nInputPlane, nInputRows, nInputCols, oheight, owidth, THCTensor_(data)(state, output));
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 
   if(input->dim() == 3)
     THCTensor_(resize3d)(state, output, nInputPlane, oheight, owidth);
@@ -93,7 +93,7 @@ void THNN_(SpatialMaxUnpooling_updateGradInput)(
   MaxUnpoolBackward <<< GET_BLOCKS(count), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state) >>>
       (count, THCTensor_(data)(state, gradOutput), THCIndexTensor_(data)(state, indices),
       batchSize, nInputPlane, nInputRows, nInputCols, oheight, owidth, THCTensor_(data)(state, gradInput));
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 
   // clean
   THCTensor_(free)(state, input);

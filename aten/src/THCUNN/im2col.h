@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THCUNN_IM2COL_H
 #define THCUNN_IM2COL_H
 
@@ -39,7 +40,7 @@ __global__ void im2col_kernel(const int64_t n, const Dtype* data_im,
 }
 
 template <typename Dtype>
-void im2col(cudaStream_t stream, const Dtype* data_im, const int64_t channels,
+void im2col(hipStream_t stream, const Dtype* data_im, const int64_t channels,
             const int64_t height, const int64_t width,
             const int64_t height_col, const int64_t width_col,
             const int64_t ksize_h, const int64_t ksize_w, const int64_t pad_h,
@@ -55,7 +56,7 @@ void im2col(cudaStream_t stream, const Dtype* data_im, const int64_t channels,
       dilation_h, dilation_w,
       height_col, width_col, data_col
   );
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 template <typename Dtype, typename Acctype>
@@ -102,7 +103,7 @@ __global__ void col2im_kernel(const int64_t n, const Dtype* data_col,
 
 
 template <typename Dtype, typename Acctype>
-void col2im(cudaStream_t stream, const Dtype* data_col, const int64_t channels,
+void col2im(hipStream_t stream, const Dtype* data_col, const int64_t channels,
             const int64_t height, const int64_t width,
             const int64_t output_height, const int64_t output_width,
             const int64_t patch_h, const int64_t patch_w, const int64_t pad_h,
@@ -117,7 +118,7 @@ void col2im(cudaStream_t stream, const Dtype* data_col, const int64_t channels,
       dilation_h, dilation_w,
       output_height, output_width, data_im
   );
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #endif

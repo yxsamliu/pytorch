@@ -6,7 +6,7 @@
 #include <ATen/cuda/CUDAGuard.h>
 
 #include <THC/THC.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include <unistd.h>
 
@@ -179,8 +179,8 @@ void DataChannelNccl::_destroyNcclResources(THDGroup groupId) {
       size_t idx = 0;
       for (auto& event : *(_groupNcclResources[groupId][i].ncclCudaEvents())) {
         gpuGuard.set_index(devices[idx++]);
-        THCudaCheck(cudaEventSynchronize(event));
-        THCudaCheck(cudaEventDestroy(event));
+        THCudaCheck(hipEventSynchronize(event));
+        THCudaCheck(hipEventDestroy(event));
       }
       // Destroy the communicators
       for (auto& comm : *(_groupNcclResources[groupId][i].ncclComms())) {
@@ -213,7 +213,7 @@ bool DataChannelNccl::init() {
   _groups.insert({THDGroupWORLD, DataChannel::Group(ranks, _numProcesses - 1)});
 
   // Get the GPU count
-  THCudaCheck(cudaGetDeviceCount(&_numGPUs));
+  THCudaCheck(hipGetDeviceCount(&_numGPUs));
 
   return true;
 }
@@ -272,7 +272,7 @@ NcclResourcePair DataChannelNccl::_getNcclResourcePair(
 
   // Corresponding CUDA events
   auto events =
-      std::unique_ptr<std::vector<cudaEvent_t>>(new std::vector<cudaEvent_t>());
+      std::unique_ptr<std::vector<hipEvent_t>>(new std::vector<hipEvent_t>());
 
   events->resize(input.size());
 
@@ -289,7 +289,7 @@ NcclResourcePair DataChannelNccl::_getNcclResourcePair(
   // Now creating the CUDA events
   for (size_t i = 0; i < input.size(); ++i) {
     gpuGuard.set_index(input[i].get_device());
-    THCudaCheck(cudaEventCreate(&((*events)[i])));
+    THCudaCheck(hipEventCreate(&((*events)[i])));
   }
   // Create the communicator on each device of the input
   NCCL_CHECK(ncclGroupStart());
@@ -427,7 +427,7 @@ void DataChannelNccl::allReduce(
         ncclOp[operation],
         (*comms)[i],
         stream));
-    THCudaCheck(cudaEventRecord((*events)[i], stream));
+    THCudaCheck(hipEventRecord((*events)[i], stream));
   }
   NCCL_CHECK(ncclGroupEnd());
 
@@ -475,7 +475,7 @@ void DataChannelNccl::allGather(
         _getNcclDataType(input[i].type().scalarType()),
         (*comms)[i],
         stream));
-    THCudaCheck(cudaEventRecord((*events)[i], stream));
+    THCudaCheck(hipEventRecord((*events)[i], stream));
   }
   NCCL_CHECK(ncclGroupEnd());
 
@@ -527,7 +527,7 @@ void DataChannelNccl::reduce(
         dstRank * data.size(),
         (*comms)[i],
         stream));
-    THCudaCheck(cudaEventRecord((*events)[i], stream));
+    THCudaCheck(hipEventRecord((*events)[i], stream));
   }
   NCCL_CHECK(ncclGroupEnd());
 
@@ -577,7 +577,7 @@ void DataChannelNccl::broadcast(
         srcRank * data.size(),
         (*comms)[i],
         stream));
-    THCudaCheck(cudaEventRecord((*events)[i], stream));
+    THCudaCheck(hipEventRecord((*events)[i], stream));
   }
   NCCL_CHECK(ncclGroupEnd());
 

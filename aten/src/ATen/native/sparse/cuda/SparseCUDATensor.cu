@@ -39,7 +39,7 @@ SparseTensor coalesce_sparse_cuda(const SparseTensor& self) {
     return dst;
   }
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
   auto allocator = THCThrustAllocator(globalContext().lazyInitCUDA());
   auto policy = thrust::cuda::par(allocator).on(stream);
   // Replace instances with
@@ -152,7 +152,7 @@ SparseTensor coalesce_sparse_cuda(const SparseTensor& self) {
 
   SparseTensor dst = ::at::native::sparse_coo_tensor(newIndices, newValues, self.sizes())._coalesced_(true);
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return dst;
 }
 

@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #pragma once
 
 #include "ATen/cuda/detail/IndexUtils.cuh"
@@ -225,7 +226,7 @@ template <typename Op,
           int remaining_steps,
           typename... Offsets>
 struct ApplyOp1 {
-__device__ __forceinline__
+__device__ inline
 static void apply(detail::TensorInfo<scalar, IndexType> &a, const Op &op, int n,
                   IndexType linearIndex, Offsets... aOffsets) {
   // Convert `linearIndex` into an offset of `a`
@@ -246,7 +247,7 @@ template <typename Op,
           int ADims,
           typename Offset>
 struct ApplyOp1<Op, scalar, IndexType, ADims, 0, Offset> {
-__device__ __forceinline__
+__device__ inline
 static void apply(detail::TensorInfo<scalar, IndexType> &a, int n,
                   const Op &op, IndexType linearIndex, Offset offset) {
   op(a.data[offset]);
@@ -259,7 +260,7 @@ template <typename Op,
           int ADims,
           typename... Offsets>
 struct ApplyOp1<Op, scalar, IndexType, ADims, 0, Offsets...> {
-__device__ __forceinline__
+__device__ inline
 static void apply(detail::TensorInfo<scalar, IndexType> &a, const Op &op, int n,
                  IndexType linearIndex, Offsets... offsets) {
   op(n, a.data[offsets]...);
@@ -294,7 +295,7 @@ template <typename Op,
           int remaining_steps,
           typename... Offsets>
 struct ApplyOp2 {
-__device__ __forceinline__
+__device__ inline
 static void apply(detail::TensorInfo<scalar1, IndexType> &a,
                   detail::TensorInfo<scalar2, IndexType> &b,
                   const Op &op, int n, IndexType linearIndex,
@@ -323,7 +324,7 @@ template <typename Op,
           int BDims,
           typename Offset>
 struct ApplyOp2<Op, scalar1, scalar2, IndexType, ADims, BDims, 0, Offset> {
-__device__ __forceinline__
+__device__ inline
 static void apply(detail::TensorInfo<scalar1, IndexType> &a,
                   detail::TensorInfo<scalar2, IndexType> &b,
                   const Op &op, int n, IndexType linearIndex,
@@ -340,7 +341,7 @@ template <typename Op,
           int BDims,
           typename... Offsets>
 struct ApplyOp2<Op, scalar1, scalar2, IndexType, ADims, BDims, 0, Offsets...> {
-__device__ __forceinline__
+__device__ inline
 static void apply(detail::TensorInfo<scalar1, IndexType> &a,
                   detail::TensorInfo<scalar2, IndexType> &b,
                   const Op &op, int n, IndexType linearIndex,
@@ -384,7 +385,7 @@ template <typename Op,
           int remaining_steps,
           typename... Offsets>
 struct ApplyOp3 {
-__device__ __forceinline__
+__device__ inline
 static void apply(detail::TensorInfo<scalar1, IndexType> &a,
                   detail::TensorInfo<scalar2, IndexType> &b,
                   detail::TensorInfo<scalar3, IndexType> &c,
@@ -424,7 +425,7 @@ template <typename Op,
           typename Offset>
 struct ApplyOp3<Op, scalar1, scalar2, scalar3, IndexType,
                 ADims, BDims, CDims, 0, Offset> {
-__device__ __forceinline__
+__device__ inline
 static void apply(detail::TensorInfo<scalar1, IndexType> &a,
                   detail::TensorInfo<scalar2, IndexType> &b,
                   detail::TensorInfo<scalar3, IndexType> &c,
@@ -445,7 +446,7 @@ template <typename Op,
           typename... Offsets>
 struct ApplyOp3<Op, scalar1, scalar2, scalar3, IndexType,
                 ADims, BDims, CDims, 0, Offsets...> {
-__device__ __forceinline__
+__device__ inline
 static void apply(detail::TensorInfo<scalar1, IndexType> &a,
                   detail::TensorInfo<scalar2, IndexType> &b,
                   detail::TensorInfo<scalar3, IndexType> &c,
@@ -495,7 +496,7 @@ template <typename Op,
           int remaining_steps,
           typename... Offsets>
 struct ApplyOp4 {
-__device__ __forceinline__
+__device__ inline
 static void apply(detail::TensorInfo<scalar1, IndexType> &a,
                   detail::TensorInfo<scalar2, IndexType> &b,
                   detail::TensorInfo<scalar3, IndexType> &c,
@@ -542,7 +543,7 @@ template <typename Op,
           typename Offset>
 struct ApplyOp4<Op, scalar1, scalar2, scalar3, scalar4, IndexType,
                 ADims, BDims, CDims, DDims, 0, Offset> {
-__device__ __forceinline__
+__device__ inline
 static void apply(detail::TensorInfo<scalar1, IndexType> &a,
                   detail::TensorInfo<scalar2, IndexType> &b,
                   detail::TensorInfo<scalar3, IndexType> &c,
@@ -567,7 +568,7 @@ template <typename Op,
           typename... Offsets>
 struct ApplyOp4<Op, scalar1, scalar2, scalar3, scalar4, IndexType,
                 ADims, BDims, CDims, DDims, 0, Offsets...> {
-__device__ __forceinline__
+__device__ inline
 static void apply(detail::TensorInfo<scalar1, IndexType> &a,
                   detail::TensorInfo<scalar2, IndexType> &b,
                   detail::TensorInfo<scalar3, IndexType> &c,
@@ -612,7 +613,7 @@ kernelPointwiseApply4(detail::TensorInfo<scalar1, IndexType> a,
    Computes ceil(a / b)
 */
 template <typename T>
-__host__ __device__ __forceinline__ T ATenCeilDiv(T a, T b) {
+__host__ __device__ inline T ATenCeilDiv(T a, T b) {
   return (a + b - 1) / b;
 }
 
@@ -729,7 +730,7 @@ inline bool CUDA_tensor_apply1(at::Tensor a,
     aInfo.collapseDims();
 #if CUDA_VERSION < 9000
     if (!aInfo.isContiguous())
-        grid.x = std::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
+        grid.x = ::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
 #endif
 
     HANDLE_A_CASE(unsigned int, aInfo.dims);
@@ -748,7 +749,7 @@ inline bool CUDA_tensor_apply1(at::Tensor a,
       HANDLE_CASE(uint64_t, 1);
     } else {
 #if CUDA_VERSION < 9000
-      grid.x = std::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
+      grid.x = ::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
 #endif
       HANDLE_CASE(uint64_t, -1);
     }
@@ -882,7 +883,7 @@ inline bool CUDA_tensor_apply2(at::Tensor a,
     bInfo.collapseDims();
 #if CUDA_VERSION < 9000
     if (!(aInfo.isContiguous() && bInfo.isContiguous()))
-        grid.x = std::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
+        grid.x = ::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
 #endif
 
     HANDLE_A_CASE(unsigned int, aInfo.dims, bInfo.dims);
@@ -904,7 +905,7 @@ inline bool CUDA_tensor_apply2(at::Tensor a,
       HANDLE_CASE(uint64_t, 1, 1);
     } else {
 #if CUDA_VERSION < 9000
-      grid.x = std::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
+      grid.x = ::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
 #endif
       HANDLE_CASE(uint64_t, -1, -1);
     }
@@ -1072,7 +1073,7 @@ inline bool CUDA_tensor_apply3(at::Tensor a,
 
 #if CUDA_VERSION < 9000
     if (!(aInfo.isContiguous() && bInfo.isContiguous() && cInfo.isContiguous()))
-      grid.x = std::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
+      grid.x = ::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
 #endif
     HANDLE_A_CASE(unsigned int, aInfo.dims, bInfo.dims, cInfo.dims);
   } else {
@@ -1098,7 +1099,7 @@ inline bool CUDA_tensor_apply3(at::Tensor a,
       HANDLE_CASE(uint64_t, 1, 1, 1);
     } else {
 #if CUDA_VERSION < 9000
-  grid.x = std::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
+  grid.x = ::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
 #endif
 
       HANDLE_CASE(uint64_t, -1, -1, -1);
@@ -1312,7 +1313,7 @@ inline bool CUDA_tensor_apply4(at::Tensor a,
 
 #if CUDA_VERSION < 9000
     if (!(aInfo.isContiguous() && bInfo.isContiguous() && cInfo.isContiguous() && dInfo.isContiguous()))
-      grid.x = std::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
+      grid.x = ::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
 #endif
     HANDLE_A_CASE(unsigned int, aInfo.dims, bInfo.dims, cInfo.dims, dInfo.dims);
   } else {
@@ -1342,7 +1343,7 @@ inline bool CUDA_tensor_apply4(at::Tensor a,
       HANDLE_CASE(uint64_t, 1, 1, 1, 1);
     } else {
 #if CUDA_VERSION < 9000
-  grid.x = std::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
+  grid.x = ::min((unsigned int)at::cuda::getCurrentDeviceProperties()->multiProcessorCount * AT_APPLY_BLOCKS_PER_SM , grid.x);
 #endif
       HANDLE_CASE(uint64_t, -1, -1, -1, -1);
     }

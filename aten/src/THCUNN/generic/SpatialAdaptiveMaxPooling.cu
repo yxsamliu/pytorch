@@ -51,7 +51,7 @@ void THNN_(SpatialAdaptiveMaxPooling_updateOutput)(
                                    indices_data,
                                    isizeH, isizeW, osizeH, osizeW,
                                    istrideD, istrideH, istrideW);
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
 
   } else {
     input = THCTensor_(newContiguous)(state, input);
@@ -83,7 +83,7 @@ void THNN_(SpatialAdaptiveMaxPooling_updateOutput)(
                                    indices_data,
                                    isizeH, isizeW, osizeH, osizeW,
                                    istrideD, istrideH, istrideW);
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
     // clean
     THCTensor_(free)(state, input);
   }
@@ -143,7 +143,7 @@ void THNN_(SpatialAdaptiveMaxPooling_updateGradInput)(
                                           indices_data,
                                           isizeH, isizeW, osizeH, osizeW);
     }
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
   } else {
     int64_t sizeB  = input->size(0);
     int64_t sizeD  = input->size(1);
@@ -182,7 +182,7 @@ void THNN_(SpatialAdaptiveMaxPooling_updateGradInput)(
                                           indices_data,
                                           isizeH, isizeW, osizeH, osizeW);
     }
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
   }
 
   // clean

@@ -149,7 +149,7 @@ void THNN_(SpatialDilatedMaxPooling_updateOutput)(
       (count, input_data,
       batchSize, nInputPlane, nInputRows, nInputCols, nOutputRows, nOutputCols,
       kH, kW, dH, dW, padH, padW, dilationH, dilationW, output_data, indices_data);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 
   if(input->dim() == 3)
     THCTensor_(resize3d)(state, output, nInputPlane, nOutputRows, nOutputCols);
@@ -234,7 +234,7 @@ void THNN_(SpatialDilatedMaxPooling_updateGradInput)(
       batchSize, nInputPlane, nInputRows, nInputCols, nOutputRows, nOutputCols,
       kH, kW, dH, dW, padH, padW, dilationH, dilationW,
       THCTensor_(data)(state, gradInput));
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 
   THCTensor_(free)(state, gradOutput);
 

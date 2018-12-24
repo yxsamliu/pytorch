@@ -15,7 +15,7 @@ void THCStorage_resize(THCState *state, THCStorage *self, ptrdiff_t size)
   THArgCheck(size >= 0, 2, "invalid size");
   THAssert(self->allocator() != nullptr);
   int device;
-  THCudaCheck(cudaGetDevice(&device));
+  THCudaCheck(hipGetDevice(&device));
 
   if (!self->resizable())
     THError("Trying to resize storage that is not resizable");
@@ -36,10 +36,10 @@ void THCStorage_resize(THCState *state, THCStorage *self, ptrdiff_t size)
       // Enable p2p access when the memcpy is across devices
       THCState_getPeerToPeerAccess(state, device, THCStorage_getDevice(state, self));
 
-      THCudaCheck(cudaMemcpyAsync(data.get(),
+      THCudaCheck(hipMemcpyAsync(data.get(),
                                   self->data(),
                                   THMin(self->numel(), size) * itemsize,
-                                  cudaMemcpyDeviceToDevice,
+                                  hipMemcpyDeviceToDevice,
                                   THCState_getCurrentStream(state)));
     }
 
@@ -59,7 +59,7 @@ THC_API THCStorage* THCStorage_new(
   THStorage* storage = c10::make_intrusive<at::StorageImpl>(
       data_type,
       0,
-      state->cudaDeviceAllocator,
+      state->hipDeviceAllocator,
       true).release();
   return storage;
 }

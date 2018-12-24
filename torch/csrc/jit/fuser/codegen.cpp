@@ -8,7 +8,7 @@
 #include "torch/csrc/jit/fuser/interface.h"
 #include "torch/csrc/jit/fuser/tensor_info.h"
 
-#if USE_CUDA_FUSER
+#if USE_ROCM_FUSER
   #include "torch/csrc/jit/fuser/cuda/resource_strings.h"
 #endif 
 
@@ -350,7 +350,7 @@ generateKernel(
 
   // Includes headers
   // Note: CUDA kernels support halfs and random generation, CPU kernels do not
-  #if USE_CUDA_FUSER
+  #if USE_ROCM_FUSER
     if (has_half_tensor) {
       env.s("HalfHeader", cuda::half_support_literal);
     } else {
@@ -366,7 +366,7 @@ generateKernel(
       env.s("RandParam", "");
       env.s("RandInit", "");
     }
-  #endif // USE_CUDA_FUSER
+  #endif // USE_ROCM_FUSER
 
   // Insantiates the CUDA or CPU-specific templates
   env.s("tensorOffsets", tensorOffsets.str());
@@ -375,12 +375,12 @@ generateKernel(
   env.v("argument_loads", argument_loads);
   std::string code_string;
   if (use_cuda) {
-    #if USE_CUDA_FUSER
+    #if USE_ROCM_FUSER
       env.s("type_declarations", cuda::type_declarations_template.format(env));
       code_string = cuda::cuda_compilation_unit_template.format(env);
     #else
       throw std::runtime_error("CUDA Fusion requested but not supported.");
-    #endif // USE_CUDA_FUSER
+    #endif // USE_ROCM_FUSER
   } else {
     #if USE_CPU_FUSER
       env.s("type_declarations", cpu::type_declarations_template.format(env));

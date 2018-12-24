@@ -1,6 +1,6 @@
-#ifdef USE_CUDA
-#include <cuda.h>
-#include <cuda_runtime.h>
+#ifdef USE_ROCM
+#include <hip/hip_runtime.h>
+#include <hip/hip_runtime.h>
 #include <ATen/cuda/CUDAGuard.h>
 #endif
 
@@ -228,10 +228,10 @@ static PyObject * THPStorage_(shareCuda)(THPStorage *self)
     void *base_ptr = THCCachingAllocator_getBaseAllocation(THWStorage_(data)(LIBRARY_STATE storage), &base_size);
     ptrdiff_t offset = (char*)storage->data<scalar_t>() - (char*)base_ptr;
 
-    cudaIpcMemHandle_t handle;
-    THCudaCheck(cudaIpcGetMemHandle(&handle, base_ptr));
+    hipIpcMemHandle_t handle;
+    THCudaCheck(hipIpcGetMemHandle(&handle, base_ptr));
 
-    _handle = PyBytes_FromStringAndSize((char *)&handle, CUDA_IPC_HANDLE_SIZE);
+    _handle = PyBytes_FromStringAndSize((char *)&handle, HIP_IPC_HANDLE_SIZE);
     _offset = PyLong_FromSsize_t((Py_ssize_t)offset / sizeof(scalar_t));
     size = PyLong_FromSize_t(base_size / sizeof(scalar_t));
   }
@@ -270,11 +270,11 @@ static PyObject * THPStorage_(newSharedCuda)(PyObject *_unused, PyObject *args)
   if (PyBytes_AsStringAndSize(_handle, &buffer, &handle_size) == -1) {
     return nullptr;
   }
-  THPUtils_assert(handle_size == CUDA_IPC_HANDLE_SIZE, "incorrect handle size");
-  cudaIpcMemHandle_t handle = *(cudaIpcMemHandle_t*)buffer;
+  THPUtils_assert(handle_size == HIP_IPC_HANDLE_SIZE, "incorrect handle size");
+  hipIpcMemHandle_t handle = *(hipIpcMemHandle_t*)buffer;
 
   void *devPtr = nullptr;
-  THCudaCheck(cudaIpcOpenMemHandle(&devPtr, handle, cudaIpcMemLazyEnablePeerAccess));
+  THCudaCheck(hipIpcOpenMemHandle(&devPtr, handle, hipIpcMemLazyEnablePeerAccess));
 
   THWStoragePtr base(THWStorage_(newWithDataAndAllocator)(
       LIBRARY_STATE

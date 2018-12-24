@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/NativeFunctions.h"
 #include "ATen/Dispatch.h"
@@ -87,11 +88,11 @@ Tensor prelu_cuda(const Tensor& self, const Tensor& weight_) {
 
     // config to run cuda kernel
     int64_t input_numel = input.numel();
-    const dim3 block = dim3(std::min(static_cast<int64_t>(cuda::getApplyBlock().x), input_numel));
+    const dim3 block = dim3(::min(static_cast<int64_t>(cuda::getApplyBlock().x), input_numel));
     dim3 grid;
     int curDevice = -1;
-    cudaGetDevice(&curDevice);
-    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+    hipGetDevice(&curDevice);
+    hipStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
     AT_CHECK(cuda::getApplyGrid(input_numel, grid, curDevice), "prelu: input too large or too many dimensions");
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "prelu_cuda", [&] {
@@ -203,11 +204,11 @@ std::tuple<Tensor, Tensor> prelu_backward_cuda(const Tensor& grad_out_, const Te
 
     // config to run cuda kernel
     int64_t input_numel = input.numel();
-    const dim3 block = dim3(std::min(static_cast<int64_t>(cuda::getApplyBlock().x), input_numel));
+    const dim3 block = dim3(::min(static_cast<int64_t>(cuda::getApplyBlock().x), input_numel));
     dim3 grid;
     int curDevice = -1;
-    cudaGetDevice(&curDevice);
-    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+    hipGetDevice(&curDevice);
+    hipStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
     AT_CHECK(cuda::getApplyGrid(input_numel, grid, curDevice), "prelu_backward_cuda: input too large or too many dimensions");
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "prelu_backward_cuda", [&] {

@@ -57,7 +57,7 @@ void THNN_(IndexLinear_updateOutput)(
     scalar_t *weightData      = THCTensor_(data)      (state, weight);
     scalar_t *outData         = THCTensor_(data)      (state, output);
 
-    cudaStream_t stream = THCState_getCurrentStream(state);
+    hipStream_t stream = THCState_getCurrentStream(state);
     dim3 threads(THREADS_X, THREADS_Y);
     int blocks_x = divup(outDim, threads.x);
     int blocks_y = batchSize;
@@ -67,7 +67,7 @@ void THNN_(IndexLinear_updateOutput)(
     dim3 blocks(blocks_x, blocks_y, blocks_z);
 
     if (blocks_z > 1) {
-        THCudaCheck(cudaMemsetAsync(outData, 0, outDim * batchSize * sizeof(scalar_t), stream));
+        THCudaCheck(hipMemsetAsync(outData, 0, outDim * batchSize * sizeof(scalar_t), stream));
     }
 
     scalar_t *normalizedValuesData = NULL;
@@ -139,7 +139,7 @@ void THNN_(IndexLinear_accGradParameters)(
     scalar_t *gradWeightData  = THCTensor_(data)      (state, gradWeight);
     int64_t gradWeightStride = gradWeight->stride(0);
 
-    cudaStream_t stream = THCState_getCurrentStream(state);
+    hipStream_t stream = THCState_getCurrentStream(state);
     dim3 threads(THREADS_X, THREADS_Y);
     int blocks_x = divup(outDim, threads.x);
     accGradBias<scalar_t, false><<<blocks_x, threads, 0, stream>>>
@@ -196,7 +196,7 @@ void THNN_(IndexLinear_accUpdateGradParameters)(
     int64_t *cumSumSizesData  = THCudaLongTensor_data (state, cumSumSizes);
     int64_t weightStride = weight->stride(0);
 
-    cudaStream_t stream = THCState_getCurrentStream(state);
+    hipStream_t stream = THCState_getCurrentStream(state);
     dim3 threads(THREADS_X, THREADS_Y);
     int blocks_x = divup(outDim, threads.x);
 
@@ -261,7 +261,7 @@ void THNN_(IndexLinear_updateParameters)(
     int blocks_x = divup(outDim, threads.x);
     int blocks_y = divup(nnzPerRow, REPEAT * threads.y);
     dim3 blocks(blocks_x, blocks_y);
-    cudaStream_t stream = THCState_getCurrentStream(state);
+    hipStream_t stream = THCState_getCurrentStream(state);
 
     for (int64_t batchId = 0; batchId < batchSize; batchId++) {
         updateWeight<scalar_t><<<blocks, threads, 0, stream>>>

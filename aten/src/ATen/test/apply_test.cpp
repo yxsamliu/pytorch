@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
-#include "cuda.h"
-#include "cuda_runtime.h"
+#include "hip/hip_runtime.h"
+#include "hip/hip_runtime.h"
 
 #include "ATen/cuda/detail/TensorInfo.cuh"
 #define ASSERT_EQ_CUDA(X, Y) \

@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/AccumulateType.h"
 #include "ATen/TensorUtils.h"
@@ -36,7 +37,7 @@ __global__ void embedding_backward_feature_kernel
    int64_t stride,
    int padding_idx)
 {
-  extern __shared__ char buf[];
+  HIP_DYNAMIC_SHARED( char, buf)
   accscalar_t* smem = (accscalar_t*)buf;
   accscalar_t* my_s = smem + WARP_SIZE*threadIdx.y;
   int* indices_batch = (int*)(buf + sizeof(accscalar_t)*WARP_SIZE*blockDim.y);
@@ -184,7 +185,7 @@ __global__ void renorm_kernel(
     int64_t weights_stride0, int64_t weights_stride1) {
 
   // Some casting hacks since dynamic shared memory and templates don't work together:
-  extern __shared__ unsigned char smem[];
+  HIP_DYNAMIC_SHARED( unsigned char, smem)
   auto sdata = reinterpret_cast<accscalar_t*>(smem);
 
   int tid = threadIdx.x;
@@ -198,7 +199,7 @@ __global__ void renorm_kernel(
     } else if (norm_type == 2) {
       v += x * x;
     } else {
-      v += std::pow(x, norm_type);
+      v += ::pow(x, norm_type);
     }
   }
 
@@ -206,7 +207,7 @@ __global__ void renorm_kernel(
   v = reduceBlock<accscalar_t>(sdata, blockDim.x, v, Op(), 0);
 
   if (tid == 0) {
-    sdata[0] = std::pow(v, static_cast<accscalar_t>(1.0 / norm_type));
+    sdata[0] = ::pow(v, static_cast<accscalar_t>(1.0 / norm_type));
   }
   __syncthreads();
 
@@ -234,7 +235,7 @@ Tensor embedding_dense_backward_cuda(const Tensor & grad_, const Tensor & indice
   auto grad_weight = at::zeros({num_weights, grad_.size(-1)}, grad_.options());
 
   int64_t stride = grad_weight.stride(0);
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
 
   if (num_indices <= 768 && !scale_grad_by_freq) {
     auto indices_contig = indices.contiguous();
@@ -261,7 +262,7 @@ Tensor embedding_dense_backward_cuda(const Tensor & grad_, const Tensor & indice
             static_cast<int>(padding_idx));
        });
 
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
     return grad_weight;
   }
 
@@ -337,7 +338,7 @@ Tensor embedding_dense_backward_cuda(const Tensor & grad_, const Tensor & indice
       stride,
       padding_idx);
   });
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 
   return grad_weight;
 }
@@ -349,7 +350,7 @@ Tensor & embedding_renorm_cuda_(Tensor & self, const Tensor & indices,
   checkDim("embedding_renorm_", self_arg, 2);
   checkSameGPU("embedding_renorm", self_arg, indices_arg);
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
   auto allocator = THCThrustAllocator(globalContext().lazyInitCUDA());
   auto policy = thrust::cuda::par(allocator).on(stream);
 
@@ -380,7 +381,7 @@ Tensor & embedding_renorm_cuda_(Tensor & self, const Tensor & indices,
       static_cast<accscalar_t>(norm_type),
       dim, self.stride(0), self.stride(1));
   });
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 
   return self;
 }

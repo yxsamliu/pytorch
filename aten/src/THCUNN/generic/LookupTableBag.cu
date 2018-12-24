@@ -29,7 +29,7 @@ void THNN_(LookupTableBag_updateOutput)(
     bag_size_data = THCIndexTensor_(data)(state, bag_size);
   }
 
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
 
   std::vector<int64_t> outputSize = {numBags, stride};
   THCTensor_(resize)(state, output, outputSize, {});
@@ -51,7 +51,7 @@ void THNN_(LookupTableBag_updateOutput)(
     bag_size_data
   );
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 
@@ -92,7 +92,7 @@ void THNN_(LookupTableBag_accGradParameters)(
   ptrdiff_t numel = THCIndexTensor_(nElement)(state, input);
   int64_t stride = THCTensor_(stride)(state, gradWeight, 0);
 
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
 
   THCIndexTensor_(resize)(state, sortedIndices, input->sizes(), {});
   THCIndexTensor_(resize)(state, origIndices, input->sizes(), {});
@@ -187,7 +187,7 @@ void THNN_(LookupTableBag_accGradParameters)(
   );
 
   THCTensor_(free)(state, gradOutput);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #endif

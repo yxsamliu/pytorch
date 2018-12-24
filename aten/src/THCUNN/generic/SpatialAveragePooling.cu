@@ -140,7 +140,7 @@ void THNN_(SpatialAveragePooling_updateOutput)(
         count, input_data,
         batchSize, nInputPlane, nInputRows, nInputCols, nOutputRows, nOutputCols,
         kH, kW, dH, dW, padH, padW, output_data);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 
   if(input->dim() == 3)
     THCTensor_(resize3d)(state, output, nInputPlane, nOutputRows, nOutputCols);
@@ -227,7 +227,7 @@ void THNN_(SpatialAveragePooling_updateGradInput)(
         batchSize, nInputPlane, nInputRows, nInputCols, nOutputRows, nOutputCols,
         kH, kW, dH, dW, padH, padW,
         THCTensor_(data)(state, gradInput));
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 
   // clean
   THCTensor_(free)(state, input);

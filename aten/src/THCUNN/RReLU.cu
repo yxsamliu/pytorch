@@ -1,10 +1,11 @@
+#include "hip/hip_runtime.h"
 #include "THCUNN.h"
 #include "TH/THHalf.h"
 #include "THCHalfAutoNumerics.cuh"
 #include <THC/THCApply.cuh>
 #include "common.h"
-#include <curand.h>
-#include <curand_kernel.h>
+#include <hiprand.h>
+#include <hiprand_kernel.h>
 
 // copied from cutorch/lib/THC/THCTensorRandom.cu
 #define MAX_NUM_BLOCKS 64
@@ -12,25 +13,25 @@
 #define NUM_BLOCKS(n) min((int)THCCeilDiv(n, (ptrdiff_t) BLOCK_SIZE), MAX_NUM_BLOCKS)
 
 template<typename T>
-inline T __device__ curand_uniform_type(curandStateMtgp32 *state);
+inline T __device__ curand_uniform_type(hiprandStateMtgp32_t *state);
 
 template <>
-inline THHalf __device__ curand_uniform_type<THHalf>(curandStateMtgp32 *state) {
-  return ScalarConvert<float, THHalf>::to(curand_uniform(state));
+inline THHalf __device__ curand_uniform_type<THHalf>(hiprandStateMtgp32_t *state) {
+  return ScalarConvert<float, THHalf>::to(hiprand_uniform(state));
 }
 
 template <>
-inline float __device__ curand_uniform_type<float>(curandStateMtgp32 *state) {
-  return curand_uniform(state);
+inline float __device__ curand_uniform_type<float>(hiprandStateMtgp32_t *state) {
+  return hiprand_uniform(state);
 }
 
 template <>
-inline double __device__ curand_uniform_type<double>(curandStateMtgp32 *state) {
-  return curand_uniform_double(state);
+inline double __device__ curand_uniform_type<double>(hiprandStateMtgp32_t *state) {
+  return hiprand_uniform_double(state);
 }
 
 template <typename T>
-__global__ void rreluUpdateOutputTrain(int n, curandStateMtgp32 *state,
+__global__ void rreluUpdateOutputTrain(int n, hiprandStateMtgp32_t *state,
   T *input, T* noise, T *output, double a, double b)
 {
   CUDA_KERNEL_LOOP(i, n)
@@ -59,7 +60,7 @@ struct RReLUUpdateOutputEval_functor
     : negSlope_(negSlope)
   {}
 
-  __device__ __forceinline__ void operator()(T *out, T *in)
+  __device__ inline void operator()(T *out, T *in)
   {
     const T x = *in;
     const T r = x <= 0 ? negSlope_ : ScalarConvert<int, T>::to(1);
@@ -76,7 +77,7 @@ struct RReLUUpdateOutputEvalIP_functor
     : negSlope_(negSlope)
   {}
 
-  __device__ __forceinline__ void operator()(T *x)
+  __device__ inline void operator()(T *x)
   {
     if (*x <= 0)
     {
@@ -94,7 +95,7 @@ struct RReLUupdateGradInputEval_functor
     : negSlope_(negSlope)
   {}
 
-  __device__ __forceinline__ void operator()(T *gradIn, T *gradOut, T *in)
+  __device__ inline void operator()(T *gradIn, T *gradOut, T *in)
   {
     *gradIn = (*in) <= 0 ? (*gradOut) * negSlope_ : (*gradOut);
   }
@@ -109,7 +110,7 @@ struct RReLUupdateGradInputEvalIP_functor
     : negSlope_(negSlope)
   {}
 
-  __device__ __forceinline__ void operator()(T *gradOut, T *in)
+  __device__ inline void operator()(T *gradOut, T *in)
   {
     if (*in <= 0)
     {

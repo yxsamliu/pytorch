@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "gtest/gtest.h"
 
 // Test IntegerDivider: this tests *all* 32-bit pairs (a, b) where a % b is 0 or
@@ -59,24 +60,24 @@ template<typename Value>
 class IntDividerTester {
  public:
   IntDividerTester() {
-    cudaError_t err;
+    hipError_t err;
 
-    err = cudaMalloc(&dividersBuf_, NUM_CASES * sizeof(IntDivider<Value>));
-    bool isEQ = err == cudaSuccess;
+    err = hipMalloc(&dividersBuf_, NUM_CASES * sizeof(IntDivider<Value>));
+    bool isEQ = err == hipSuccess;
     EXPECT_TRUE(isEQ);
-    err = cudaMalloc(&testCasesBuf_, NUM_CASES * sizeof(TestCase<Value>));
-    isEQ = err == cudaSuccess;
+    err = hipMalloc(&testCasesBuf_, NUM_CASES * sizeof(TestCase<Value>));
+    isEQ = err == hipSuccess;
     EXPECT_TRUE(isEQ);
   }
 
   ~IntDividerTester() {
-    cudaError_t err;
+    hipError_t err;
 
-    err = cudaFree(dividersBuf_);
-    bool isEQ = err == cudaSuccess;
+    err = hipFree(dividersBuf_);
+    bool isEQ = err == hipSuccess;
     EXPECT_TRUE(isEQ);
-    err = cudaFree(testCasesBuf_);
-    isEQ = err == cudaSuccess;
+    err = hipFree(testCasesBuf_);
+    isEQ = err == hipSuccess;
     EXPECT_TRUE(isEQ);
   }
 
@@ -94,7 +95,7 @@ class IntDividerTester {
   }
 
   void flush() {
-    cudaError_t err;
+    hipError_t err;
     bool isTrue;
     if (testCases_.empty())
       return;
@@ -105,19 +106,19 @@ class IntDividerTester {
     ASSERT_TRUE(isTrue);
     isTrue = testCases_.size() <= NUM_CASES;
     ASSERT_TRUE(isTrue);
-    err = cudaMemcpy(
+    err = hipMemcpy(
         dividersBuf_,
         dividers_.data(),
         dividers_.size() * sizeof(IntDivider<Value>),
-        cudaMemcpyHostToDevice);
-    isTrue = err == cudaSuccess;
+        hipMemcpyHostToDevice);
+    isTrue = err == hipSuccess;
     ASSERT_TRUE(isTrue);
-    err = cudaMemcpy(
+    err = hipMemcpy(
         testCasesBuf_,
         testCases_.data(),
         testCases_.size() * sizeof(TestCase<Value>),
-        cudaMemcpyHostToDevice);
-    isTrue = err == cudaSuccess;
+        hipMemcpyHostToDevice);
+    isTrue = err == hipSuccess;
     ASSERT_TRUE(isTrue);
 
     int numCases = testCases_.size();
@@ -201,7 +202,7 @@ TEST(TestCUDAIntegerDivider, IntegerDivider) {
   testUint64Divider();
   testUint32Divider();
 
-  cudaError_t err = cudaDeviceSynchronize();
-  bool isTrue = err == cudaSuccess;
+  hipError_t err = hipDeviceSynchronize();
+  bool isTrue = err == hipSuccess;
   ASSERT_TRUE(isTrue);
 }

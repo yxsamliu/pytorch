@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THCUNN_VOL2COL_H
 #define THCUNN_VOL2COL_H
 
@@ -43,7 +44,7 @@ CUDA_KERNEL_LOOP(index, n) {
 }
 
 template <typename Dtype>
-void vol2col(cudaStream_t stream, const Dtype* data_vol, const int channels,
+void vol2col(hipStream_t stream, const Dtype* data_vol, const int channels,
     const int depth, const int height, const int width,
     const int depth_col, const int height_col, const int width_col,
     const int ksize_t, const int ksize_h, const int ksize_w,
@@ -61,7 +62,7 @@ void vol2col(cudaStream_t stream, const Dtype* data_vol, const int channels,
       dilation_t, dilation_h, dilation_w,
       depth_col, height_col, width_col, data_col
   );
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 template <typename Dtype, typename Acctype>
@@ -116,7 +117,7 @@ __global__ void vol2im_kernel(const int n, const Dtype* data_col,
 }
 
 template <typename Dtype, typename Acctype>
-void col2vol(cudaStream_t stream, const Dtype* data_col, const int channels,
+void col2vol(hipStream_t stream, const Dtype* data_col, const int channels,
     const int depth, const int height, const int width,
     const int output_depth, const int output_height, const int output_width,
     const int patch_t, const int patch_h, const int patch_w,
@@ -133,7 +134,7 @@ void col2vol(cudaStream_t stream, const Dtype* data_col, const int channels,
       dilation_t, dilation_h, dilation_w,
       output_depth, output_height, output_width, data_vol
   );
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #endif

@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "THCUNN.h"
 #include "THCTensor.hpp"
 #include "common.h"
@@ -61,7 +62,7 @@ __global__ void im3d2col_kernel(const int64_t n, const Dtype* data_im,
 }
 
 template <typename Dtype>
-void im3d2col(cudaStream_t stream, const Dtype* data_im, const int64_t channels,
+void im3d2col(hipStream_t stream, const Dtype* data_im, const int64_t channels,
               const int64_t height, const int64_t width, const int64_t depth,
               const int64_t kernel_h, const int64_t kernel_w, const int64_t kernel_d,
               const int64_t pad_h, const int64_t pad_w, const int64_t pad_d,
@@ -82,7 +83,7 @@ void im3d2col(cudaStream_t stream, const Dtype* data_im, const int64_t channels,
                                    stride_h, stride_w, stride_d,
                                    height_col, width_col, depth_col,
                                    data_col);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 template <typename Dtype, typename Acctype>
@@ -130,7 +131,7 @@ __global__ void col2im3d_kernel(const int64_t n, const Dtype* data_col,
 }
 
 template <typename Dtype, typename Acctype>
-void col2im3d(cudaStream_t stream, const Dtype* data_col, const int64_t channels,
+void col2im3d(hipStream_t stream, const Dtype* data_col, const int64_t channels,
               const int64_t height, const int64_t width, const int64_t depth,
               const int64_t patch_h, const int64_t patch_w, const int64_t patch_d,
               const int64_t pad_h, const int64_t pad_w, const int64_t pad_d,
@@ -152,7 +153,7 @@ void col2im3d(cudaStream_t stream, const Dtype* data_col, const int64_t channels
                                    stride_h, stride_w, stride_d,
                                    height_col, width_col, depth_col,
                                    data_im);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #include "generic/VolumetricConvolution.cu"

@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/NativeFunctions.h"
 #include "ATen/cuda/CUDAContext.h"
@@ -9,11 +10,11 @@
 namespace at {
 namespace native {
 
-__host__ __device__ __forceinline__ float fmin(float a, float b) {
+__host__ __device__ inline float fmin(float a, float b) {
   return a > b ? b : a;
 }
 
-__host__ __device__ __forceinline__ float fmax(float a, float b) {
+__host__ __device__ inline float fmax(float a, float b) {
   return a > b ? a : b;
 }
 
@@ -135,10 +136,10 @@ std::tuple<Tensor, Tensor> RoiPooling2d_forward_cuda(
 
   dim3 block(512);
   dim3 grid((output.numel() + 512 - 1) / 512);
-  RoiPooling2d_forward_kernel<<<grid, block, 0, at::cuda::getCurrentCUDAStream()>>>(
+  RoiPooling2d_forward_kernel<float><<<grid, block, 0, at::cuda::getCurrentCUDAStream()>>>(
     output.numel(), input.data<float>(), rois.data<float>(), static_cast<float>(spatialScale), inputChannels,
     inputHeight, inputWidth, pooledHeight, pooledWidth, output.data<float>(), argmaxes.data<int>());
-  AT_CHECK(cudaGetLastError() == cudaSuccess, "RoiPooling2d_forward_kernel failed with error code ", cudaGetLastError());
+  AT_CHECK(hipGetLastError() == hipSuccess, "RoiPooling2d_forward_kernel failed with error code ", hipGetLastError());
 
   return std::make_tuple(output, argmaxes);
 }
@@ -202,11 +203,11 @@ Tensor RoiPooling2d_backward_cuda(
 
   dim3 block(512);
   dim3 grid((gradInput.numel() + 512 - 1) / 512);
-  RoiPooling2d_backward_kernel<<<grid, block, 0, at::cuda::getCurrentCUDAStream()>>>(
+  RoiPooling2d_backward_kernel<float><<<grid, block, 0, at::cuda::getCurrentCUDAStream()>>>(
     gradOutput.numel(), gradOutput.data<float>(), argmaxes.data<int>(), proposals,
     static_cast<float>(spatialScale), inputChannels, inputHeight, inputWidth,
     pooledHeight, pooledWidth, gradInput.data<float>(), rois.data<float>());
-  AT_CHECK(cudaGetLastError() == cudaSuccess, "RoiPooling2d_backward_kernel failed with error code ", cudaGetLastError());
+  AT_CHECK(hipGetLastError() == hipSuccess, "RoiPooling2d_backward_kernel failed with error code ", hipGetLastError());
 
   return gradInput;
 }

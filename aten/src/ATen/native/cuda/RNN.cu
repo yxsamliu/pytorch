@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "ATen/ATen.h"
 #include "ATen/AccumulateType.h"
 #include "ATen/TensorUtils.h"
@@ -43,7 +44,7 @@ bool allContiguous(at::TensorList tensors) {
 
 void getLaunchConfig(dim3* block, dim3* grid, int64_t numel) {
   int curDevice = -1;
-  cudaGetDevice(&curDevice);
+  hipGetDevice(&curDevice);
   *block = cuda::getApplyBlock();
   AT_ASSERTM(cuda::getApplyGrid(numel, *grid, curDevice),
              "Could not get grid size for pointwise apply.");
@@ -72,7 +73,7 @@ void collapseDims(TensorInfo<T, T2>& info, Args&... infos) {
 #define F2H(input) ScalarConvert<accscalar_t, scalar_t>::to(input)
 
 template<typename T>
-__device__ __forceinline__
+__device__ inline
 T sigmoid(T in)  {
   T one = static_cast<T>(1.0);
   return one / (one + THCNumerics<T>::exp(-in));
@@ -374,7 +375,7 @@ void lstm_forward_impl(const Tensor& input_gates, const Tensor& hidden_gates,
   auto workspaceI = getTensorInfo<scalar_t, index_type>(workspace);
   index_type hidden_size = cxI.sizes[cxI.dims-1];
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
   if (allContiguous({input_gates, hidden_gates, input_bias, hidden_bias, cx, hy, cy, workspace})) {
     collapseDims(input_gatesI, hidden_gatesI, input_biasI, hidden_biasI, cxI, hyI, cyI, workspaceI);
     kernel::lstm_cell_forward<scalar_t, accscalar_t, index_type, 1>
@@ -407,7 +408,7 @@ void lstm_backward_impl(const Tensor& grad_hy, const Tensor& grad_cy,
   auto grad_cxI = getTensorInfo<scalar_t, index_type>(grad_cx);
   index_type hidden_size = cxI.sizes[cxI.dims-1];
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
   if (allContiguous({grad_hy, grad_cy, cx, cy, workspace, grad_gates, grad_cx})) {
     collapseDims(grad_hyI, grad_cyI, cxI, cyI, workspaceI, grad_gatesI, grad_cxI);
     kernel::lstm_cell_backward<scalar_t, accscalar_t, index_type, 1>
@@ -440,7 +441,7 @@ void gru_forward_impl(const Tensor& input_gates, const Tensor& hidden_gates,
   auto workspaceI = getTensorInfo<scalar_t, index_type>(workspace);
   index_type hidden_size = hxI.sizes[hxI.dims-1];
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
   if (allContiguous({input_gates, hidden_gates, input_bias, hidden_bias, hx, hy, workspace})) {
     collapseDims(input_gatesI, hidden_gatesI, input_biasI, hidden_biasI, hxI, hyI, workspaceI);
     kernel::gru_cell_forward<scalar_t, accscalar_t, index_type, 1>
@@ -469,7 +470,7 @@ void gru_backward_impl(const Tensor& grad_hy, const Tensor& workspace,
   auto grad_hxI = getTensorInfo<scalar_t, index_type>(grad_hx);
   index_type hidden_size = grad_hyI.sizes[grad_hyI.dims-1];
 
-  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  hipStream_t stream = at::cuda::getCurrentCUDAStream();
   if (allContiguous({grad_hy, workspace, grad_input_gates, grad_hidden_gates, grad_hx})) {
     collapseDims(grad_hyI, workspaceI, grad_input_gatesI, grad_hidden_gatesI, grad_hxI);
     kernel::gru_cell_backward<scalar_t, accscalar_t, index_type, 1>

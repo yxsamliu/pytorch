@@ -60,10 +60,10 @@ void THNN_(SpatialUpSamplingBilinear_updateOutput)(
   const int num_kernels = outputHeight * outputWidth;
   const int num_threads =
     THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock;
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
   caffe_gpu_interp2_kernel<scalar_t, accreal> <<<THCCeilDiv(num_kernels, num_threads), num_threads ,
    0 , stream>>>(num_kernels, rheight, rwidth, align_corners, idata, odata);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 
@@ -95,10 +95,10 @@ void THNN_(SpatialUpSamplingBilinear_updateGradInput)(
   const int num_kernels = outputHeight * outputWidth;
   const int num_threads =
     THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock;
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
   caffe_gpu_interp2_kernel_backward<scalar_t ,accreal> <<<THCCeilDiv(num_kernels, num_threads),
   num_threads, 0, stream>>>(num_kernels, rheight, rwidth, align_corners, data1, data2);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   THCTensor_(free)(state, gradOutput);
 }
 

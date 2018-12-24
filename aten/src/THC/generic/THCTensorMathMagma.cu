@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorMathMagma.cu"
 #else
@@ -12,7 +13,7 @@ static void THCTensor_(copyArray1d)(THCState *state, THCTensor *self, scalar_t *
   int64_t stride[1] = { 1 };
   THCTensor_(resizeNd)(state, self, 1, size, stride);
   size_t len = k * sizeof(scalar_t);
-  THCudaCheck(cudaMemcpy(THCStorage_(data)(state, THTensor_getStoragePtr(self)) + self->storage_offset(), src, len, cudaMemcpyHostToDevice));
+  THCudaCheck(hipMemcpy(THCStorage_(data)(state, THTensor_getStoragePtr(self)) + self->storage_offset(), src, len, hipMemcpyHostToDevice));
 }
 
 static void THCTensor_(copyArray2d)(THCState *state, THCTensor *self, scalar_t *src, int m, int n)
@@ -21,7 +22,7 @@ static void THCTensor_(copyArray2d)(THCState *state, THCTensor *self, scalar_t *
   int64_t stride[2] = { 1, m };
   THCTensor_(resizeNd)(state, self, 2, size, stride);
   size_t len = m * n * sizeof(scalar_t);
-  THCudaCheck(cudaMemcpy(THCStorage_(data)(state, THTensor_getStoragePtr(self)) + self->storage_offset(), src, len, cudaMemcpyHostToDevice));
+  THCudaCheck(hipMemcpy(THCStorage_(data)(state, THTensor_getStoragePtr(self)) + self->storage_offset(), src, len, hipMemcpyHostToDevice));
 }
 
 static void THCTensor_(copyTensor2d)(THCState *state, scalar_t *dst, THCTensor *self)
@@ -30,7 +31,7 @@ static void THCTensor_(copyTensor2d)(THCState *state, scalar_t *dst, THCTensor *
   size_t len = THCTensor_(nElement)(state, self)*sizeof(scalar_t);
   THCTensor *temp = THCTensor_(newTranspose)(state, self, 0, 1);
   THCTensor *selfc = THCTensor_(newContiguous)(state, temp);
-  THCudaCheck(cudaMemcpy(dst, THCStorage_(data)(state, THTensor_getStoragePtr(selfc)) + selfc->storage_offset(), len, cudaMemcpyDeviceToHost));
+  THCudaCheck(hipMemcpy(dst, THCStorage_(data)(state, THTensor_getStoragePtr(selfc)) + selfc->storage_offset(), len, hipMemcpyDeviceToHost));
   THCTensor_(free)(state, temp);
   THCTensor_(free)(state, selfc);
 }
@@ -300,8 +301,8 @@ void THCTensor_(geev)(THCState *state, THCTensor *re_, THCTensor *rv_, THCTensor
     THCTensor_(resize2d)(state, re_, 2, n);
     THCTensor *re = THCTensor_(newContiguous)(state, re_);
     if (n > 0) {
-      THCudaCheck(cudaMemcpy(THCStorage_(data)(state, THTensor_getStoragePtr(re)) + re->storage_offset(), wr, n*sizeof(scalar_t), cudaMemcpyHostToDevice));
-      THCudaCheck(cudaMemcpy(THCStorage_(data)(state, THTensor_getStoragePtr(re)) + re->storage_offset() + n, wi, n*sizeof(scalar_t), cudaMemcpyHostToDevice));
+      THCudaCheck(hipMemcpy(THCStorage_(data)(state, THTensor_getStoragePtr(re)) + re->storage_offset(), wr, n*sizeof(scalar_t), hipMemcpyHostToDevice));
+      THCudaCheck(hipMemcpy(THCStorage_(data)(state, THTensor_getStoragePtr(re)) + re->storage_offset() + n, wi, n*sizeof(scalar_t), hipMemcpyHostToDevice));
     }
     THCTensor_(freeCopyTo)(state, re, re_);
     THCTensor_(transpose)(state, re_, NULL, 0, 1);
@@ -469,10 +470,10 @@ void THCTensor_(getri)(THCState *state, THCTensor *ra_, THCTensor *a)
   auto d_matrices1 = static_cast<scalar_t**>(THCudaMalloc(state, sizeof(scalar_t*)));
   auto d_matrices2 = static_cast<scalar_t**>(THCudaMalloc(state, sizeof(scalar_t*)));
 
-  THCudaCheck(cudaMemcpyAsync(d_matrices1, matrices1, sizeof(scalar_t*),
-                              cudaMemcpyHostToDevice, THCState_getCurrentStream(state)));
-  THCudaCheck(cudaMemcpyAsync(d_matrices2, matrices2, sizeof(scalar_t*),
-                              cudaMemcpyHostToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(d_matrices1, matrices1, sizeof(scalar_t*),
+                              hipMemcpyHostToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(d_matrices2, matrices2, sizeof(scalar_t*),
+                              hipMemcpyHostToDevice, THCState_getCurrentStream(state)));
   int info;
   auto info_gpu = static_cast<int*>(THCudaMalloc(state, sizeof(int)));
 
@@ -485,7 +486,7 @@ void THCTensor_(getri)(THCState *state, THCTensor *ra_, THCTensor *a)
   THCudaBlas_Dgetrf(state, n, d_matrices1, n, ipiv_gpu, info_gpu, 1);
 #endif
 
-  THCudaCheck(cudaMemcpy(&info, info_gpu, sizeof(int), cudaMemcpyDeviceToHost));
+  THCudaCheck(hipMemcpy(&info, info_gpu, sizeof(int), hipMemcpyDeviceToHost));
 
   if (info > 0)
     THError("CUBLAS getrf : U(%d,%d) is 0, U is singular", info, info);
@@ -499,7 +500,7 @@ void THCTensor_(getri)(THCState *state, THCTensor *ra_, THCTensor *a)
   THCudaBlas_Dgetri(state, n, (const scalar_t**)d_matrices1, n, ipiv_gpu, d_matrices2, n, info_gpu, 1);
 #endif
 
-  THCudaCheck(cudaMemcpy(&info, info_gpu, sizeof(int), cudaMemcpyDeviceToHost));
+  THCudaCheck(hipMemcpy(&info, info_gpu, sizeof(int), hipMemcpyDeviceToHost));
 
   if (info > 0)
     THError("CUBLAS getri : U(%d,%d) is 0, U is singular", info, info);
@@ -562,9 +563,9 @@ void THCTensor_(potri)(THCState *state, THCTensor *ra_, THCTensor *a, const char
   else if (info < 0)
     THError("MAGMA potri : Argument %d : illegal value", -info);
 
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
   const int len = n*n;
-  dim3 blocks(std::min(DIVUP(len, 128), 65535));
+  dim3 blocks(::min(DIVUP(len, 128), 65535));
   dim3 threads(128);
   if (uplo[0] == 'U') {
     THCTensor_(copyUpperSymmetric)<<<blocks, threads, 0, stream>>>(input_data, n, len);

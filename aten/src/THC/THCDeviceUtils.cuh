@@ -1,7 +1,7 @@
 #ifndef THC_DEVICE_UTILS_INC
 #define THC_DEVICE_UTILS_INC
 
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 /* The largest consecutive integer representable in float32 (2^24) */
 #define FLOAT32_MAX_CONSECUTIVE_INT 16777216.0f
 
@@ -9,7 +9,7 @@
    Computes ceil(a / b)
 */
 template <typename T>
-__host__ __device__ __forceinline__ T THCCeilDiv(T a, T b) {
+__host__ __device__ inline T THCCeilDiv(T a, T b) {
   return (a + b - 1) / b;
 }
 
@@ -18,7 +18,7 @@ __host__ __device__ __forceinline__ T THCCeilDiv(T a, T b) {
    multiple of b
 */
 template <typename T>
-__host__ __device__ __forceinline__ T THCRoundUp(T a, T b) {
+__host__ __device__ inline T THCRoundUp(T a, T b) {
   return THCCeilDiv(a, b) * b;
 }
 
@@ -26,7 +26,7 @@ __host__ __device__ __forceinline__ T THCRoundUp(T a, T b) {
  * For CC 3.5+, perform a load using __ldg
  */
 template <typename T>
-__device__ __forceinline__ T doLdg(const T* p) {
+__device__ inline T doLdg(const T* p) {
 #if __CUDA_ARCH__ >= 350
   return __ldg(p);
 #else
@@ -34,7 +34,7 @@ __device__ __forceinline__ T doLdg(const T* p) {
 #endif
 }
 
-__device__ __forceinline__ unsigned int ACTIVE_MASK()
+__device__ inline unsigned int ACTIVE_MASK()
 {
 #if CUDA_VERSION >= 9000
     return __activemask();
@@ -45,12 +45,12 @@ __device__ __forceinline__ unsigned int ACTIVE_MASK()
 }
 
 #if defined(__HIP_PLATFORM_HCC__)
-__device__ __forceinline__ unsigned long long int WARP_BALLOT(int predicate)
+__device__ inline unsigned long long int WARP_BALLOT(int predicate)
 {
    return __ballot(predicate);
 }
 #else
-__device__ __forceinline__ unsigned int WARP_BALLOT(int predicate, unsigned int mask = 0xffffffff)
+__device__ inline unsigned int WARP_BALLOT(int predicate, unsigned int mask = 0xffffffff)
 {
 #if CUDA_VERSION >= 9000
     return __ballot_sync(mask, predicate);
@@ -62,13 +62,13 @@ __device__ __forceinline__ unsigned int WARP_BALLOT(int predicate, unsigned int 
 
 #ifdef __HIP_PLATFORM_HCC__
 //To handle ambiguity, add a type double version.
-__device__ __forceinline__ double WARP_SHFL_XOR(double value, int laneMask, int width = warpSize, unsigned int mask = 0xffffffff) {
+__device__ inline double WARP_SHFL_XOR(double value, int laneMask, int width = warpSize, unsigned int mask = 0xffffffff) {
   //(HIP doesn't support double)
   return (double) __shfl_xor((float) value, laneMask, width);
 }
 #endif
 template <typename T>
-__device__ __forceinline__ T WARP_SHFL_XOR(T value, int laneMask, int width = warpSize, unsigned int mask = 0xffffffff)
+__device__ inline T WARP_SHFL_XOR(T value, int laneMask, int width = warpSize, unsigned int mask = 0xffffffff)
 {
 #if CUDA_VERSION >= 9000
     return __shfl_xor_sync(mask, value, laneMask, width);
@@ -78,7 +78,7 @@ __device__ __forceinline__ T WARP_SHFL_XOR(T value, int laneMask, int width = wa
 }
 
 template <typename T>
-__device__ __forceinline__ T WARP_SHFL(T value, int srcLane, int width = warpSize, unsigned int mask = 0xffffffff)
+__device__ inline T WARP_SHFL(T value, int srcLane, int width = warpSize, unsigned int mask = 0xffffffff)
 {
 #if CUDA_VERSION >= 9000
     return __shfl_sync(mask, value, srcLane, width);
@@ -88,7 +88,7 @@ __device__ __forceinline__ T WARP_SHFL(T value, int srcLane, int width = warpSiz
 }
 
 template <typename T>
-__device__ __forceinline__ T WARP_SHFL_UP(T value, unsigned int delta, int width = warpSize, unsigned int mask = 0xffffffff)
+__device__ inline T WARP_SHFL_UP(T value, unsigned int delta, int width = warpSize, unsigned int mask = 0xffffffff)
 {
 #if CUDA_VERSION >= 9000
     return __shfl_up_sync(mask, value, delta, width);
@@ -99,12 +99,12 @@ __device__ __forceinline__ T WARP_SHFL_UP(T value, unsigned int delta, int width
 
 #ifdef __HIP_PLATFORM_HCC__
 //To handle ambiguity, add a type double version.
-__device__ __forceinline__ double WARP_SHFL_DOWN(double value, unsigned int delta, int width = warpSize, unsigned int mask = 0xffffffff)
+__device__ inline double WARP_SHFL_DOWN(double value, unsigned int delta, int width = warpSize, unsigned int mask = 0xffffffff)
 {
   //(HIP doesn't support double)
   return (double) __shfl_down((float) value, delta, width);
 }
-__device__ __forceinline__ int64_t WARP_SHFL_DOWN(int64_t value, unsigned int delta, int width = warpSize, unsigned int mask = 0xffffffff)
+__device__ inline int64_t WARP_SHFL_DOWN(int64_t value, unsigned int delta, int width = warpSize, unsigned int mask = 0xffffffff)
 {
   //(HIP doesn't support int64_t). Trick from https://devblogs.nvidia.com/faster-parallel-reductions-kepler/
   int2 a = *reinterpret_cast<int2*>(&value);
@@ -114,7 +114,7 @@ __device__ __forceinline__ int64_t WARP_SHFL_DOWN(int64_t value, unsigned int de
 }
 #endif
 template <typename T>
-__device__ __forceinline__ T WARP_SHFL_DOWN(T value, unsigned int delta, int width = warpSize, unsigned int mask = 0xffffffff)
+__device__ inline T WARP_SHFL_DOWN(T value, unsigned int delta, int width = warpSize, unsigned int mask = 0xffffffff)
 {
 #if CUDA_VERSION >= 9000
     return __shfl_down_sync(mask, value, delta, width);

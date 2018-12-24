@@ -274,7 +274,7 @@ void THNN_(VolumetricDilatedMaxPooling_updateOutput)(
                              kT, kH, kW, dT, dH, dW,
                              padT, padH, padW, dilationT, dilationH, dilationW, offsetZ);
       }
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
     totalZ -= 65535;
     offsetZ += 65535;
   }
@@ -384,7 +384,7 @@ void THNN_(VolumetricDilatedMaxPooling_updateGradInput)(
                                              dT, dH, dW,
                                              padT, padH, padW,
                                              dilationT, dilationH, dilationW, offsetZ);
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
     totalZ -= 65535;
     offsetZ += 65535;
   }

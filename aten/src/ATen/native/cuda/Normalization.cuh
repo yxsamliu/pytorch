@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #pragma once
 
 #include <THC/THCDeviceUtils.cuh>
@@ -17,15 +18,15 @@ constexpr int WARP_SIZE = 64;
 // take these out when ROCm implements std:: math functions
 #include <math.h>
 template <typename scalar_t>
-static __forceinline__ __device__ scalar_t device_sqrt(scalar_t val);
+static inline __device__ scalar_t device_sqrt(scalar_t val);
 
 template <>
-__forceinline__ __device__ float device_sqrt(float val) {
+inline __device__ float device_sqrt(float val) {
   return ::sqrtf(val);
 }
 
 template <>
-__forceinline__ __device__ double device_sqrt(double val) {
+inline __device__ double device_sqrt(double val) {
   return ::sqrt(val);
 }
 
@@ -33,7 +34,7 @@ __forceinline__ __device__ double device_sqrt(double val) {
 constexpr int WARP_SIZE = 32;
 
 template<typename scalar_t>
-__forceinline__ __device__ double device_sqrt(scalar_t val) {
+inline __device__ double device_sqrt(scalar_t val) {
   return std::sqrt(val);
 }
 #endif
@@ -61,7 +62,7 @@ static int getNumThreads(int nElem) {
 }
 
 // Returns the index of the most significant 1 bit in `val`.
-__device__ __forceinline__ int getMSB(int val) {
+__device__ inline int getMSB(int val) {
   return 31 - __clz(val);
 }
 
@@ -81,7 +82,7 @@ struct Float2 {
 template <typename scalar_t, typename accscalar_t, typename PTA>
 struct SumOp {
   __device__ SumOp(const PTA& t) : tensor(t) {}
-  __device__ __forceinline__ accscalar_t operator()(int batch, int plane, int n) {
+  __device__ inline accscalar_t operator()(int batch, int plane, int n) {
     return static_cast<accscalar_t>(tensor[batch][plane][n]);
   }
   const PTA& tensor;
@@ -90,7 +91,7 @@ struct SumOp {
 template <typename scalar_t, typename accscalar_t, typename PTA>
 struct VarOp {
   __device__ VarOp(accscalar_t m, const PTA& t) : mean(m), tensor(t) {}
-  __device__ __forceinline__ accscalar_t operator()(int batch, int plane, int n) {
+  __device__ inline accscalar_t operator()(int batch, int plane, int n) {
     accscalar_t val = tensor[batch][plane][n];
     return (val - mean) * (val - mean);
   }
@@ -102,7 +103,7 @@ template <typename scalar_t, typename accscalar_t, typename PTA>
 struct GradOp {
   __device__ GradOp(accscalar_t m, const PTA& i, const PTA& g)
     : mean(m), input(i), grad_output(g) {}
-  __device__ __forceinline__ Float2<scalar_t, accscalar_t> operator()(int batch, int plane, int n) {
+  __device__ inline Float2<scalar_t, accscalar_t> operator()(int batch, int plane, int n) {
     accscalar_t g = grad_output[batch][plane][n];
     accscalar_t c = static_cast<accscalar_t>(input[batch][plane][n]) - mean;
     return Float2<scalar_t, accscalar_t>(g, g * c);
@@ -114,7 +115,7 @@ struct GradOp {
 
 // Sum across all threads within a warp
 template <typename T>
-static __device__ __forceinline__ T warpSum(T val) {
+static __device__ inline T warpSum(T val) {
   for (int i = 0; i < getMSB(WARP_SIZE); ++i) {
     val += WARP_SHFL_XOR(val, 1 << i, WARP_SIZE);
   }
@@ -122,7 +123,7 @@ static __device__ __forceinline__ T warpSum(T val) {
 }
 
 template <typename scalar_t, typename accscalar_t>
-static __device__ __forceinline__ Float2<scalar_t, accscalar_t> warpSum(Float2<scalar_t, accscalar_t> value) {
+static __device__ inline Float2<scalar_t, accscalar_t> warpSum(Float2<scalar_t, accscalar_t> value) {
   value.v1 = warpSum(value.v1);
   value.v2 = warpSum(value.v2);
   return value;
@@ -456,7 +457,7 @@ std::tuple<Tensor, Tensor, Tensor> batch_norm_cuda_template(const Tensor& input_
     batch_norm_transform_input_kernel<scalar_t, accscalar_t, true, index_t> <<<blocks_trans, threads_trans, 0, stream>>>
       (input, output, save_mean, save_invstd, weight, bias, epsilon);
   }
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return std::make_tuple(output_reshaped.view(input_.sizes()), save_mean_, save_invstd_);
 }
 
@@ -503,7 +504,7 @@ std::tuple<Tensor, Tensor, Tensor> batch_norm_backward_cuda_template(const Tenso
   batch_norm_backward_kernel<scalar_t,  accscalar_t, index_t> <<<blocks, threads, 0, stream>>>
     (input, grad_output, grad_input, grad_weight, grad_bias, weight, running_mean, running_var,
      save_mean, save_invstd, train, epsilon);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 
   return std::make_tuple(grad_input_, grad_weight_, grad_bias_);
 }

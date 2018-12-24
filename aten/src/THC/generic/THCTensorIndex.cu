@@ -118,7 +118,7 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
     return;
   }
 
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
   int indContig = THCudaLongTensor_isContiguous(state, indices);
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
@@ -139,11 +139,11 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
       (IDX_IS_MAJOR) ? sliceSize : numIndices,                 \
       dstCopyDimSize);
 
-  dim3 smallIndexGrid(std::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
-  dim3 smallIndexBlock(std::min(sliceSize, (ptrdiff_t)128));
+  dim3 smallIndexGrid(::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
+  dim3 smallIndexBlock(::min(sliceSize, (ptrdiff_t)128));
 
-  dim3 largeIndexGrid(std::min(THCCeilDiv(srcTotalSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
-  dim3 largeIndexBlock(std::min(srcTotalSize, (ptrdiff_t)128));
+  dim3 largeIndexGrid(::min(THCCeilDiv(srcTotalSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
+  dim3 largeIndexBlock(::min(srcTotalSize, (ptrdiff_t)128));
 
   if (THCTensor_canUse32BitIndexMath(state, dst) &&
       THCTensor_canUse32BitIndexMath(state, src) &&
@@ -306,7 +306,7 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
   if (sliceSize == 0) {
     return;
   }
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
   int indContig = THCudaLongTensor_isContiguous(state, indices);
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
@@ -327,11 +327,11 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
       (IDX_IS_MAJOR) ? sliceSize : numIndices,                \
       dstAddDimSize);
 
-  dim3 smallIndexGrid(std::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
-  dim3 smallIndexBlock(std::min(sliceSize, (ptrdiff_t)128));
+  dim3 smallIndexGrid(::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
+  dim3 smallIndexBlock(::min(sliceSize, (ptrdiff_t)128));
 
-  dim3 largeIndexGrid(std::min(THCCeilDiv(srcTotalSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
-  dim3 largeIndexBlock(std::min(srcTotalSize, (ptrdiff_t)128));
+  dim3 largeIndexGrid(::min(THCCeilDiv(srcTotalSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
+  dim3 largeIndexBlock(::min(srcTotalSize, (ptrdiff_t)128));
 
   if (THCTensor_canUse32BitIndexMath(state, dst) &&
       THCTensor_canUse32BitIndexMath(state, src) &&
@@ -428,7 +428,7 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
   if (sliceSize == 0) {
     return;
   }
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
   int indContig = THCudaLongTensor_isContiguous(state, indices);
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
@@ -447,11 +447,11 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
       (IDX_IS_MAJOR) ? sliceSize : numIndices,                           \
       dstFillDimSize, val);
 
-  dim3 smallIndexGrid(std::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
-  dim3 smallIndexBlock(std::min(sliceSize, (ptrdiff_t)128));
+  dim3 smallIndexGrid(::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
+  dim3 smallIndexBlock(::min(sliceSize, (ptrdiff_t)128));
 
-  dim3 largeIndexGrid(std::min(THCCeilDiv(dstTotalSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
-  dim3 largeIndexBlock(std::min(dstTotalSize, (ptrdiff_t)128));
+  dim3 largeIndexGrid(::min(THCCeilDiv(dstTotalSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
+  dim3 largeIndexBlock(::min(dstTotalSize, (ptrdiff_t)128));
 
   if (THCTensor_canUse32BitIndexMath(state, dst) &&
       THCTensor_canUse32BitIndexMath(state, indices)) {
@@ -528,7 +528,7 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
   ptrdiff_t numIndices = THCudaLongTensor_nElement(state, indices);
 
   int srcDims = THCTensor_(nDimensionLegacyNoScalars)(state, src);
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
 
   THArgCheck(THCudaLongTensor_nDimensionLegacyNoScalars(state, indices) <= 1, 3,
              "Index is supposed to be an empty tensor or a vector");
@@ -573,11 +573,11 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
       static_cast<TYPE>((IDX_IS_MAJOR) ? sliceSize : numIndices),  \
       srcSelectDimSize);
 
-  dim3 smallIndexGrid(std::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
-  dim3 smallIndexBlock(std::min(sliceSize, (ptrdiff_t)128));
+  dim3 smallIndexGrid(::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
+  dim3 smallIndexBlock(::min(sliceSize, (ptrdiff_t)128));
 
-  dim3 largeIndexGrid(std::min(THCCeilDiv(dstTotalSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
-  dim3 largeIndexBlock(std::min(dstTotalSize, (ptrdiff_t)128));
+  dim3 largeIndexGrid(::min(THCCeilDiv(dstTotalSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
+  dim3 largeIndexBlock(::min(dstTotalSize, (ptrdiff_t)128));
 
   if (THCTensor_canUse32BitIndexMath(state, dst) &&
       THCTensor_canUse32BitIndexMath(state, src) &&

@@ -36,7 +36,7 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
   const dim3 block = getApplyBlock();
   dim3 grid;
   int curDevice = -1;
-  cudaGetDevice(&curDevice);
+  hipGetDevice(&curDevice);
   THArgCheck(getApplyGrid(state, totalElements, grid, curDevice), 1, CUTORCH_DIM_WARNING);
 
   THCTensor* oldTensor = NULL;
@@ -60,19 +60,19 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
       switch (indexInfo.dims) {
         case 1:
           RUN(unsigned int, 1, scalar_t);
-          THCudaCheck(cudaGetLastError());
+          THCudaCheck(hipGetLastError());
           break;
         case 2:
           RUN(unsigned int, 2, scalar_t);
-          THCudaCheck(cudaGetLastError());
+          THCudaCheck(hipGetLastError());
           break;
         case 3:
           RUN(unsigned int, 3, scalar_t);
-          THCudaCheck(cudaGetLastError());
+          THCudaCheck(hipGetLastError());
           break;
         default:
           RUN(unsigned int, -1, scalar_t);
-          THCudaCheck(cudaGetLastError());
+          THCudaCheck(hipGetLastError());
           break;
       }
     } else {
@@ -83,7 +83,7 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
       TensorInfo<int64_t, uint64_t> indexInfo =
         getTensorInfo<int64_t, THCudaLongTensor, uint64_t>(state, index);
       RUN(uint64_t, -1, scalar_t);
-      THCudaCheck(cudaGetLastError());
+      THCudaCheck(hipGetLastError());
     }
   }
 
@@ -92,7 +92,7 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
     THCTensor_(free)(state, tensor);
     tensor = oldTensor;
   }
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #undef RUN
@@ -133,7 +133,7 @@ void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLong
   const dim3 block = getApplyBlock();
   dim3 grid;
   int curDevice = -1;
-  cudaGetDevice(&curDevice);
+  hipGetDevice(&curDevice);
   THArgCheck(getApplyGrid(state, totalElements, grid, curDevice), 1, CUTORCH_DIM_WARNING);
 
   THCTensor* oldTensor = NULL;
@@ -185,7 +185,7 @@ void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLong
     THCTensor_(free)(state, tensor);
     tensor = oldTensor;
   }
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #undef RUN
@@ -225,7 +225,7 @@ void THCTensor_(scatterAdd)(THCState* state, THCTensor *tensor, int dim, THCudaL
   const dim3 block = getApplyBlock();
   dim3 grid;
   int curDevice = -1;
-  cudaGetDevice(&curDevice);
+  hipGetDevice(&curDevice);
   THArgCheck(getApplyGrid(state, totalElements, grid, curDevice), 1, CUTORCH_DIM_WARNING);
 
   THCTensor* oldTensor = NULL;
@@ -277,7 +277,7 @@ void THCTensor_(scatterAdd)(THCState* state, THCTensor *tensor, int dim, THCudaL
     THCTensor_(free)(state, tensor);
     tensor = oldTensor;
   }
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #undef RUN
@@ -314,7 +314,7 @@ THCTensor_(scatterFill)(THCState* state, THCTensor *tensor,
   const dim3 block = getApplyBlock();
   dim3 grid;
   int curDevice = -1;
-  cudaGetDevice(&curDevice);
+  hipGetDevice(&curDevice);
   THArgCheck(getApplyGrid(state, totalElements, grid, curDevice), 1, CUTORCH_DIM_WARNING);
 
   THCTensor* oldTensor = NULL;
@@ -359,7 +359,7 @@ THCTensor_(scatterFill)(THCState* state, THCTensor *tensor,
     THCTensor_(free)(state, tensor);
     tensor = oldTensor;
   }
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 #undef RUN

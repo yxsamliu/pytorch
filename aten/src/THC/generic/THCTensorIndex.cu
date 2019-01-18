@@ -264,18 +264,24 @@ void THCTensor_(put)(THCState *state, THCTensor *dst, THCudaLongTensor *index, T
   }
 
   if (accumulate) {
+#if 1
     // wrap indices so to replace negative indices
-    THCudaLongTensor* sorted_index = THCudaLongTensor_new(state);
-    THCudaLongTensor_resizeAs(state, sorted_index, index);
-    THC_pointwiseApply2<int64_t, int64_t>(state, sorted_index, index, WrapIndexOp(dstSize));
+    //THCudaLongTensor* sorted_index = THCudaLongTensor_new(state);
+    //THCudaLongTensor_resizeAs(state, sorted_index, index);
+    //THC_pointwiseApply2<int64_t, int64_t>(state, sorted_index, index, WrapIndexOp(dstSize));
 
-    THCTensor* sorted_src = THCTensor_(newClone)(state, src);
+    THCudaLongTensor* sorted_index = index;
+    //THCTensor* sorted_src = THCTensor_(newClone)(state, src);
+    THCTensor* sorted_src = src;
 
     THCTensor_(sort_indices)(state, sorted_index, sorted_src);
     dispatchTakePut<scalar_t, TensorPutAccumulateOp>(state, dst, sorted_src, sorted_index);
 
-    THCTensor_(free)(state, sorted_src);
-    THCudaLongTensor_free(state, sorted_index);
+    //THCTensor_(free)(state, sorted_src);
+    //THCudaLongTensor_free(state, sorted_index);
+#endif
+    //THCTensor_(sort_indices)(state, index, src);
+    //dispatchTakePut<scalar_t, TensorPutAccumulateOp>(state, dst, src, index);
   } else {
     dispatchTakePut<scalar_t, TensorPutOp>(state, dst, src, index);
   }
